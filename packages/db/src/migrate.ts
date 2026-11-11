@@ -44,9 +44,9 @@ export async function migrate(pool: Pool, options: MigrateOptions = {}): Promise
         applied_at  timestamptz NOT NULL DEFAULT now()
       )`);
     const done = new Map<string, string>(
-      (await client.query<{ version: string; checksum: string }>('SELECT version, checksum FROM schema_migrations')).rows.map(
-        (r) => [r.version, r.checksum],
-      ),
+      (
+        await client.query<{ version: string; checksum: string }>('SELECT version, checksum FROM schema_migrations')
+      ).rows.map((r) => [r.version, r.checksum]),
     );
     for (const file of files) {
       const version = file.replace(/\.sql$/, '');
@@ -65,7 +65,9 @@ export async function migrate(pool: Pool, options: MigrateOptions = {}): Promise
         await client.query('COMMIT');
       } catch (err) {
         await client.query('ROLLBACK').catch(() => {});
-        throw new Error(`Migration ${version} failed: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
+        throw new Error(`Migration ${version} failed: ${err instanceof Error ? err.message : String(err)}`, {
+          cause: err,
+        });
       }
       log(`applied ${version}`);
       result.applied.push(version);

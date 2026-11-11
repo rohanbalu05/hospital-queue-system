@@ -49,11 +49,7 @@ export class LockOrderError extends Error {
 /** Same (actor, operation, key) reused with a different request hash: HTTP 409 IDEMPOTENCY_KEY_REUSED. */
 export class IdempotencyConflictError extends ConflictError {
   constructor(details: { actorId: string; operation: string; key: string }) {
-    super(
-      'IDEMPOTENCY_KEY_REUSED',
-      'Idempotency-Key was already used with a different request',
-      details,
-    );
+    super('IDEMPOTENCY_KEY_REUSED', 'Idempotency-Key was already used with a different request', details);
     this.name = 'IdempotencyConflictError';
   }
 }
@@ -77,6 +73,74 @@ export function sqlState(err: unknown): string | undefined {
     if (typeof code === 'string' && code.length === 5) return code;
   }
   return undefined;
+}
+
+/**
+ * The database connection was lost, refused or could not be obtained: HTTP 503 SERVICE_UNAVAILABLE with
+ * Retry-After. Never retried inside withTransaction: when `outcomeUnknown` is true the connection dropped
+ * while COMMIT was in flight, so the transaction may or may not have committed. Safe client retries rely
+ * on the idempotency key (a replay returns the stored response, or re-runs when nothing was stored).
+ */
+export class DatabaseUnavailableError extends Error {
+  readonly status = 503 as const;
+  readonly code = 'SERVICE_UNAVAILABLE' as const satisfies ErrorCode;
+  readonly retryAfterSec = 2;
+  constructor(
+    message: string,
+    readonly outcomeUnknown = false,
+    options?: { cause?: unknown },
+  ) {
+    super(message, options);
+    this.name = 'DatabaseUnavailableError';
+  }
+}
+
+const CONNECTION_SQLSTATES = new Set([
+  '57P01',
+  '57P02',
+  '57P03',
+  '08000',
+  '08001',
+  '08003',
+  '08004',
+  '08006',
+  '08007',
+  '53300',
+]);
+const CONNECTION_ERRNOS = new Set([
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'EPIPE',
+  'ETIMEDOUT',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'ECONNABORTED',
+]);
+const CONNECTION_MESSAGES = [
+  'connection terminated',
+  'client has encountered a connection error',
+  'connection error',
+  'timeout exceeded when trying to connect',
+  'cannot use a pool after calling end',
+  'server closed the connection unexpectedly',
+  'not currently accepting connections', // ALLOW_CONNECTIONS false (SQLSTATE 55000 is too generic to match on)
+];
+
+/** True for connection-level failures: terminated backend, shutdown, refused/reset socket, pool connect timeout. */
+export function isConnectionError(err: unknown): boolean {
+  if (err instanceof DatabaseUnavailableError) return true;
+  if (typeof err !== 'object' || err === null) return false;
+  const state = sqlState(err);
+  if (state && CONNECTION_SQLSTATES.has(state)) return true;
+  const code = (err as { code?: unknown }).code;
+  if (typeof code === 'string' && CONNECTION_ERRNOS.has(code)) return true;
+  if (err instanceof AggregateError) return err.errors.some(isConnectionError);
+  const message = (err as { message?: unknown }).message;
+  if (typeof message === 'string') {
+    const m = message.toLowerCase();
+    return CONNECTION_MESSAGES.some((s) => m.includes(s));
+  }
+  return false;
 }
 
 /** Retryable by the transaction helper: serialization failure or deadlock detected. */

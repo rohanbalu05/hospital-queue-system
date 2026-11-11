@@ -12,7 +12,7 @@ import {
 } from '@hqms/db';
 import { createLogger, silentLogger, type Logger } from '../src/log.js';
 
-export const TEST_DB = 'hqms_test_worker_w3';
+export const TEST_DB = process.env['WORKER_TEST_DB_NAME'] ?? 'hqms_test_worker_w3';
 
 export function adminUrl(): string {
   return process.env['TEST_ADMIN_DATABASE_URL'] ?? 'postgres://postgres:postgres@localhost:5432/postgres';
