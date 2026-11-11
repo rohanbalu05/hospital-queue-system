@@ -1,0 +1,14 @@
+{
+  "name": "HQMS (Node 22 + PostgreSQL 16)",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "bash .devcontainer/post-start.sh",
+  "containerEnv": {
+    "__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS": ".app.github.dev"
+  },
+  "forwardPorts": [5173, 3000],
+  "portsAttributes": {
+    "5173": { "label": "HQMS web", "onAutoForward": "openBrowser" },
+    "3000": { "label": "HQMS api", "onAutoForward": "silent" }
+  }
+}
