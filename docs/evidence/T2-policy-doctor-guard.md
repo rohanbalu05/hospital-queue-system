@@ -46,7 +46,7 @@ API, database and load generator share 4 vCPUs on localhost, so latencies are co
   The in-process version of the same trace with an injected clock is `apps/api/test/queue.int.test.ts`; the pure
   function is `packages/domain/test/table8.golden.test.ts`.
 - **Overlap.** The doctor-guard race uses doctor 5 with two sessions dated today that overlap (started 40 and 25
-  minutes ago, 4 hours long), each with 16 waiting walk-ins.
+  minutes ago, 4 hours long), each with 16 waiting walk-ins (raised to 20 after a fixture flake where a drained session answered NO_ALLOCATION — see commit history; the guard itself never failed).
 - **Invariant polling.** During every race a separate PostgreSQL connection polls
   `count(called or in_service entries of that doctor)` in a loop (about 1 ms apart) and the suite records the highest
   value it ever saw. After each round the committed state is also checked. Whole-database invariants (`checkGlobalInvariants`,
