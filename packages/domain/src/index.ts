@@ -47,4 +47,4 @@ export {
   projectEta,
   recordConsultation,
 } from './eta.js';
-export type { Estimator, Eta, EtaInput, EtaStatus } from './eta.js';
+export type { Estimator, Eta, EtaInput, EtaStatus, EtaUncertainty } from './eta.js';

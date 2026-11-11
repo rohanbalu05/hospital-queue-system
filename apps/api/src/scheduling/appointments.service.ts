@@ -34,7 +34,15 @@ import type { AppointmentListQueryDto, CancelAppointmentRequestDto } from '../co
 import { conflict, notFound, validationFailed } from '../common/errors.js';
 import type { RequestCtx } from '../common/request-context.js';
 import { AccessPolicy } from '../access/access-policy.service.js';
-import { assertBookable, cancelReservationReleaseJob, firstFreeSlot, toAppointment, toDomainPolicy } from './shared.js';
+import {
+  assertBookable,
+  assertNoActiveAppointment,
+  cancelReservationReleaseJob,
+  enrichAppointments,
+  firstFreeSlot,
+  toAppointment,
+  toDomainPolicy,
+} from './shared.js';
 
 @Injectable()
 export class AppointmentsService {
@@ -63,7 +71,8 @@ export class AppointmentsService {
         const now = this.clock.now();
         assertBookable(session, now);
         const policy = await this.policyOf(tx, session.policyId);
-        const scheduledAt = await firstFreeSlot(tx, session);
+        await assertNoActiveAppointment(tx, patientId, session.id);
+        const scheduledAt = await firstFreeSlot(tx, session, now, policy.lateGraceMin);
         const allocationId = await reserveBooked(tx, session.id);
         const appt = await insertAppointment(tx, {
           patientId,
@@ -152,6 +161,7 @@ export class AppointmentsService {
           entityVersion: updated.version,
           sessionId: cur.sessionId,
           patientId: cur.patientId,
+          ...(eventType === 'ReservationReleased' ? { payload: { reason: 'cancelled' } } : {}),
         });
       }
       return { status: 200, body: toAppointment(updated) };
@@ -206,12 +216,16 @@ export class AppointmentsService {
             currentVersion: cur.version,
           });
         }
-        assertBookable(targetSession, this.clock.now());
+        const now = this.clock.now();
+        assertBookable(targetSession, now);
         const policy = await this.policyOf(tx, targetSession.policyId);
+        await assertNoActiveAppointment(tx, cur.patientId, targetSession.id);
 
-        // Reserve the target first; CAPACITY_FULL here rolls everything back.
-        const scheduledAt = await firstFreeSlot(tx, targetSession);
+        // Reserve the target first; CAPACITY_FULL here rolls everything back before any write commits.
+        const scheduledAt = await firstFreeSlot(tx, targetSession, now, policy.lateGraceMin);
         const allocationId = await reserveBooked(tx, targetSession.id);
+        // The original goes to 'rescheduled' before the replacement is inserted (active-appointment index).
+        await setAppointmentStatus(tx, cur.id, 'rescheduled', { expectedVersion: cur.version });
         const created = await insertAppointment(tx, {
           patientId: cur.patientId,
           sessionId: targetSession.id,
@@ -221,7 +235,6 @@ export class AppointmentsService {
           bookedBy: user.userId,
           rescheduledFromId: cur.id,
         });
-        await setAppointmentStatus(tx, cur.id, 'rescheduled', { expectedVersion: cur.version });
         await releaseAllocation(tx, cur.allocationId);
         await cancelReservationReleaseJob(tx, cur.id);
         await this.scheduleReservationRelease(tx, created, policy.lateGraceMin);
@@ -253,6 +266,7 @@ export class AppointmentsService {
           entityVersion: cur.version + 1,
           sessionId: cur.sessionId,
           patientId: cur.patientId,
+          payload: { reason: 'rescheduled' },
         });
         return { status: 201, body: toAppointment(created) };
       },
@@ -271,7 +285,9 @@ export class AppointmentsService {
     const appt = await getAppointment(this.pool, id);
     if (!appt) throw notFound('Appointment');
     this.access.assertAppointmentAccess(ctx.user, appt);
-    return toAppointment(appt);
+    const [out] = await enrichAppointments(this.pool, [appt], ctx.user.role !== 'patient');
+    if (!out) throw notFound('Appointment');
+    return out;
   }
 
   /** Patients list only their own; staff must name a patient or a session and see only their doctors' appointments. */
@@ -296,7 +312,7 @@ export class AppointmentsService {
     } else {
       throw validationFailed('patientId or sessionId is required');
     }
-    return rows.map(toAppointment);
+    return enrichAppointments(this.pool, rows, user.role !== 'patient');
   }
 
   private async policyOf(tx: Tx, policyId: string) {
