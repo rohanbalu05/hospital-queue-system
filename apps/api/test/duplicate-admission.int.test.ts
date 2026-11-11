@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- tests index rows they have just created */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { ApiError, ArrivalResult, Appointment, CallNextResult, QueueCommandResult } from '@hqms/contracts';
+import { ApiError, ArrivalResult, CallNextResult, QueueCommandResult, type Appointment } from '@hqms/contracts';
 import {
   type Client,
   type MadeSession,

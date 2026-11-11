@@ -20,6 +20,7 @@ import { APP_CONFIG, CLOCK, DB_POOL } from '../common/tokens.js';
 import type { AppConfig } from '../common/config.js';
 import type { Clock } from '../common/clock.js';
 import { conflict, notFound } from '../common/errors.js';
+import { hasLivePlace } from '../common/live-place.js';
 import { localDate } from '../common/http.js';
 import type { RequestCtx } from '../common/request-context.js';
 import { AccessPolicy } from '../access/access-policy.service.js';
@@ -275,6 +276,10 @@ export class QueueService {
     return this.entryCommand(ctx, entryId, 'queue.re_enter', key, body, async (tx, entry, s) => {
       assertVersion(body.expectedVersion, entry.version, 'The queue entry');
       assertTransition('queueEntry', entry.state, 'waiting');
+      // One place per patient and session: re-entry may not create a second live place (Codex P1 #2).
+      if (await hasLivePlace(tx, entry.sessionId, entry.patientId, entry.id)) {
+        throw conflict('CONFLICT', 'This patient already has another place in this session');
+      }
       if (s.status !== 'scheduled' && s.status !== 'open' && s.status !== 'paused') {
         throw conflict('SESSION_NOT_CALLABLE', `The session is ${s.status}; the patient cannot re-enter it`, {
           status: s.status,
