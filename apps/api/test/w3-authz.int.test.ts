@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- the probe table indexes a record it just defined */
 import { ModulesContainer, Reflector } from '@nestjs/core';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
