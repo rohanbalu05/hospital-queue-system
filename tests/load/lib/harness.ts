@@ -438,7 +438,7 @@ function procRssMb(pid: number): number | undefined {
   }
 }
 function systemTicks(): { busy: number; total: number } {
-  const l = readFileSync('/proc/stat', 'utf8').split('\n')[0]!.split(/\s+/).slice(1).map(Number);
+  const l = (readFileSync('/proc/stat', 'utf8').split('\n')[0] ?? '').split(/\s+/).slice(1).map(Number);
   const idle = (l[3] ?? 0) + (l[4] ?? 0);
   const total = l.reduce((a, b) => a + b, 0);
   return { busy: total - idle, total };
@@ -586,8 +586,8 @@ export function rssTrend(samples: Sample[], pick: (s: Sample) => number | undefi
   const sxx = pts.reduce((a, p) => a + (p[0] - mx) ** 2, 0);
   const sxy = pts.reduce((a, p) => a + (p[0] - mx) * (p[1] - my), 0);
   return {
-    first: round1(pts[0]![1]),
-    last: round1(pts[n - 1]![1]),
+    first: round1(pts[0]?.[1] ?? 0),
+    last: round1(pts[n - 1]?.[1] ?? 0),
     max: round1(Math.max(...pts.map((p) => p[1]))),
     slopeMbPerMin: Math.round((sxx === 0 ? 0 : (sxy / sxx) * 60) * 100) / 100,
     n,
