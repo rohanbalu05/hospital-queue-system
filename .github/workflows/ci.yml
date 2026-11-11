@@ -58,6 +58,13 @@ jobs:
         run: pnpm verify
       - name: Concurrency tests (real Postgres)
         run: pnpm test:concurrency
+      - name: Coverage (v8) and summary
+        run: pnpm coverage
+      - name: Static analysis and unit-test evidence reports
+        if: always()
+        run: |
+          pnpm evidence:static
+          pnpm evidence:tests
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
@@ -65,5 +72,15 @@ jobs:
           name: coverage
           path: |
             **/coverage/**
+            docs/evidence/coverage-summary.json
             !**/node_modules/**
+          if-no-files-found: ignore
+      - name: Upload evidence reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-reports
+          path: |
+            docs/evidence/static-analysis.md
+            docs/evidence/unit-tests.md
           if-no-files-found: ignore
