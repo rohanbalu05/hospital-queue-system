@@ -10,10 +10,16 @@ import { HealthController } from './health/health.controller.js';
 import { IdentityModule } from './identity/identity.module.js';
 import { PatientsModule } from './patients/patients.module.js';
 import { SchedulingModule } from './scheduling/scheduling.module.js';
+import { AssistantModule } from './assistant/assistant.module.js';
+import { DocumentsModule } from './documents/documents.module.js';
+import { FollowUpModule } from './followup/followup.module.js';
+import { ProvidersModule } from './providers/providers.module.js';
+import { ReportsModule } from './reports/reports.module.js';
 
 @Module({
   imports: [
     CoreModule,
+    ProvidersModule,
     AccessModule,
     IdentityModule,
     PatientsModule,
@@ -23,6 +29,10 @@ import { SchedulingModule } from './scheduling/scheduling.module.js';
     QueueModule,
     LiveModule,
     AuditModule,
+    FollowUpModule,
+    DocumentsModule,
+    AssistantModule,
+    ReportsModule,
   ],
   controllers: [HealthController],
 })

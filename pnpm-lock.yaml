@@ -44,6 +44,9 @@ importers:
       '@hqms/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@hqms/providers':
+        specifier: workspace:*
+        version: link:../../packages/providers
       '@nestjs/common':
         specifier: ^11.1.0
         version: 11.2.9(reflect-metadata@0.2.2)(rxjs@7.8.2)
