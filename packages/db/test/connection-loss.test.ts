@@ -141,6 +141,8 @@ describe('isConnectionError', () => {
     [Object.assign(new Error('x'), { code: '08006' }), true],
     [Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' }), true],
     [new Error('Connection terminated unexpectedly'), true],
+    [Object.assign(new Error('database "x" is not currently accepting connections'), { code: '55000' }), true],
+    [Object.assign(new Error('cannot change sequence'), { code: '55000' }), false],
     [new Error('Client has encountered a connection error and is not queryable'), true],
     [Object.assign(new Error('dup'), { code: '23505' }), false],
     [Object.assign(new Error('serialization'), { code: '40001' }), false],
