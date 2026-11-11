@@ -319,6 +319,9 @@ importers:
 
   tests:
     devDependencies:
+      '@hqms/db':
+        specifier: workspace:*
+        version: link:../packages/db
       '@hqms/domain':
         specifier: workspace:*
         version: link:../packages/domain

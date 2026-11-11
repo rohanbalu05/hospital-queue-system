@@ -1,5 +1,5 @@
 {
   "extends": "../tsconfig.base.json",
-  "compilerOptions": { "rootDir": ".", "noEmit": true, "types": ["node"] },
-  "include": ["*.ts", "integration", "concurrency", "e2e", "helpers"]
+  "compilerOptions": { "noEmit": true, "types": ["node"] },
+  "include": ["*.ts", "integration", "concurrency", "support", "e2e", "helpers"]
 }
