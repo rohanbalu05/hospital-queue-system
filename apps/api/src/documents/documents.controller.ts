@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Inject,
   Param,
   Post,
@@ -22,11 +23,13 @@ import {
   type DocumentMeta,
   type InstructionVersion,
   type OcrDraft,
+  type ReviewInboxItem,
 } from '@hqms/contracts';
+import { optionalIdempotencyKey, sendResult } from '../common/http.js';
 import type { RequestCtx } from '../common/request-context.js';
 import { UuidPipe, ZodPipe } from '../common/zod.pipe.js';
 import { ALL_ROLES, Ctx, Roles } from '../identity/auth.decorators.js';
-import { DocumentsService, type ReviewInboxItem, type UploadedFile as UploadedFileDto } from './documents.service.js';
+import { DocumentsService, type UploadedFile as UploadedFileDto } from './documents.service.js';
 
 const UploadFields = z.object({ patientId: Id.optional(), visitId: Id.optional() });
 const PatientQuery = z.object({ patientId: Id.optional() });
@@ -110,10 +113,10 @@ export class DocumentsController {
     @Ctx() ctx: RequestCtx,
     @Param('id', new UuidPipe()) id: string,
     @Body(new ZodPipe(VerifyInstructionRequest)) body: VerifyInstructionRequest,
+    @Headers('idempotency-key') key: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ): Promise<InstructionVersion> {
-    res.status(201);
-    return this.documents.verify(ctx, id, body);
+    return sendResult(res, await this.documents.verify(ctx, id, body, optionalIdempotencyKey(key)));
   }
 }
 

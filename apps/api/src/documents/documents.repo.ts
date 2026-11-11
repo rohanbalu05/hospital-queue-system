@@ -1,5 +1,6 @@
 import type { DocumentMeta, InstructionVersion, OcrDraft } from '@hqms/contracts';
 import type { Queryable, Tx } from '@hqms/db';
+import { linkedToDoctorsSql } from '../access/patient-scope.service.js';
 import { notFound } from '../common/errors.js';
 
 /** SQL for documents, OCR drafts and instruction versions (FR-12, FR-13). */
@@ -61,17 +62,16 @@ export async function listDocumentsOfPatient(db: Queryable, patientId: string): 
 export async function reviewInbox(
   db: Queryable,
   doctorIds: string[] | null,
+  now: Date,
 ): Promise<Array<DocumentRow & { patientName: string }>> {
   const res = await db.query(
     `SELECT ${DOC_COLS}, p.full_name AS patient_name
        FROM documents d JOIN patients p ON p.id = d.patient_id
       WHERE d.status IN ('ocr_ready','ocr_failed')
-        AND ($1::uuid[] IS NULL
-             OR EXISTS (SELECT 1 FROM appointments a WHERE a.patient_id = d.patient_id AND a.doctor_id = ANY($1::uuid[]))
-             OR EXISTS (SELECT 1 FROM visits v WHERE v.patient_id = d.patient_id AND v.doctor_id = ANY($1::uuid[])))
+        AND ($1::uuid[] IS NULL OR ${linkedToDoctorsSql('d.patient_id', '$1', '$2')})
       ORDER BY d.created_at, d.id
       LIMIT 200`,
-    [doctorIds],
+    [doctorIds, now],
   );
   return res.rows.map((r) => ({ ...mapDoc(r), patientName: r.patient_name as string }));
 }

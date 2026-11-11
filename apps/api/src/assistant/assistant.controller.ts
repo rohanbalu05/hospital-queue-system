@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Inject, Param, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Inject, Param, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { AskAssistantRequest, type AssistantAnswer, type ConversationMessage } from '@hqms/contracts';
+import { AskAssistantRequest, type AssistantAnswer, type AssistantConversation, type ConversationMessage } from '@hqms/contracts';
+import { optionalIdempotencyKey, sendResult } from '../common/http.js';
 import type { RequestCtx } from '../common/request-context.js';
 import { UuidPipe, ZodPipe } from '../common/zod.pipe.js';
 import { Ctx, Roles } from '../identity/auth.decorators.js';
@@ -13,18 +14,18 @@ export class AssistantController {
 
   @Roles('patient')
   @Post('messages')
-  ask(
+  async ask(
     @Ctx() ctx: RequestCtx,
     @Body(new ZodPipe(AskAssistantRequest)) body: AskAssistantRequest,
+    @Headers('idempotency-key') key: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AssistantAnswer> {
-    res.status(201);
-    return this.assistant.ask(ctx, body);
+    return sendResult(res, await this.assistant.ask(ctx, body, optionalIdempotencyKey(key)));
   }
 
   @Roles('patient')
   @Get('conversations')
-  conversations(@Ctx() ctx: RequestCtx): Promise<Array<{ id: string; createdAt: string; lastMessageAt: string | null }>> {
+  conversations(@Ctx() ctx: RequestCtx): Promise<AssistantConversation[]> {
     return this.assistant.conversations(ctx);
   }
 

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { DocumentMeta, InstructionVersion, OcrDraft, VerifyInstructionRequest } from '@hqms/contracts';
-import { enqueueJob, withTransaction, writeAudit, writeOutbox, type Pool } from '@hqms/db';
+import type { DocumentMeta, InstructionVersion, OcrDraft, ReviewInboxItem, VerifyInstructionRequest } from '@hqms/contracts';
+import { enqueueJob, withTransaction, writeAudit, writeOutbox, type IdempotentResult, type Pool } from '@hqms/db';
 import { assertTransition, InvalidTransitionError } from '@hqms/domain';
 import { AccessPolicy } from '../access/access-policy.service.js';
 import { PatientScope } from '../access/patient-scope.service.js';
@@ -9,7 +9,7 @@ import type { Clock } from '../common/clock.js';
 import { ApiException, conflict, notFound, validationFailed } from '../common/errors.js';
 import type { RequestCtx } from '../common/request-context.js';
 import { CLOCK, DB_POOL, OBJECT_STORAGE } from '../common/tokens.js';
-import { assertVersion } from '../queue/command.js';
+import { assertVersion, runCommand } from '../queue/command.js';
 import type { ObjectStorage } from '../providers/ports.js';
 import {
   listDocumentsOfPatient,
@@ -29,8 +29,6 @@ export interface UploadedFile {
   originalname: string;
   mimetype: string;
 }
-
-export type ReviewInboxItem = DocumentMeta & { patientName: string };
 
 @Injectable()
 export class DocumentsService {
@@ -223,7 +221,7 @@ export class DocumentsService {
 
   /** Doctor's inbox: documents waiting for review (ocr_ready) or manual transcription (ocr_failed). */
   async inbox(ctx: RequestCtx): Promise<ReviewInboxItem[]> {
-    const rows = await reviewInbox(this.pool, this.access.doctorScope(ctx.user));
+    const rows = await reviewInbox(this.pool, this.access.doctorScope(ctx.user), this.clock.now());
     return rows.map((r) => ({ ...toMeta(r), patientName: r.patientName }));
   }
 
@@ -232,10 +230,18 @@ export class DocumentsService {
    * 1) or, with instructionId, a new version that supersedes the current one (old row current -> superseded, the
    * only update the trigger allows, then the new row), all in one transaction.
    */
-  async verify(ctx: RequestCtx, documentId: string, body: VerifyInstructionRequest): Promise<InstructionVersion> {
+  async verify(
+    ctx: RequestCtx,
+    documentId: string,
+    body: VerifyInstructionRequest,
+    key: string | undefined,
+  ): Promise<IdempotentResult<InstructionVersion>> {
     const { user } = ctx;
     await this.load(ctx, documentId);
-    const id = await withTransaction(this.pool, async (tx) => {
+    if (body.instructionId && !body.expectedCurrentVersionId) {
+      throw validationFailed('expectedCurrentVersionId is required when instructionId is given');
+    }
+    return runCommand(this.pool, ctx, 'instruction.verify', key, { documentId, body }, async (tx) => {
       const doc = await lockDocument(tx, documentId);
       if (body.instructionId === undefined || doc.status !== 'verified') {
         // A verified document may only feed a revision of an existing instruction (the same lineage).
@@ -250,8 +256,9 @@ export class DocumentsService {
       let version = 1;
       let supersedesId: string | null = null;
       if (body.instructionId) {
+        // FOR NO KEY UPDATE (D-017): excludes other verifiers of the same lineage without blocking FK checks.
         const lineage = await tx.query<{ patient_id: string }>(
-          `SELECT patient_id FROM instructions WHERE id = $1 FOR UPDATE`,
+          `SELECT patient_id FROM instructions WHERE id = $1 FOR NO KEY UPDATE`,
           [body.instructionId],
         );
         const l = lineage.rows[0];
@@ -262,15 +269,21 @@ export class DocumentsService {
           [instructionId],
         );
         const current = cur.rows[0];
+        // Compare-and-set: the clinician verified against the version they saw as current; if another verifier got
+        // there first (or the version was superseded meanwhile) this is a controlled 409, never a silent overwrite.
+        if (!current || current.id !== body.expectedCurrentVersionId) {
+          throw conflict('CONFLICT', 'The instruction was changed by someone else; reload the current version and try again', {
+            expectedCurrentVersionId: body.expectedCurrentVersionId,
+            currentVersionId: current?.id ?? null,
+          });
+        }
         const max = await tx.query<{ v: number }>(
           `SELECT COALESCE(max(version), 0) AS v FROM instruction_versions WHERE instruction_id = $1`,
           [instructionId],
         );
         version = (max.rows[0]?.v ?? 0) + 1;
-        if (current) {
-          supersedesId = current.id;
-          await tx.query(`UPDATE instruction_versions SET status = 'superseded' WHERE id = $1`, [current.id]);
-        }
+        supersedesId = current.id;
+        await tx.query(`UPDATE instruction_versions SET status = 'superseded' WHERE id = $1`, [current.id]);
       } else {
         const ins = await tx.query<{ id: string }>(
           `INSERT INTO instructions (patient_id, document_id, visit_id, title) VALUES ($1, $2, $3, $4) RETURNING id`,
@@ -320,11 +333,10 @@ export class DocumentsService {
         patientId: doc.patientId,
         payload: { instructionId, version },
       });
-      return versionId;
+      const out = await readVersion(tx, versionId);
+      if (!out) throw notFound('Instruction');
+      return { status: 201, body: out };
     });
-    const out = await readVersion(this.pool, id);
-    if (!out) throw notFound('Instruction');
-    return out;
   }
 
   /** Patient: their current versions only. Staff in scope: current plus history. */
