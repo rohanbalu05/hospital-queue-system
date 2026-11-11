@@ -33,8 +33,8 @@ export class Tx implements Queryable {
     readonly attempt = 1,
   ) {}
 
-  query<R extends QueryResultRow = any>(text: string, params?: unknown[]): Promise<QueryResult<R>> {
-    return this.client.query<R>(text, params as any[] | undefined);
+  query<R extends QueryResultRow = QueryResultRow>(text: string, params?: unknown[]): Promise<QueryResult<R>> {
+    return this.client.query<R>(text, params);
   }
 
   /** True when this transaction already holds the `kind` lock for `id` (doctor id, or session id for session/capacity). */

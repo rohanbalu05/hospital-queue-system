@@ -1,5 +1,5 @@
 import type { Session } from '@hqms/contracts';
-import { maybeOne, many, type Queryable } from '../pool.js';
+import { maybeOne, many, type Queryable, type QueryResultRow } from '../pool.js';
 import type { Tx } from '../tx.js';
 
 const SELECT_SESSION = `
@@ -11,7 +11,7 @@ const SELECT_SESSION = `
     JOIN queue_policies p ON p.id = s.policy_id
     JOIN session_capacity c ON c.session_id = s.id`;
 
-const mapSession = (r: any): Session => ({
+const mapSession = (r: QueryResultRow): Session => ({
   id: r.id,
   doctorId: r.doctor_id,
   doctorName: r.doctor_name,

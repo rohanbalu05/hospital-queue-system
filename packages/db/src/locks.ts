@@ -1,5 +1,6 @@
 import type { Capacity, Doctor, SessionStatus } from '@hqms/contracts';
 import { NotFoundError } from './errors.js';
+import { required, type QueryResultRow } from './pool.js';
 import type { LockKind, Tx } from './tx.js';
 
 /*
@@ -44,7 +45,7 @@ async function lockMany<R>(
   entity: string,
   ids: string[],
   sql: string,
-  mapRow: (row: any) => R,
+  mapRow: (row: QueryResultRow) => R,
   rowId: (r: R) => string,
 ): Promise<R[]> {
   const unique = [...new Set(ids.map((i) => i.toLowerCase()))].sort();
@@ -59,7 +60,7 @@ async function lockMany<R>(
   return rows;
 }
 
-const mapDoctor = (r: any): Doctor => ({
+const mapDoctor = (r: QueryResultRow): Doctor => ({
   id: r.id,
   fullName: r.full_name,
   department: r.department,
@@ -81,10 +82,10 @@ export function lockDoctors(tx: Tx, ids: string[]): Promise<Doctor[]> {
 }
 
 export async function lockDoctor(tx: Tx, doctorId: string): Promise<Doctor> {
-  return (await lockDoctors(tx, [doctorId]))[0]!;
+  return required((await lockDoctors(tx, [doctorId]))[0], 'doctor');
 }
 
-const mapSession = (r: any): SessionLockRow => ({
+const mapSession = (r: QueryResultRow): SessionLockRow => ({
   id: r.id,
   doctorId: r.doctor_id,
   policyId: r.policy_id,
@@ -120,10 +121,10 @@ export function lockSessions(tx: Tx, ids: string[]): Promise<SessionLockRow[]> {
 }
 
 export async function lockSession(tx: Tx, sessionId: string): Promise<SessionLockRow> {
-  return (await lockSessions(tx, [sessionId]))[0]!;
+  return required((await lockSessions(tx, [sessionId]))[0], 'session');
 }
 
-export const toCapacity = (r: any): CapacityLockRow => ({
+export const toCapacity = (r: QueryResultRow): CapacityLockRow => ({
   sessionId: r.session_id,
   bookedCapacity: r.booked_capacity,
   walkinCapacity: r.walkin_capacity,
@@ -149,5 +150,5 @@ export function lockCapacities(tx: Tx, sessionIds: string[]): Promise<CapacityLo
 }
 
 export async function lockCapacity(tx: Tx, sessionId: string): Promise<CapacityLockRow> {
-  return (await lockCapacities(tx, [sessionId]))[0]!;
+  return required((await lockCapacities(tx, [sessionId]))[0], 'session_capacity');
 }

@@ -25,11 +25,18 @@ import {
 export const DEMO_PASSWORD = 'demo1234';
 export const SEED_DAYS = 7;
 
+/** Element at `i`, or a RangeError (no non-null assertions in the seed). */
+function at<T>(items: readonly T[], i: number): T {
+  const v = items[i];
+  if (v === undefined) throw new RangeError(`seed: index ${i} out of range (${items.length})`);
+  return v;
+}
+
 /** Deterministic UUID (v5-shaped) from a natural key. */
 export function stableId(name: string): string {
   const b = createHash('sha1').update(`hqms-seed:${name}`).digest().subarray(0, 16);
-  b[6] = (b[6]! & 0x0f) | 0x50;
-  b[8] = (b[8]! & 0x3f) | 0x80;
+  b.writeUInt8((b.readUInt8(6) & 0x0f) | 0x50, 6);
+  b.writeUInt8((b.readUInt8(8) & 0x3f) | 0x80, 8);
   const h = b.toString('hex');
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
@@ -127,17 +134,17 @@ export async function seed(pool: Pool, opts: { now?: Date; log?: (m: string) => 
 
   // Staff: 10 doctors + 6 reception + 4 follow-up + 2 admin = 22
   for (const [i, d] of DOCTORS.entries()) {
-    await insertUser(`doctor${i + 1}`, `doctor${suffix(i + 1)}@hqms.test`, d.name, 'doctor', { doctorId: doctorIds[i]! });
+    await insertUser(`doctor${i + 1}`, `doctor${suffix(i + 1)}@hqms.test`, d.name, 'doctor', { doctorId: at(doctorIds, i) });
   }
   const receptionScopes = [all, [0, 1], [2, 3], [4, 5], [6, 7], [8, 9]];
   for (const [i, name] of RECEPTION.entries()) {
     await insertUser(`reception${i + 1}`, `reception${suffix(i + 1)}@hqms.test`, name, 'reception');
-    await assign(`reception${i + 1}`, receptionScopes[i]!);
+    await assign(`reception${i + 1}`, at(receptionScopes, i));
   }
   const followupScopes = [all, [0, 1, 2, 3], [4, 5, 6, 7], [8, 9]];
   for (const [i, name] of FOLLOWUP.entries()) {
     await insertUser(`followup${i + 1}`, `followup${suffix(i + 1)}@hqms.test`, name, 'followup');
-    await assign(`followup${i + 1}`, followupScopes[i]!);
+    await assign(`followup${i + 1}`, at(followupScopes, i));
   }
   for (const [i, name] of ADMINS.entries()) {
     await insertUser(`admin${i + 1}`, `admin${suffix(i + 1)}@hqms.test`, name, 'admin');
@@ -153,7 +160,7 @@ export async function seed(pool: Pool, opts: { now?: Date; log?: (m: string) => 
       `INSERT INTO patients (id, hospital_id, mrn, full_name, phone, date_of_birth) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING`,
       [patientIds[i], hospitalId, `BLR-${String(n).padStart(6, '0')}`, name, phone, dob],
     );
-    if (n <= 10) await insertUser(`patient${n}`, `patient${suffix(n)}@hqms.test`, name, 'patient', { patientId: patientIds[i]! });
+    if (n <= 10) await insertUser(`patient${n}`, `patient${suffix(n)}@hqms.test`, name, 'patient', { patientId: at(patientIds, i) });
   }
 
   // Sessions: today .. today+6 (IST), morning 09:00-13:00 and afternoon 14:00-18:00, 10 booked + 5 walk-in
@@ -166,7 +173,7 @@ export async function seed(pool: Pool, opts: { now?: Date; log?: (m: string) => 
         for (const label of ['morning', 'afternoon'] as const) {
           const id = await createSession(tx, {
             id: sessionId(di, day, label),
-            doctorId: doctorIds[di]!,
+            doctorId: at(doctorIds, di),
             sessionDate: date,
             label,
             startsAt: `${date}T${SLOTS[label].start}+05:30`,
@@ -198,7 +205,7 @@ export async function seed(pool: Pool, opts: { now?: Date; log?: (m: string) => 
     const apptId = stableId(`appointment:${pn}:${dn}:${day}:${label}:${slot}`);
     const created = await withTransaction(pool, async (tx) => {
       const sid = sessionId(dn - 1, day, label);
-      await lockDoctor(tx, doctorIds[dn - 1]!);
+      await lockDoctor(tx, at(doctorIds, dn - 1));
       const session = await lockSession(tx, sid);
       await lockCapacity(tx, sid);
       const exists = await tx.query('SELECT 1 FROM appointments WHERE id = $1', [apptId]);
@@ -207,9 +214,9 @@ export async function seed(pool: Pool, opts: { now?: Date; log?: (m: string) => 
       const scheduledAt = new Date(new Date(session.startsAt).getTime() + slot * session.slotMinutes * 60_000).toISOString();
       const appt = await insertAppointment(tx, {
         id: apptId,
-        patientId: patientIds[pn - 1]!,
+        patientId: at(patientIds, pn - 1),
         sessionId: sid,
-        doctorId: doctorIds[dn - 1]!,
+        doctorId: at(doctorIds, dn - 1),
         scheduledAt,
         allocationId,
         bookedBy,
@@ -245,7 +252,7 @@ export async function seed(pool: Pool, opts: { now?: Date; log?: (m: string) => 
 // CLI: `tsx db/seed/seed.ts` (normally run through `pnpm --filter @hqms/db seed`)
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const pool = createPool(process.env['DATABASE_URL'] ?? DEFAULT_DATABASE_URL);
-  seed(pool, { log: console.log })
+  seed(pool, { log: (m) => process.stdout.write(`${m}\n`) })
     .catch((err) => {
       console.error(err);
       process.exitCode = 1;

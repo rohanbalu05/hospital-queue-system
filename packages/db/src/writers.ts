@@ -1,5 +1,6 @@
 import type { DomainEventType, EntityType } from '@hqms/contracts';
 import { NotFoundError } from './errors.js';
+import { firstRow } from './pool.js';
 import type { Tx } from './tx.js';
 
 /*
@@ -42,7 +43,7 @@ export async function writeAudit(tx: Tx, a: AuditInput): Promise<number> {
       a.correlationId ?? null,
     ],
   );
-  return res.rows[0]!.id;
+  return firstRow(res, 'audit_event').id;
 }
 
 export interface OutboxInput {
@@ -72,7 +73,7 @@ export async function writeOutbox(tx: Tx, e: OutboxInput): Promise<{ id: string;
       JSON.stringify(e.payload ?? {}),
     ],
   );
-  return res.rows[0]!;
+  return firstRow(res, 'outbox_event');
 }
 
 /**
@@ -86,7 +87,7 @@ export async function bumpQueueVersion(tx: Tx, sessionId: string): Promise<numbe
     [sessionId],
   );
   if (res.rowCount === 0) throw new NotFoundError('session', sessionId);
-  return res.rows[0]!.queue_version;
+  return firstRow(res, 'session').queue_version;
 }
 
 export interface JobInput {

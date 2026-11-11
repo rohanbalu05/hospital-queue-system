@@ -20,7 +20,7 @@ import {
   type Tx,
   withTransaction,
 } from '../src/index.js';
-import { addSession, bookOne, makeFixture, TEST_DB, testUrl, type Fixture } from './helpers.js';
+import { addSession, bookOne, makeFixture, must, nth, TEST_DB, testUrl, type Fixture } from './helpers.js';
 
 let pool: Pool;
 beforeAll(() => {
@@ -52,19 +52,19 @@ function race(f: Fixture, patientId: string) {
 describe('T1 (persistence level): N parallel connections race for the last place', () => {
   it('20 concurrent bookings, 1 place left: exactly one succeeds; counters match allocation rows', async () => {
     const f = await makeFixture(pool, { booked: 5, patients: 20 });
-    for (let i = 0; i < 4; i++) await bookOne(pool, f, f.patientIds[i]!); // 4 of 5 taken, 1 left
+    for (let i = 0; i < 4; i++) await bookOne(pool, f, nth(f.patientIds, i)); // 4 of 5 taken, 1 left
     expect((await capacityInvariant(pool, f.sessionId)).counters.bookedReserved).toBe(4);
 
     const racers = f.patientIds.slice(0, 20).map((p) => race(f, p).then((id) => ({ ok: true as const, id }), (e) => ({ ok: false as const, e })));
     const results = await Promise.all(racers);
 
     const wins = results.filter((r) => r.ok);
-    const losses = results.filter((r): r is { ok: false; e: any } => !r.ok);
+    const losses = results.filter((r): r is { ok: false; e: unknown } => !r.ok);
     expect(wins).toHaveLength(1);
     expect(losses).toHaveLength(19);
     for (const l of losses) {
       expect(l.e).toBeInstanceOf(ConflictError);
-      expect(l.e.code).toBe('CAPACITY_FULL');
+      expect((l.e as ConflictError).code).toBe('CAPACITY_FULL');
     }
 
     const inv = await capacityInvariant(pool, f.sessionId);
@@ -104,7 +104,7 @@ describe('T1 (persistence level): N parallel connections race for the last place
 describe('allocation state machine', () => {
   it('release gives the place back; releasing twice does not double-decrement', async () => {
     const f = await makeFixture(pool, { booked: 2, patients: 1 });
-    const { allocationId } = await bookOne(pool, f, f.patientIds[0]!);
+    const { allocationId } = await bookOne(pool, f, nth(f.patientIds, 0));
     const out = await withTransaction(pool, async (tx) => {
       await lockSession(tx, f.sessionId);
       await lockCapacity(tx, f.sessionId);
@@ -118,7 +118,7 @@ describe('allocation state machine', () => {
 
   it('consumed never reopens (FR-04): release is refused and counters stay', async () => {
     const f = await makeFixture(pool, { booked: 2, patients: 1 });
-    const { allocationId } = await bookOne(pool, f, f.patientIds[0]!);
+    const { allocationId } = await bookOne(pool, f, nth(f.patientIds, 0));
     await withTransaction(pool, async (tx) => {
       await lockSession(tx, f.sessionId);
       await lockCapacity(tx, f.sessionId);
@@ -145,7 +145,7 @@ describe('allocation state machine', () => {
 
   it('a released allocation cannot be consumed', async () => {
     const f = await makeFixture(pool, { booked: 2, patients: 1 });
-    const { allocationId } = await bookOne(pool, f, f.patientIds[0]!);
+    const { allocationId } = await bookOne(pool, f, nth(f.patientIds, 0));
     const err = await withTransaction(pool, async (tx) => {
       await lockSession(tx, f.sessionId);
       await lockCapacity(tx, f.sessionId);
@@ -214,11 +214,11 @@ describe('reschedule atomicity (reserve target, then release original, one trans
   /** Reschedule as the scheduling module will do it: lock both guards in sorted order. */
   function reschedule(f: Fixture, appointmentId: string, targetSessionId: string, failAfterRelease = false) {
     return withTransaction(pool, async (tx) => {
-      const appt = (await getAppointment(tx, appointmentId))!;
+      const appt = must(await getAppointment(tx, appointmentId), 'appointment');
       await lockDoctor(tx, f.doctorId);
       const sessions = await lockSessions(tx, [appt.sessionId, targetSessionId]);
       await lockCapacities(tx, [appt.sessionId, targetSessionId]);
-      const target = sessions.find((s) => s.id === targetSessionId)!;
+      const target = must(sessions.find((s) => s.id === targetSessionId), 'target session');
       const newAlloc = await reserveBooked(tx, targetSessionId); // CAPACITY_FULL here aborts before anything is released
       await releaseAllocation(tx, appt.allocationId);
       await setAppointmentStatus(tx, appt.id, 'rescheduled');
@@ -247,8 +247,8 @@ describe('reschedule atomicity (reserve target, then release original, one trans
   it('target full: the reschedule fails and the original appointment is intact', async () => {
     const f = await makeFixture(pool, { booked: 5, patients: 2 });
     const target = await addSession(pool, f, { booked: 1 });
-    const original = await bookOne(pool, f, f.patientIds[0]!);
-    await bookOne(pool, f, f.patientIds[1]!, target); // target now full
+    const original = await bookOne(pool, f, nth(f.patientIds, 0));
+    await bookOne(pool, f, nth(f.patientIds, 1), target); // target now full
     const before = await snapshot(f.sessionId, original.appointmentId);
 
     const err = await reschedule(f, original.appointmentId, target).catch((e) => e);
@@ -262,7 +262,7 @@ describe('reschedule atomicity (reserve target, then release original, one trans
   it('failure after the release rolls everything back, including the release', async () => {
     const f = await makeFixture(pool, { booked: 5, patients: 1 });
     const target = await addSession(pool, f, { booked: 3 });
-    const original = await bookOne(pool, f, f.patientIds[0]!);
+    const original = await bookOne(pool, f, nth(f.patientIds, 0));
     const before = await snapshot(f.sessionId, original.appointmentId);
     await expect(reschedule(f, original.appointmentId, target, true)).rejects.toThrow('simulated failure');
     expect(await snapshot(f.sessionId, original.appointmentId)).toEqual(before);
@@ -274,11 +274,11 @@ describe('reschedule atomicity (reserve target, then release original, one trans
   it('success: target reserved, original released, link recorded', async () => {
     const f = await makeFixture(pool, { booked: 5, patients: 1 });
     const target = await addSession(pool, f, { booked: 3 });
-    const original = await bookOne(pool, f, f.patientIds[0]!);
+    const original = await bookOne(pool, f, nth(f.patientIds, 0));
     const movedId = await reschedule(f, original.appointmentId, target);
-    const moved = (await getAppointment(pool, movedId))!;
+    const moved = must(await getAppointment(pool, movedId), 'moved appointment');
     expect(moved).toMatchObject({ sessionId: target, status: 'booked', rescheduledFromId: original.appointmentId });
-    expect((await getAppointment(pool, original.appointmentId))!.status).toBe('rescheduled');
+    expect(must(await getAppointment(pool, original.appointmentId), 'original').status).toBe('rescheduled');
     expect((await capacityInvariant(pool, f.sessionId)).counters.bookedReserved).toBe(0);
     expect((await capacityInvariant(pool, target)).counters.bookedReserved).toBe(1);
   });
@@ -286,8 +286,8 @@ describe('reschedule atomicity (reserve target, then release original, one trans
   it('two patients rescheduling in opposite directions at once do not deadlock or oversubscribe', async () => {
     const f = await makeFixture(pool, { booked: 1, patients: 2 });
     const other = await addSession(pool, f, { booked: 1 });
-    const a = await bookOne(pool, f, f.patientIds[0]!, f.sessionId);
-    const b = await bookOne(pool, f, f.patientIds[1]!, other);
+    const a = await bookOne(pool, f, nth(f.patientIds, 0), f.sessionId);
+    const b = await bookOne(pool, f, nth(f.patientIds, 1), other);
     // both sessions are full: each reschedule must fail cleanly (CAPACITY_FULL), none may deadlock
     const results = await Promise.all([
       reschedule(f, a.appointmentId, other).catch((e) => e.code),

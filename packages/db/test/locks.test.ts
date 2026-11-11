@@ -14,7 +14,7 @@ import {
   reserveBooked,
   withTransaction,
 } from '../src/index.js';
-import { addSession, makeFixture, TEST_DB, testUrl } from './helpers.js';
+import { addSession, makeFixture, nth, TEST_DB, testUrl } from './helpers.js';
 
 let pool: Pool;
 beforeAll(() => {
@@ -143,7 +143,7 @@ describe('lock order doctor -> session -> capacity', () => {
       const allocationId = await reserveBooked(tx, f.sessionId);
       // FK check on doctors/sessions takes FOR KEY SHARE; must not wait for a doctor FOR NO KEY UPDATE holder
       await insertAppointment(tx, {
-        patientId: f.patientIds[0]!,
+        patientId: nth(f.patientIds, 0),
         sessionId: f.sessionId,
         doctorId: f.doctorId,
         scheduledAt: s.startsAt,

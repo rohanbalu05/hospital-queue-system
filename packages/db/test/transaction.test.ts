@@ -74,7 +74,7 @@ describe('withTransaction retry', () => {
     };
     const run = (name: 'x' | 'y', first: string, second: string) =>
       withTransaction(pool, async (tx) => {
-        attempts[name]!++;
+        attempts[name] = (attempts[name] ?? 0) + 1;
         await tx.query(`SET LOCAL deadlock_timeout = '50ms'`);
         await tx.query(`SELECT 1 FROM doctors WHERE id = $1 FOR UPDATE`, [first]);
         if (tx.attempt === 1) await sync(); // both hold their first row before asking for the other
@@ -83,7 +83,7 @@ describe('withTransaction retry', () => {
       });
     const results = await Promise.all([run('x', a.doctorId, b.doctorId), run('y', b.doctorId, a.doctorId)]);
     expect(results.sort()).toEqual(['x', 'y']);
-    expect(attempts['x']! + attempts['y']!).toBeGreaterThanOrEqual(3); // at least one was retried
+    expect((attempts['x'] ?? 0) + (attempts['y'] ?? 0)).toBeGreaterThanOrEqual(3); // at least one was retried
   });
 
   it('maps lock_timeout (55P03) to a ConflictError without retrying', async () => {
