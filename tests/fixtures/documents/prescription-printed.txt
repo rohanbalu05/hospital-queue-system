@@ -1,0 +1,2 @@
+HQMS-FIXTURE:prescription-printed
+Synthetic test document for the fake OCR provider. Not a real record.
