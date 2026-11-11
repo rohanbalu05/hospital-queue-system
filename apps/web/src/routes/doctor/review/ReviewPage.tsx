@@ -3,7 +3,14 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { VerifyInstructionRequest } from '@hqms/contracts';
 import { API_BASE } from '@/lib/api';
-import { useDocumentDrafts, useInstructions, useRetryOcr, useReviewInbox, useVerifyInstruction, type ReviewItem } from '@/api';
+import {
+  useDocumentDrafts,
+  useInstructions,
+  useRetryOcr,
+  useReviewInbox,
+  useVerifyInstruction,
+  type ReviewItem,
+} from '@/api';
 import { StaffShell } from '@/components/layout/Shells';
 import { EmptyState, ErrorState, SkeletonRows } from '@/components/queue';
 import { InlineAlert } from '@/components/scheduling/status';
@@ -25,20 +32,21 @@ function InboxList({ items, selectedId }: { items: ReviewItem[]; selectedId: str
       </header>
       <ul className="divide-y divide-rule">
         {items.map((d) => {
-          const failed = d.status === 'ocr_failed';
           return (
             <li key={d.id}>
               <Link
                 to={`/doctor/review/${d.id}`}
                 aria-current={d.id === selectedId ? 'true' : undefined}
                 className={cn(
-                  'block border-l-[3px] px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink',
+                  'block border-l-[3px] px-3 py-2 focus-visible:outline-offset-[-2px] ',
                   d.id === selectedId ? 'border-l-ink bg-secondary' : 'border-l-transparent hover:bg-secondary/60',
                 )}
               >
                 <span className="flex items-baseline gap-2">
                   <span className="min-w-0 flex-1 truncate font-bold">{d.patientName}</span>
-                  <span className={cn('shrink-0 text-xs font-bold', failed ? 'text-priority' : 'text-ink')}>{STAFF_DOCUMENT_STATUS[d.status] ?? d.status}</span>
+                  <span className={cn('shrink-0 text-xs font-bold', 'text-ink')}>
+                    {STAFF_DOCUMENT_STATUS[d.status] ?? d.status}
+                  </span>
                 </span>
                 <span className="mt-0.5 block truncate text-muted-foreground">{d.originalName}</span>
                 <span className="block text-xs text-muted-foreground tabular-nums">
@@ -53,7 +61,17 @@ function InboxList({ items, selectedId }: { items: ReviewItem[]; selectedId: str
   );
 }
 
-function Panel({ title, label, children, className }: { title: string; label?: ReactNode; children: ReactNode; className?: string }) {
+function Panel({
+  title,
+  label,
+  children,
+  className,
+}: {
+  title: string;
+  label?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <section aria-label={title} className={cn('rounded-xl border border-rule bg-surface', className)}>
       <header className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 border-b border-rule px-3 py-2">
@@ -73,9 +91,14 @@ function ReviewDetail({ item, onDone }: { item: ReviewItem; onDone: () => void }
   const verify = useVerifyInstruction();
   const retry = useRetryOcr();
 
-  const latest = drafts.data && drafts.data.length > 0 ? [...drafts.data].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).at(-1) : undefined;
+  const latest =
+    drafts.data && drafts.data.length > 0
+      ? [...drafts.data].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).at(-1)
+      : undefined;
   const current = (instructions.data ?? []).filter((v) => v.status === 'current');
-  const showForm = failed ? manual : latest !== undefined || drafts.isError || (drafts.data !== undefined && drafts.data.length === 0);
+  const showForm = failed
+    ? manual
+    : latest !== undefined || drafts.isError || (drafts.data !== undefined && drafts.data.length === 0);
 
   const doVerify = (req: VerifyInstructionRequest) => {
     verify.mutate(
@@ -94,7 +117,8 @@ function ReviewDetail({ item, onDone }: { item: ReviewItem; onDone: () => void }
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <h2 className="text-lg font-bold">{item.patientName}</h2>
         <p className="text-muted-foreground tabular-nums">
-          {item.originalName}, {fileSizeWord(item.sizeBytes)}, {item.pageCount} {item.pageCount === 1 ? 'page' : 'pages'}
+          {item.originalName}, {fileSizeWord(item.sizeBytes)}, {item.pageCount}{' '}
+          {item.pageCount === 1 ? 'page' : 'pages'}
         </p>
         <a
           href={`${API_BASE}/documents/${item.id}/file`}
@@ -109,12 +133,17 @@ function ReviewDetail({ item, onDone }: { item: ReviewItem; onDone: () => void }
       <div className="grid items-start gap-4 xl:grid-cols-2">
         <Panel
           title="OCR draft"
-          label={<span className="rounded-xs bg-muted px-1.5 py-0.5 text-xs font-bold text-muted-foreground">Draft, not visible to the patient&apos;s assistant</span>}
+          label={
+            <span className="rounded-xs bg-muted px-1.5 py-0.5 text-xs font-bold text-muted-foreground">
+              Draft — not visible to the patient&apos;s assistant
+            </span>
+          }
         >
           {failed ? (
             <div className="grid gap-3">
               <InlineAlert title="OCR failed">
-                {item.lastError ?? 'The text could not be read from this document.'} {item.ocrAttempts > 0 ? `Attempts so far: ${item.ocrAttempts}.` : ''}
+                {item.lastError ?? 'The text could not be read from this document.'}{' '}
+                {item.ocrAttempts > 0 ? `Attempts so far: ${item.ocrAttempts}.` : ''}
               </InlineAlert>
               {retry.isError ? <InlineAlert title="Retry was not started">{retry.error.message}</InlineAlert> : null}
               <div className="flex flex-wrap gap-2">
@@ -124,7 +153,12 @@ function ReviewDetail({ item, onDone }: { item: ReviewItem; onDone: () => void }
                   onClick={() =>
                     retry.mutate(
                       { documentId: item.id, expectedVersion: item.version },
-                      { onSuccess: () => { toast.success('OCR retry started'); onDone(); } },
+                      {
+                        onSuccess: () => {
+                          toast.success('OCR retry started');
+                          onDone();
+                        },
+                      },
                     )
                   }
                 >
@@ -134,12 +168,20 @@ function ReviewDetail({ item, onDone }: { item: ReviewItem; onDone: () => void }
                   Transcribe manually
                 </Button>
               </div>
-              {manual ? <p className="text-muted-foreground">Open the original, then type the instruction in the form. Nothing is saved until you verify it.</p> : null}
+              {manual ? (
+                <p className="text-muted-foreground">
+                  Open the original, then type the instruction in the form. Nothing is saved until you verify it.
+                </p>
+              ) : null}
             </div>
           ) : drafts.isPending ? (
             <SkeletonRows count={6} className="border-0" />
           ) : drafts.isError ? (
-            <ErrorState title="The draft could not be loaded" error={drafts.error} onRetry={() => void drafts.refetch()} />
+            <ErrorState
+              title="The draft could not be loaded"
+              error={drafts.error}
+              onRetry={() => void drafts.refetch()}
+            />
           ) : latest ? (
             <pre
               tabIndex={0}
@@ -149,9 +191,15 @@ function ReviewDetail({ item, onDone }: { item: ReviewItem; onDone: () => void }
               {latest.text}
             </pre>
           ) : (
-            <p className="text-muted-foreground">No draft text was produced. Open the original and type the instruction yourself.</p>
+            <p className="text-muted-foreground">
+              No draft text was produced. Open the original and type the instruction yourself.
+            </p>
           )}
-          {latest ? <p className="mt-2 text-xs text-muted-foreground tabular-nums">Read by {latest.provider} at {formatIST(latest.createdAt, 'date-time')}.</p> : null}
+          {latest ? (
+            <p className="mt-2 text-xs text-muted-foreground tabular-nums">
+              Read by {latest.provider} at {formatIST(latest.createdAt, 'date-time')}.
+            </p>
+          ) : null}
         </Panel>
 
         <Panel title="Instruction to verify">
@@ -171,7 +219,9 @@ function ReviewDetail({ item, onDone }: { item: ReviewItem; onDone: () => void }
               />
             )
           ) : failed ? (
-            <p className="text-muted-foreground">Retry OCR, or choose Transcribe manually to write the instruction from the original.</p>
+            <p className="text-muted-foreground">
+              Retry OCR, or choose Transcribe manually to write the instruction from the original.
+            </p>
           ) : (
             <SkeletonRows count={4} className="border-0" />
           )}
@@ -202,10 +252,15 @@ export default function ReviewPage({ nav }: { nav: ReactNode }) {
       {inbox.isPending ? (
         <SkeletonRows count={6} />
       ) : inbox.isError && !inbox.data ? (
-        <ErrorState title="The review inbox could not be loaded" error={inbox.error} onRetry={() => void inbox.refetch()} />
+        <ErrorState
+          title="The review inbox could not be loaded"
+          error={inbox.error}
+          onRetry={() => void inbox.refetch()}
+        />
       ) : items.length === 0 ? (
         <EmptyState title="Nothing to verify">
-          Documents your patients upload appear here once their text has been read. Verifying an instruction is what lets the patient assistant quote it.
+          Documents your patients upload appear here once their text has been read. Verifying an instruction is what
+          lets the patient assistant quote it.
         </EmptyState>
       ) : (
         <div className="grid items-start gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">

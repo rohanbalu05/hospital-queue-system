@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { PatientShell } from '@/components/layout/Shells';
 import { cn } from '@/lib/utils';
 
@@ -14,9 +14,12 @@ const NAV = [
 
 function PatientNav() {
   const listRef = useRef<HTMLUListElement>(null);
+  const { pathname } = useLocation();
   useEffect(() => {
     // Six tabs scroll sideways on a phone: keep the current one in view.
-    listRef.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ inline: 'center', block: 'nearest' });
+    listRef.current
+      ?.querySelector<HTMLElement>('[aria-current="page"]')
+      ?.scrollIntoView?.({ inline: 'center', block: 'nearest' });
   }, []);
   return (
     <nav aria-label="Patient" className="border-b border-rule bg-surface">
@@ -26,10 +29,14 @@ function PatientNav() {
             <NavLink
               to={n.to}
               end={n.end}
+              aria-current={n.to === '/patient' && pathname.startsWith('/patient/visit/') ? 'page' : undefined}
               className={({ isActive }) =>
                 cn(
                   'flex min-h-12 items-center justify-center border-b-[3px] px-3 text-center text-base leading-5 font-bold whitespace-nowrap sm:px-4',
-                  isActive ? 'border-ink text-ink' : 'border-transparent text-muted-foreground hover:text-ink',
+                  // My visit (/patient/visit/:id) belongs to the Today tab.
+                  isActive || (n.to === '/patient' && pathname.startsWith('/patient/visit/'))
+                    ? 'border-ink text-ink'
+                    : 'border-transparent text-muted-foreground hover:text-ink',
                 )
               }
             >
@@ -43,7 +50,15 @@ function PatientNav() {
 }
 
 /** Wraps a patient page in the shell with the patient navigation. */
-export function PatientPage({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+export function PatientPage({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
   return (
     <PatientShell title={title} nav={<PatientNav />} {...(description ? { description } : {})}>
       {children}

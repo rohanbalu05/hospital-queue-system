@@ -98,7 +98,7 @@ export default function VisitsPage() {
 
           {past.length > 0 ? (
             <Collapsible open={pastOpen} onOpenChange={setPastOpen}>
-              <CollapsibleTrigger className="flex min-h-12 w-full items-center justify-between rounded-md px-1 text-left text-lg font-bold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+              <CollapsibleTrigger className="flex min-h-12 w-full items-center justify-between rounded-md px-1 text-left text-lg font-bold    ">
                 <span>
                   Past and cancelled <span className="tabular-nums">({past.length})</span>
                 </span>
@@ -132,7 +132,7 @@ function AppointmentLine({ a }: { a: Appointment }) {
           {formatLocalDate(istDate(a.scheduledAt))}, {formatIST(a.scheduledAt)}
         </p>
         <p>{a.doctorName}</p>
-        <p className="text-sm text-muted-foreground">{a.department}</p>
+        <p className="text-base text-muted-foreground">{a.department}</p>
       </div>
       <StatusWord status={a.status} className="shrink-0" />
     </div>

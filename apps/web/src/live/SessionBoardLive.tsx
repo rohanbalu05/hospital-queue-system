@@ -116,7 +116,7 @@ function BoardBody({ snapshot, status, lastUpdated, refreshFailed, selectedEntry
           <span
             className={cn(
               'ml-1 rounded-xs px-1.5 py-0.5 text-xs',
-              snapshot.status === 'open' ? 'bg-done/10 text-done' : 'bg-priority/10 text-priority',
+              'bg-ink/10 text-ink',
             )}
           >
             {SESSION_STATUS_WORD[snapshot.status]}

@@ -121,7 +121,8 @@ export default function AssistantPage() {
       onSuccess: (a) => {
         if (patientId) saveConversation(patientId, a.conversationId);
         setConversationId(a.conversationId);
-        if (a.escalation) setDueNow((d) => ({ ...d, [a.escalation!.taskId]: a.escalation!.dueAt }));
+        const esc = a.escalation;
+        if (esc) setDueNow((d) => ({ ...d, [esc.taskId]: esc.dueAt }));
         setQuestion('');
         setAsked(null);
       },

@@ -77,7 +77,7 @@ export function SessionBoard(p: SessionBoardProps) {
               {sessionLabelWord(s)}, {sessionTimes(s)}
             </p>
             <p>
-              <span className={cn('font-bold', s.status === 'open' ? 'text-done' : s.status === 'paused' || s.status === 'unavailable' ? 'text-priority' : 'text-ink')}>
+              <span className={cn('font-bold', s.status === 'paused' || s.status === 'unavailable' ? 'text-ink' : 'text-muted-foreground')}>
                 {SESSION_WORD[s.status]}
               </span>
             </p>
@@ -90,7 +90,8 @@ export function SessionBoard(p: SessionBoardProps) {
           walkin={s.capacity.walkinUsed}
           walkinCapacity={s.capacity.walkinCapacity}
         />
-        <StaleBanner className="mt-3" status={p.stale ? 'reconnecting' : 'live'} lastUpdated={p.lastUpdated} />
+        {/* The live board below carries the "Last updated" line; this one speaks up only when the arrivals list went stale. */}
+        {p.stale ? <StaleBanner className="mt-3" status="reconnecting" lastUpdated={p.lastUpdated} /> : null}
       </div>
 
       <SessionBoardLive
