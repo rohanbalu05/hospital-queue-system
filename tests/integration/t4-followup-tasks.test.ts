@@ -79,15 +79,21 @@ describe('T4.6 overdue tasks stay open and visible (FR-11)', () => {
     const t = await createTask(followup1, P3, { title: 'Overdue call back', dueAt: futureIso(-2) });
     expect(t.status).toBe('open');
     expect(t.overdue).toBe(true);
-    expect(t.ownerId).toBeNull();
+    // D-028: a task always has an owner; a follow-up user who creates one without naming an owner owns it.
+    expect(t.ownerId).toBe(followup1Id);
 
     const all = await followup1.get('/follow-up-tasks?owner=all&overdue=true');
     expect(all.status).toBe(200);
     expect((all.body as any[]).map((x) => x.id)).toContain(t.id);
     const notOverdue = await followup1.get('/follow-up-tasks?owner=all&overdue=false');
     expect((notOverdue.body as any[]).map((x) => x.id)).not.toContain(t.id);
+    const mine = await followup1.get('/follow-up-tasks?owner=me&status=open&overdue=true');
+    expect((mine.body as any[]).map((x) => x.id)).toContain(t.id);
     const unassigned = await followup1.get('/follow-up-tasks?owner=unassigned&status=open');
-    expect((unassigned.body as any[]).map((x) => x.id)).toContain(t.id);
+    expect(
+      (unassigned.body as any[]).map((x) => x.id),
+      'an owned task is not in the unassigned list',
+    ).not.toContain(t.id);
 
     // The doctor of the patient sees it too (their scope); reception and the patient do not.
     expect(((await doctor.get('/follow-up-tasks?owner=all')).body as any[]).map((x) => x.id)).toContain(t.id);
@@ -164,9 +170,34 @@ describe('T4.6 overdue tasks stay open and visible (FR-11)', () => {
 });
 
 describe('T4.7 acknowledging takes ownership (FR-11)', () => {
-  it('an unowned task is acknowledged by the caller, who becomes its owner', async () => {
-    const t = await createTask(followup2, P3, { title: 'Unowned task to acknowledge' });
+  it('a task created without an owner always gets one (D-028): the creating follow-up user, or a default owner for a doctor', async () => {
+    const own = await createTask(followup2, P3, { title: 'Created by follow-up user 2' });
+    expect(own.ownerId).toBe(followup2Id);
+    const byDoctor = await createTask(doctor, P3, { title: 'Created by the doctor, no owner named' });
+    expect(byDoctor.ownerId, 'doctor-created task gets a default owner').toBeTruthy();
+    expect([followup1Id, followup2Id]).toContain(byDoctor.ownerId);
+    const detail = await followup1.get(`/follow-up-tasks/${byDoctor.id}`);
+    expect(detail.body.ownerId).toBe(byDoctor.ownerId);
+    const unassigned = await followup1.get('/follow-up-tasks?owner=unassigned&status=open');
+    const ids = (unassigned.body as any[]).map((x) => x.id);
+    expect(ids).not.toContain(own.id);
+    expect(ids).not.toContain(byDoctor.id);
+    const audit = await sqlRows(`SELECT operation, actor_role FROM audit_events WHERE entity_id = $1 ORDER BY id`, [
+      byDoctor.id,
+    ]);
+    expect(audit.map((a) => a['operation'])).toEqual(['follow_up.create']);
+    record['defaultOwner'] = { followUpCreator: 'self', doctorCreator: 'assigned follow-up user' };
+  });
+
+  it('a task left without an owner (cleared in the database) is acknowledged by the caller, who becomes its owner', async () => {
+    const created = await createTask(followup2, P3, { title: 'Unowned task to acknowledge' });
+    // The API no longer produces an unowned task; clear the owner directly to exercise the documented
+    // "unowned -> the caller takes it" rule of acknowledge.
+    await sqlRows(`UPDATE follow_up_tasks SET owner_id = NULL WHERE id = $1`, [created.id]);
+    const t = (await followup2.get(`/follow-up-tasks/${created.id}`)).body;
     expect(t.ownerId).toBeNull();
+    const unassigned = await followup1.get('/follow-up-tasks?owner=unassigned&status=open');
+    expect((unassigned.body as any[]).map((x) => x.id)).toContain(t.id);
     const stale = await followup2.post(`/follow-up-tasks/${t.id}/acknowledge`, { expectedVersion: t.version + 5 });
     expect(stale.status).toBe(409);
     const ack = await followup2.post(`/follow-up-tasks/${t.id}/acknowledge`, { expectedVersion: t.version });
@@ -188,6 +219,39 @@ describe('T4.7 acknowledging takes ownership (FR-11)', () => {
     expect(audit.map((a) => a['operation'])).toEqual(['follow_up.create', 'follow_up.acknowledge']);
     expect(audit[1]?.['actor_id']).toBe(followup2Id);
     record['acknowledge'] = { ownerAfter: 'caller', status: ack.body.status };
+  });
+
+  it('resolve and cancel need the owner (or admin); an unowned task is taken by the caller (D-028)', async () => {
+    const t = await createTask(followup1, P3, { title: 'Owned by follow-up user 1', ownerId: followup1Id });
+    const denyResolve = await followup2.post(`/follow-up-tasks/${t.id}/resolve`, {
+      disposition: 'advice_given',
+      outcomeNote: 'not my task',
+    });
+    expect(denyResolve.status).toBe(403);
+    const denyCancel = await followup2.post(`/follow-up-tasks/${t.id}/cancel`, { reason: 'not my task' });
+    expect(denyCancel.status).toBe(403);
+    const after = (await followup1.get(`/follow-up-tasks/${t.id}`)).body;
+    expect(after.status).toBe('open');
+    expect(after.ownerId).toBe(followup1Id);
+    // the audit trail has no resolve/cancel row for the refused attempts
+    const audit = await sqlRows(`SELECT operation FROM audit_events WHERE entity_id = $1 ORDER BY id`, [t.id]);
+    expect(audit.map((a) => a['operation'])).toEqual(['follow_up.create']);
+    // admin may act on any task, and the owner stays the owner
+    const byAdmin = await admin.post(`/follow-up-tasks/${t.id}/cancel`, { reason: 'Admin closed a duplicate task' });
+    expect(byAdmin.status, JSON.stringify(byAdmin.body)).toBe(200);
+    expect(byAdmin.body.status).toBe('cancelled');
+    expect(byAdmin.body.ownerId).toBe(followup1Id);
+
+    // unowned (cleared in the database): the caller who resolves it takes it
+    const u = await createTask(followup1, P3, { title: 'Unowned, resolved by follow-up user 2' });
+    await sqlRows(`UPDATE follow_up_tasks SET owner_id = NULL WHERE id = $1`, [u.id]);
+    const takes = await followup2.post(`/follow-up-tasks/${u.id}/resolve`, {
+      disposition: 'no_action_needed',
+      outcomeNote: 'Nothing further needed.',
+    });
+    expect(takes.status, JSON.stringify(takes.body)).toBe(200);
+    expect(takes.body.ownerId).toBe(followup2Id);
+    record['resolveCancelOwnerRule'] = { nonOwnerStatus: denyResolve.status, adminStatus: byAdmin.status };
   });
 
   it('a task owned by someone else cannot be taken over by another follow-up user; its owner can acknowledge it', async () => {

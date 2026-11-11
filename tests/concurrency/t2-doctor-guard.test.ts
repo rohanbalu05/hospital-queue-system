@@ -83,9 +83,12 @@ describe('T2 doctor guard under concurrency', () => {
       label: 'afternoon',
     });
     expect(new Date(sessionB.startsAt).getTime()).toBeLessThan(new Date(sessionA.endsAt).getTime());
-    const patients = await registerPatients(reception, 32, 'T2 Guard');
-    await admitWalkIns(reception, sessionA.id, patients.slice(0, 16));
-    await admitWalkIns(reception, sessionB.id, patients.slice(16, 32));
+    // Each session holds ROUNDS patients, so neither can run dry before the last round even if one session wins every
+    // round. (With 16 each, a drained session answered 200 NO_ALLOCATION with entry null, which is not an allocation
+    // but was counted as a second "winner" in about one run in four.)
+    const patients = await registerPatients(reception, ROUNDS * 2, 'T2 Guard');
+    await admitWalkIns(reception, sessionA.id, patients.slice(0, ROUNDS));
+    await admitWalkIns(reception, sessionB.id, patients.slice(ROUNDS, ROUNDS * 2));
 
     const allLatencies: number[] = [];
     const winnerLatencies: number[] = [];
