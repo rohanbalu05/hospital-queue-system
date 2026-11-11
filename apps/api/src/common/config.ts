@@ -22,6 +22,7 @@ const EnvSchema = z.object({
   LOGIN_RATE_LIMIT_WINDOW_SEC: z.coerce.number().int().positive().default(60),
   SSE_POLL_MS: z.coerce.number().int().min(50).default(500),
   SSE_PING_MS: z.coerce.number().int().min(50).default(15_000),
+  ASSISTANT_TIMEOUT_MS: z.coerce.number().int().min(50).default(15_000),
 });
 
 export interface AppConfig {
@@ -44,6 +45,8 @@ export interface AppConfig {
   ssePollMs: number;
   /** SSE heartbeat (`event: ping`) interval. */
   ssePingMs: number;
+  /** The LLM call is abandoned after this long and the question is escalated to staff (FR-14). */
+  assistantTimeoutMs: number;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -68,5 +71,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     loginRateLimitWindowSec: e.LOGIN_RATE_LIMIT_WINDOW_SEC,
     ssePollMs: e.SSE_POLL_MS,
     ssePingMs: e.SSE_PING_MS,
+    assistantTimeoutMs: e.ASSISTANT_TIMEOUT_MS,
   };
 }
