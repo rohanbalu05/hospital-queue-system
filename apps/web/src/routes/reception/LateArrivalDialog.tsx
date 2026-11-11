@@ -2,11 +2,19 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '@/components/ui/button';
 import { InlineAlert } from '@/components/scheduling/status';
 import { formatIST } from '@/lib/format';
-import type { ArrivalItem, PanelError } from './model';
+import type { PanelError } from './model';
+
+/** Who is late and when their appointment was. The check-in path passes an arrival; the re-enter path a queue entry. */
+export interface LateSubject {
+  name: string;
+  scheduledAt: string | null;
+  /** check-in: the arrival is late. re-enter: a skipped or absent patient comes back after their grace. */
+  mode?: 'check-in' | 're-enter';
+}
 
 interface LateArrivalDialogProps {
   open: boolean;
-  item: ArrivalItem | null;
+  subject: LateSubject | null;
   minutesLate: number;
   graceMin?: number;
   pending: boolean;
@@ -18,7 +26,8 @@ interface LateArrivalDialogProps {
 }
 
 /** 409 LATE_ARRIVAL_REQUIRES_REVIEW: staff decide. Default focus is "Not now" so Enter never admits by accident. */
-export function LateArrivalDialog({ open, item, minutesLate, graceMin = 15, pending, error, onAdmit, onClose, onClosed }: LateArrivalDialogProps) {
+export function LateArrivalDialog({ open, subject, minutesLate, graceMin = 15, pending, error, onAdmit, onClose, onClosed }: LateArrivalDialogProps) {
+  const returning = subject?.mode === 're-enter';
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !pending && onClose()}>
       <DialogContent
@@ -32,12 +41,13 @@ export function LateArrivalDialog({ open, item, minutesLate, graceMin = 15, pend
         }}
       >
         <DialogHeader>
-          <DialogTitle>Arrived {minutesLate} min late</DialogTitle>
+          <DialogTitle>{returning ? `Returned ${minutesLate} min after the appointment` : `Arrived ${minutesLate} min late`}</DialogTitle>
           <DialogDescription className="text-base text-ink">
-            {item ? (
+            {subject ? (
               <>
-                {item.name} had an appointment at <span className="tabular-nums">{item.appointment ? formatIST(item.appointment.scheduledAt) : '-'}</span>. This is after the{' '}
-                {graceMin} min grace. Admitting uses a walk-in place and walk-in order.
+                {subject.name} had an appointment at <span className="tabular-nums">{subject.scheduledAt ? formatIST(subject.scheduledAt) : '-'}</span>. This is after the{' '}
+                {graceMin} min grace.{' '}
+                {returning ? 'Re-entering them puts them back in walk-in order.' : 'Admitting uses a walk-in place and walk-in order.'}
               </>
             ) : null}
           </DialogDescription>

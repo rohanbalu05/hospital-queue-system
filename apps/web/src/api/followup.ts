@@ -234,8 +234,15 @@ export function useAskAssistant() {
   const qc = useQueryClient();
   return useMutation<AssistantAnswer, ApiRequestError, AskAssistantRequest>({
     mutationFn: (body) => apiFetch('/assistant/messages', { method: 'POST', body, schema: AssistantAnswer }),
-    onSettled: (data) => {
-      if (data) void qc.invalidateQueries({ queryKey: followKeys.conversation(data.conversationId) });
+    // Wait for the conversation to reload so the new reply replaces the "checking" row without a gap.
+    onSuccess: async (data) => {
+      await qc
+        .fetchQuery({
+          queryKey: followKeys.conversation(data.conversationId),
+          queryFn: ({ signal }) => get(`/assistant/conversations/${data.conversationId}/messages`, {}, listOf(ConversationMessage), signal),
+          staleTime: 0,
+        })
+        .catch(() => undefined);
       void qc.invalidateQueries({ queryKey: followKeys.tasks });
     },
   });

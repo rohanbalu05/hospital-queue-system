@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import BookPage from './BookPage';
 import VisitsPage from './VisitsPage';
+import DocumentsPage from './DocumentsPage';
+import AssistantPage from './AssistantPage';
+import FollowUpsPage from './FollowUpsPage';
 
 /** W2 adds the live visit (token, position, ETA) here. */
 function TodayPage() {
@@ -31,6 +34,9 @@ export default function PatientHome() {
       <Route index element={<TodayPage />} />
       <Route path="book" element={<BookPage />} />
       <Route path="visits" element={<VisitsPage />} />
+      <Route path="documents" element={<DocumentsPage />} />
+      <Route path="questions" element={<AssistantPage />} />
+      <Route path="follow-ups" element={<FollowUpsPage />} />
       <Route path="*" element={<TodayPage />} />
     </Routes>
   );

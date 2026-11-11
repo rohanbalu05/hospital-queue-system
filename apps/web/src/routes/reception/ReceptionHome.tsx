@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import type { ArrivalResult, RegisterPatientRequest } from '@hqms/contracts';
+import type { ArrivalResult, QueueEntry, RegisterPatientRequest } from '@hqms/contracts';
 import {
   useAdmitWalkIn,
   useCheckIn,
@@ -10,6 +10,8 @@ import {
   useSessionAppointmentsQuery,
   useSessionsQuery,
 } from '@/api';
+import { useEntryAction } from '@/api/queue';
+import { useQueueSnapshot } from '@/live';
 import { StaffShell } from '@/components/layout/Shells';
 import { EmptyState, ErrorState, SkeletonRows } from '@/components/queue';
 import { ApiRequestError } from '@/lib/api';
@@ -18,6 +20,7 @@ import { formatLocalDate, istDate, minutesBetween } from '@/lib/dates';
 import { ActionPanel } from './ActionPanel';
 import { ArrivalSearch } from './ArrivalSearch';
 import { LateArrivalDialog } from './LateArrivalDialog';
+import { QueueEntryPanel } from './QueueEntryPanel';
 import { SessionBoard } from './SessionBoard';
 import { buildItems, canCheckIn, type ArrivalItem, type ArrivalOutcome, type PanelError } from './model';
 
@@ -58,6 +61,23 @@ function toPanelError(e: unknown, what: 'check-in' | 'walk-in'): PanelError {
   }
 }
 
+function toEntryError(e: unknown, failed: string): PanelError {
+  const err = e instanceof ApiRequestError ? e : null;
+  switch (err?.code) {
+    case 'INVALID_TRANSITION':
+    case 'CONFLICT':
+      return { code: err.code, title: failed, message: 'This patient is no longer in that state. The board has been refreshed.', hint: 'Check the board, then try again.' };
+    case 'FORBIDDEN':
+      return { code: 'FORBIDDEN', title: failed, message: 'Your role cannot do this for this doctor.', hint: 'This doctor is not on your assignments.' };
+    case 'SESSION_NOT_CALLABLE':
+      return { code: err.code, title: failed, message: 'This session is closed or the doctor is unavailable, so the patient cannot re-enter it.', hint: 'Ask the doctor or an admin about the session.' };
+    case 'NETWORK':
+      return { code: 'NETWORK', title: failed, message: err.message, hint: 'Press the button again. Nothing was changed.' };
+    default:
+      return { code: err?.code ?? 'UNKNOWN', title: failed, message: 'The server could not complete this.', hint: 'Try again. If it keeps failing, tell an admin.' };
+  }
+}
+
 export default function ReceptionHome() {
   const { me } = useAuth();
   const today = istDate();
@@ -91,6 +111,20 @@ export default function ReceptionHome() {
   const [lateError, setLateError] = useState<PanelError | null>(null);
 
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Live board selection: Mark absent and Re-enter skipped act on this entry (looked up fresh in the snapshot).
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const snapshotQ = useQueueSnapshot(session?.id ?? null);
+  const snapshot = snapshotQ.data?.view === 'staff' ? snapshotQ.data : null;
+  const selectedEntry: QueueEntry | null = useMemo(() => {
+    if (!snapshot || !selectedEntryId) return null;
+    return [snapshot.active, ...snapshot.waiting, ...snapshot.skipped].find((e): e is QueueEntry => e !== null && e.id === selectedEntryId) ?? null;
+  }, [snapshot, selectedEntryId]);
+  const entryAction = useEntryAction(session?.id ?? '');
+  const [entryError, setEntryError] = useState<PanelError | null>(null);
+  const [lateEntry, setLateEntry] = useState<{ entry: QueueEntry; minutesLate: number; scheduledAt: string | null } | null>(null);
+  const [lateEntryError, setLateEntryError] = useState<PanelError | null>(null);
+  const entryPending = entryAction.isPending ? (entryAction.variables?.action === 'absent' ? 'absent' : 're-enter') : null;
 
   // "/" focuses the search box from anywhere that is not a text field.
   useEffect(() => {
@@ -180,7 +214,44 @@ export default function ReceptionHome() {
     });
   };
 
+  const doMarkAbsent = (entry: QueueEntry) => {
+    setEntryError(null);
+    entryAction.mutate(
+      { entryId: entry.id, action: 'absent', expectedVersion: entry.version },
+      {
+        onSuccess: () => toast.success('Marked absent', { description: `${entry.patientName}, token ${entry.token}` }),
+        onError: (e) => setEntryError(toEntryError(e, 'Not marked absent')),
+      },
+    );
+  };
+
+  const doReEnter = (entry: QueueEntry, admitLate = false) => {
+    setEntryError(null);
+    entryAction.mutate(
+      { entryId: entry.id, action: 're-enter', expectedVersion: entry.version, ...(admitLate ? { admitLate: true } : {}) },
+      {
+        onSuccess: () => {
+          toast.success('Re-entered', { description: `${entry.patientName}, token ${entry.token}` });
+          setLateEntry(null);
+          setLateEntryError(null);
+        },
+        onError: (e) => {
+          if (e instanceof ApiRequestError && e.code === 'LATE_ARRIVAL_REQUIRES_REVIEW' && !admitLate) {
+            const d = e.details as { minutesLate?: number; scheduledAt?: string } | null | undefined;
+            setLateEntryError(null);
+            setLateEntry({ entry, minutesLate: d?.minutesLate ?? 0, scheduledAt: d?.scheduledAt ?? entry.scheduledAt });
+            return;
+          }
+          if (admitLate) setLateEntry(null);
+          setEntryError(toEntryError(e, 'Not re-entered'));
+        },
+      },
+    );
+  };
+
   const pickDoctor = (id: string) => {
+    setSelectedEntryId(null);
+    setEntryError(null);
     setDoctorPick(id);
     setSessionPick('');
     setActiveKey(null);
@@ -188,6 +259,8 @@ export default function ReceptionHome() {
     setPanelError(null);
   };
   const pickSession = (id: string) => {
+    setSelectedEntryId(null);
+    setEntryError(null);
     setSessionPick(id);
     setActiveKey(null);
     setOutcome(null);
@@ -272,6 +345,15 @@ export default function ReceptionHome() {
               readyForNext();
             }}
             error={panelError}
+            entryPanel={
+              <QueueEntryPanel
+                entry={selectedEntry}
+                pending={entryPending}
+                error={entryError}
+                onMarkAbsent={() => selectedEntry && doMarkAbsent(selectedEntry)}
+                onReEnter={() => selectedEntry && doReEnter(selectedEntry)}
+              />
+            }
           />
         </div>
 
@@ -289,19 +371,34 @@ export default function ReceptionHome() {
             lastUpdated={apptQ.dataUpdatedAt || null}
             onRetry={() => void apptQ.refetch()}
             tokens={tokens}
+            selectedEntryId={selectedEntryId}
+            onSelectEntry={(e) => {
+              setSelectedEntryId(e.id);
+              setEntryError(null);
+            }}
           />
         </div>
       </div>
 
       <LateArrivalDialog
         open={late !== null}
-        item={late?.item ?? null}
+        subject={late ? { name: late.item.name, scheduledAt: late.item.appointment?.scheduledAt ?? null } : null}
         minutesLate={late?.minutesLate ?? 0}
         pending={checkIn.isPending}
         error={lateError}
         onAdmit={() => late && doCheckIn(late.item, true)}
         onClose={() => setLate(null)}
         onClosed={() => searchRef.current?.focus()}
+      />
+      <LateArrivalDialog
+        open={lateEntry !== null}
+        subject={lateEntry ? { name: lateEntry.entry.patientName, scheduledAt: lateEntry.scheduledAt, mode: 're-enter' } : null}
+        minutesLate={lateEntry?.minutesLate ?? 0}
+        pending={entryAction.isPending}
+        error={lateEntryError}
+        onAdmit={() => lateEntry && doReEnter(lateEntry.entry, true)}
+        onClose={() => setLateEntry(null)}
+        onClosed={() => document.querySelector<HTMLElement>('[data-testid="entry-panel"] button:not([disabled])')?.focus()}
       />
     </StaffShell>
   );
