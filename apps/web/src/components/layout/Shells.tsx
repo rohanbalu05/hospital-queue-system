@@ -74,11 +74,12 @@ export function StaffShell({ title, description, actions, children }: ShellProps
 }
 
 /** Patient shell: spacious, 16px body, mobile-first single column. */
-export function PatientShell({ title, description, children }: Omit<ShellProps, 'actions'>) {
+export function PatientShell({ title, description, nav, children }: Omit<ShellProps, 'actions'> & { nav?: ReactNode }) {
   return (
     <div className="min-h-dvh bg-paper text-base">
       <SkipLink />
       <TopBar compact={false} />
+      {nav}
       <main id="main" className="mx-auto max-w-2xl px-4 py-6 sm:py-8">
         <h1 className="text-2xl font-bold">{title}</h1>
         {description ? <p className="mt-1 text-muted-foreground">{description}</p> : null}

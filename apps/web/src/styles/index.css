@@ -98,10 +98,11 @@
   --radius-lg: 6px;
   --radius-xl: 10px;
 
-  /* No shadows except dialogs and popovers */
-  --shadow-2xs: none;
-  --shadow-xs: none;
-  --shadow-sm: none;
+  /* No shadows except dialogs and popovers. A real value, not `none`: `none` inside Tailwind's box-shadow stack
+     invalidates the whole declaration and silently drops focus rings on inputs and outline buttons. */
+  --shadow-2xs: 0 0 #0000;
+  --shadow-xs: 0 0 #0000;
+  --shadow-sm: 0 0 #0000;
   --shadow-md: 0 4px 12px rgb(22 35 43 / 0.12);
   --shadow-lg: 0 8px 24px rgb(22 35 43 / 0.16);
 }
