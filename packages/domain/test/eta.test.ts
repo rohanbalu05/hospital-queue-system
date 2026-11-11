@@ -102,6 +102,8 @@ describe('projectEta: withheld and unsupported', () => {
     expect(withheld.computedAt).toBe('2026-01-12T03:40:00.000Z');
     expect(ok.estimatorMeanMinutes).toBe(12);
     expect(ok.estimatorSamples).toBe(10);
+    expect(ok.uncertainty).toBe('warm');
+    expect(withheld.uncertainty).toBeNull();
   });
 });
 
@@ -133,9 +135,11 @@ describe('projectEta: ok estimates', () => {
     const cold = projectEta(base({ targetEntryId: 'A2', entries, estimator: { meanMinutes: 12, samples: COLD_START_SAMPLES - 1 }, now: at(5) }));
     expect(cold).toMatchObject({ lowMinutes: 6, highMinutes: 18 });
     expect(cold.note).toMatch(/Few completed consultations/);
+    expect(cold.uncertainty).toBe('cold_start');
     const warm = projectEta(base({ targetEntryId: 'A2', entries, estimator: { meanMinutes: 12, samples: COLD_START_SAMPLES }, now: at(5) }));
     expect(warm).toMatchObject({ lowMinutes: 8, highMinutes: 16 });
     expect(warm.note).not.toMatch(/Few completed/);
+    expect(warm.uncertainty).toBe('warm');
   });
 
   it('subtracts the elapsed part of the active consultation', () => {
@@ -160,6 +164,7 @@ describe('projectEta: ok estimates', () => {
     expect(eta.lowMinutes).toBe(0);
     expect(eta.highMinutes).toBe(12); // one more mean consultation of headroom
     expect(eta.note).toMatch(/run longer than average/);
+    expect(eta.uncertainty).toBe('widened_overrun');
   });
 
   it('a called but not yet started patient counts the full consultation plus the call timeout window', () => {

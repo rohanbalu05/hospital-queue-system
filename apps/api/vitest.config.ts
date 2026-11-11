@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
 /** Own scratch database, so parallel builders never collide on hqms_test. Created and seeded in global setup. */
-export const TEST_DB_NAME = 'hqms_test_api';
+export const TEST_DB_NAME = 'hqms_test_api_w2';
 const adminUrl = process.env['TEST_ADMIN_DATABASE_URL'] ?? 'postgres://postgres:postgres@localhost:5432/postgres';
 const testUrl = new URL(adminUrl);
 testUrl.pathname = `/${TEST_DB_NAME}`;
