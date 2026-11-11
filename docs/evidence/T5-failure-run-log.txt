@@ -1,0 +1,111 @@
+# T5 failure-injection run log (PASS/FAIL lines only; every execution of the scenarios, in order). Times are UTC on the test machine.
+# Runs 1-2 hit test-harness bugs that were fixed afterwards (stale API port after restart; 100-place sessions run out of slots; seeded appointments counted). The db-conn runs differ because the API crashes intermittently (see T5-workload-failure.md, finding F1).
+
+## failure.log
+[failure 13:44:17] === api-kill ===
+[failure 13:44:20] PASS  round 1: no committed booking lost  {"answered201":19}
+[failure 13:44:20] PASS  round 1: no half-written state right after the crash  {"violations":[],"idleInTransaction":0}
+[failure 13:44:20] PASS  round 1: replay returns the stored outcome for every committed key  []
+[failure 13:44:20] PASS  round 1: every session ends with exactly its capacity (10) booked, distinct patients  [{"session_id":"1fe3b61a-412d-419f-917c-4ffcd3070f4c","n":10,"patients":10},{"session_id":"22f06118-c314-4c84-9ff8-8b44f8eacfcc","n":10,"patients":10},{"session_id":"bc2c7a7f-0a35-4fca-a932-f38943722603","n":10,"patients":10}]
+[failure 13:44:20] PASS  round 1: capacity/allocation invariants hold after replay  []
+[failure 13:44:20] PASS  round 1: one audit row, one AppointmentBooked event and one timer job per appointment  {"appts":30,"audits":30,"outbox":30,"jobs":30}
+[failure 13:44:20] PASS  round 1: no 5xx during replay  {"201":30,"409":60}
+[failure 13:44:21] PASS  round 2: no committed booking lost  {"answered201":20}
+[failure 13:44:21] PASS  round 2: no half-written state right after the crash  {"violations":[],"idleInTransaction":0}
+[failure 13:44:21] PASS  round 2: replay returns the stored outcome for every committed key  []
+[failure 13:44:21] PASS  round 2: every session ends with exactly its capacity (10) booked, distinct patients  [{"session_id":"0b993d90-7d04-49b9-bbf7-a8967c74d782","n":10,"patients":10},{"session_id":"284b7ba5-5929-4ce8-8bed-9a0380dbc0a7","n":10,"patients":10},{"session_id":"6a0d4934-8c02-426f-8e47-b4491e91963d","n":10,"patients":10}]
+[failure 13:44:21] PASS  round 2: capacity/allocation invariants hold after replay  []
+[failure 13:44:21] PASS  round 2: one audit row, one AppointmentBooked event and one timer job per appointment  {"appts":30,"audits":30,"outbox":30,"jobs":30}
+[failure 13:44:21] PASS  round 2: no 5xx during replay  {"201":30,"409":60}
+[failure 13:44:23] PASS  round 3: no committed booking lost  {"answered201":21}
+[failure 13:44:23] PASS  round 3: no half-written state right after the crash  {"violations":[],"idleInTransaction":0}
+[failure 13:44:23] PASS  round 3: replay returns the stored outcome for every committed key  []
+[failure 13:44:23] PASS  round 3: every session ends with exactly its capacity (10) booked, distinct patients  [{"session_id":"7ab1b545-1e5c-4b01-bc4a-ef4179398387","n":10,"patients":10},{"session_id":"c91bc3a5-d00f-4dd8-8b81-c2dd5607c489","n":10,"patients":10},{"session_id":"cb39fad4-807c-4367-b1ef-30a64aae74f7","n":10,"patients":10}]
+[failure 13:44:23] PASS  round 3: capacity/allocation invariants hold after replay  []
+[failure 13:44:23] PASS  round 3: one audit row, one AppointmentBooked event and one timer job per appointment  {"appts":30,"audits":30,"outbox":30,"jobs":30}
+[failure 13:44:23] PASS  round 3: no 5xx during replay  {"201":30,"409":60}
+[failure 13:44:25] PASS  round 4: no committed booking lost  {"answered201":22}
+[failure 13:44:25] PASS  round 4: no half-written state right after the crash  {"violations":[],"idleInTransaction":0}
+[failure 13:44:25] PASS  round 4: replay returns the stored outcome for every committed key  []
+[failure 13:44:25] PASS  round 4: every session ends with exactly its capacity (10) booked, distinct patients  [{"session_id":"7002171b-b5bf-48f3-abfa-739daf86b94f","n":10,"patients":10},{"session_id":"99c6d167-0d0f-4a01-bdc2-e13a054e77e7","n":10,"patients":10},{"session_id":"e4858e8a-0650-4d74-b9b3-450c19398212","n":10,"patients":10}]
+[failure 13:44:25] PASS  round 4: capacity/allocation invariants hold after replay  []
+[failure 13:44:25] PASS  round 4: one audit row, one AppointmentBooked event and one timer job per appointment  {"appts":30,"audits":30,"outbox":30,"jobs":30}
+[failure 13:44:25] PASS  round 4: no 5xx during replay  {"201":30,"409":60}
+[failure 13:44:26] PASS  round 5: no committed booking lost  {"answered201":23}
+[failure 13:44:26] PASS  round 5: no half-written state right after the crash  {"violations":[],"idleInTransaction":0}
+[failure 13:44:26] PASS  round 5: replay returns the stored outcome for every committed key  []
+[failure 13:44:26] PASS  round 5: every session ends with exactly its capacity (10) booked, distinct patients  [{"session_id":"7bf88de6-eee4-4200-b57b-e0c5a4d1713a","n":10,"patients":10},{"session_id":"800d6dd5-c61d-4ace-9a2d-5d916960361b","n":10,"patients":10},{"session_id":"a33d64ab-877c-4c8b-bf09-3ac2ad9c2b9b","n":10,"patients":10}]
+[failure 13:44:26] PASS  round 5: capacity/allocation invariants hold after replay  []
+[failure 13:44:26] PASS  round 5: one audit row, one AppointmentBooked event and one timer job per appointment  {"appts":30,"audits":30,"outbox":30,"jobs":30}
+[failure 13:44:26] PASS  round 5: no 5xx during replay  {"201":30,"409":60}
+[failure 13:44:26] === worker-kill ===
+Error: booking failed 409 {"error":{"code":"CAPACITY_FULL","message":"No free appointment slot is left in this session","details":{"sessionId":"1f13f88c-66f3-4e53-97a7-55cfcec0e320"},"correlationId":"e7420d60-d28d-4024-8e08-1bd43448d387"}}
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @hqms/tests@0.1.0 failure: `tsx failure/run-failure.ts`
+
+## failure2.log
+[failure 13:44:39] === worker-kill ===
+[failure 13:44:46] PASS  the worker was killed while holding leases and with work left  {"runningAtKill":3,"appointmentsAlreadyMissed":32,"jobStatesAfterKill":[{"state":"pending","n":175},{"state":"running","n":3},{"state":"succeeded","n":32}]}
+[failure 13:44:47] PASS  nothing advances while the worker is down  {"before":32,"after":32}
+[failure 13:44:49] PASS  all 210 timer jobs reach a terminal state after the restart  {"drainMs":2019,"jobStates":[{"job_type":"call_timeout","state":"succeeded","n":10,"max_attempts":1,"retried":0},{"job_type":"reservation_release","state":"succeeded","n":200,"max_attempts":2,"retried":3}],"dead":0}
+[failure 13:44:49] FAIL  reservation_release effect applied exactly once for each of the 200 appointments (1 status change, 1 audit row, 1 event)  {"missed":200,"still_booked":15,"appointments_not_version_2":15,"release_audits":200,"release_audits_distinct":200,"release_events":200,"skipped_entries":10,"timeout_audits":10,"timeout_audits_distinct":10,"timeout_events":10,"entries_not_version_3":0,"booked_reserved_total":0}
+[failure 13:44:49] PASS  call_timeout effect applied exactly once for each of the 10 called entries  {"missed":200,"still_booked":15,"appointments_not_version_2":15,"release_audits":200,"release_audits_distinct":200,"release_events":200,"skipped_entries":10,"timeout_audits":10,"timeout_audits_distinct":10,"timeout_events":10,"entries_not_version_3":0,"booked_reserved_total":0}
+[failure 13:44:49] PASS  released capacity is returned exactly once (counters 0)  {"bookedReservedTotalOver20Sessions":0}
+[failure 13:44:49] PASS  capacity/allocation invariants hold  []
+[failure 13:44:50] === ocr-fail ===
+[failure 13:46:58] PASS  every booking succeeded (201) in all three phases  [{"201":1200},{"201":1200},{"201":1200}]
+[failure 13:46:58] PASS  zero 5xx and zero network errors in all phases  [{"201":1200},{"201":1200},{"201":1200}]
+[failure 13:46:58] PASS  documents with the failing fixture end in ocr_failed (visible, not lost) after bounded retries  {"docs":[{"status":"ocr_failed","n":79,"max_attempts":5}],"jobStates":[{"state":"dead","n":79,"max_attempts":5}],"ocrFailedEvents":395}
+[failure 13:46:58] PASS  invariants hold  []
+[failure 13:46:59] PASS  after the failure period the same worker still processes a good document to ocr_ready  {"uploadStatus":201,"final":"ocr_ready","seconds":0.5}
+[failure 13:46:59] === db-conn ===
+[failure 13:48:12] FAIL  the API process survived every connection loss  {"apiPid":21559}
+[failure 13:48:12] PASS  errors during the outage were controlled 5xx responses with a JSON error code (no hangs)  {"errorBodies":{"500 INTERNAL":242},"networkErrors":{"TypeError: fetch failed (UND_ERR_SOCKET)":1,"TypeError: fetch failed (ECONNREFUSED)":736},"slowestErrorMs":24.2}
+[failure 13:48:12] PASS  requests succeed again after the database reopens  {"reopenedAtSec":33.1,"firstSuccessAtSec":33.1,"secondsToFirstSuccess":0}
+[failure 13:48:12] FAIL  idempotent retry of every failed booking returned 201 or a business 409 (never 5xx)  {"retried":390,"outcome":{"0":390}}
+[failure 13:48:12] FAIL  no duplicate or lost booking: appointments in the database equal distinct idempotency records of bookings  {"appointments":464,"idempotencyRecords":449,"distinctKeysSent":839,"answered201":449}
+[failure 13:48:12] PASS  invariants hold  []
+[failure 13:48:12] PASS  the worker process survived  {"workerLogErrorLines":35}
+
+## failure4.log
+[failure 13:50:17] === worker-kill ===
+[failure 13:50:25] PASS  the worker was killed while holding leases and with work left  {"runningAtKill":4,"appointmentsAlreadyMissed":29,"jobStatesAfterKill":[{"state":"pending","n":178},{"state":"running","n":3},{"state":"succeeded","n":29}]}
+[failure 13:50:26] PASS  nothing advances while the worker is down  {"before":29,"after":29}
+[failure 13:50:28] PASS  all 210 timer jobs reach a terminal state after the restart  {"drainMs":2016.6,"jobStates":[{"job_type":"call_timeout","state":"succeeded","n":10,"max_attempts":1,"retried":0},{"job_type":"reservation_release","state":"succeeded","n":200,"max_attempts":2,"retried":3}],"dead":0}
+[failure 13:50:28] PASS  reservation_release effect applied exactly once for each of the 200 appointments (1 status change, 1 audit row, 1 event)  {"missed":200,"still_booked":0,"appointments_not_version_2":0,"release_audits":200,"release_audits_distinct":200,"release_events":200,"skipped_entries":10,"timeout_audits":10,"timeout_audits_distinct":10,"timeout_events":10,"entries_not_version_3":0,"booked_reserved_total":0}
+[failure 13:50:28] PASS  call_timeout effect applied exactly once for each of the 10 called entries  {"missed":200,"still_booked":0,"appointments_not_version_2":0,"release_audits":200,"release_audits_distinct":200,"release_events":200,"skipped_entries":10,"timeout_audits":10,"timeout_audits_distinct":10,"timeout_events":10,"entries_not_version_3":0,"booked_reserved_total":0}
+[failure 13:50:28] PASS  released capacity is returned exactly once (counters 0)  {"bookedReservedTotalOver20Sessions":0}
+[failure 13:50:28] PASS  capacity/allocation invariants hold  []
+[failure 13:50:28] === db-crash ===
+[failure 13:50:32] PASS  terminating busy API connections with pg_terminate_backend leaves the API process running  {"backendsTerminated":1,"afterMs":48.6,"exitedWith":null,"crashLine":null}
+[failure 13:50:32] PASS  no half-written state after the connection loss  {"before":60,"violations":[]}
+[failure 13:50:32] PASS  after restart every request replays with its Idempotency-Key to 201 or a business 409 (no 5xx)  {"replay":{"201":60,"409":140},"restartToHealthyMs":0}
+[failure 13:50:32] PASS  each session ends with exactly its capacity booked (10 places x 6 sessions, 200 requests)  {"perSession":[10,10,10,10,10,10],"after":60}
+[failure 13:50:32] PASS  invariants hold  []
+[failure 13:50:32] === db-conn ===
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @hqms/tests@0.1.0 failure: `tsx failure/run-failure.ts worker-kill db-crash db-conn`
+
+## failure5.log
+[failure 13:51:24] === db-crash ===
+[failure 13:51:28] FAIL  terminating a checked-out API connection (idle in transaction) with pg_terminate_backend leaves the API process running  {"backendsTerminated":1,"afterMs":83.3,"exitedWith":"see crashLine","crashLine":"      throw er; // Unhandled 'error' event"}
+[failure 13:51:28] PASS  no half-written state after the connection loss  {"before":0,"violations":[]}
+[failure 13:51:28] PASS  after restart every request replays with its Idempotency-Key to 201 or a business 409 (no 5xx)  {"replay":{"201":60,"409":140},"restartToHealthyMs":648.4}
+[failure 13:51:28] PASS  each session ends with exactly its capacity booked (10 places x 6 sessions, 200 requests)  {"perSession":[10,10,10,10,10,10],"after":60}
+[failure 13:51:28] PASS  invariants hold  []
+[failure 13:51:29] === db-conn ===
+[failure 13:52:43] PASS  the API process survived every connection loss  {"apiPid":25148}
+[failure 13:52:43] PASS  errors during the outage were controlled 5xx responses with a JSON error code (no hangs)  {"errorBodies":{"500 INTERNAL":240},"networkErrors":{},"slowestErrorMs":35.1}
+[failure 13:52:43] PASS  requests succeed again after the database reopens  {"reopenedAtSec":33.2,"firstSuccessAtSec":33.2,"secondsToFirstSuccess":0}
+[failure 13:52:43] PASS  idempotent retry of every failed booking returned 201 or a business 409 (never 5xx)  {"retried":95,"outcome":{"201":95}}
+[failure 13:52:43] FAIL  no duplicate or lost booking: appointments in the database equal distinct idempotency records of bookings  {"appointments":894,"idempotencyRecords":879,"distinctKeysSent":879,"answered201":784}
+[failure 13:52:43] PASS  invariants hold  []
+[failure 13:52:43] PASS  the worker process survived  {"workerLogErrorLines":35}
+
+## failure6.log
+[failure 13:52:58] === db-conn ===
+[failure 13:54:11] FAIL  the API process survived every connection loss  {"apiPid":26636}
+[failure 13:54:11] PASS  errors during the outage were controlled 5xx responses with a JSON error code (no hangs)  {"errorBodies":{"500 INTERNAL":247},"networkErrors":{"TypeError: fetch failed (UND_ERR_SOCKET)":1,"TypeError: fetch failed (ECONNREFUSED)":662},"slowestErrorMs":29.8}
+[failure 13:54:11] PASS  requests succeed again after the database reopens  {"reopenedAtSec":33.2,"firstSuccessAtSec":33.2,"secondsToFirstSuccess":0}
+[failure 13:54:11] FAIL  idempotent retry of every failed booking returned 201 or a business 409 (never 5xx)  {"retried":368,"outcome":{"0":368}}
+[failure 13:54:11] PASS  no duplicate or lost booking: appointments in the database equal distinct idempotency records of bookings  {"appointments":477,"idempotencyRecords":477,"distinctKeysSent":845,"answered201":477}
+[failure 13:54:11] PASS  invariants hold  []
+[failure 13:54:11] PASS  the worker process survived  {"workerLogErrorLines":35}
