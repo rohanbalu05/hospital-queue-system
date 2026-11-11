@@ -38,18 +38,13 @@ export function uploadErrorWords(e: unknown): string {
 function DocumentRow({ doc }: { doc: DocumentMeta }) {
   const s = PATIENT_DOCUMENT_STATUS[doc.status];
   const verified = doc.status === 'verified';
-  const failed = doc.status === 'ocr_failed' || doc.status === 'rejected';
   return (
     <li className={cn('border-l-[3px] px-4 py-3', verified ? 'border-l-done' : 'border-l-rule')} data-status={doc.status}>
-      <p className="flex items-baseline gap-3">
-        <span className="min-w-0 flex-1 truncate font-bold">{doc.originalName}</span>
-        <span className={cn('shrink-0 font-bold', verified ? 'text-done' : 'text-ink')}>{s.word}</span>
-      </p>
-      <p className="text-muted-foreground tabular-nums">
+      <p className="truncate font-bold">{doc.originalName}</p>
+      <p className={cn('font-bold', verified ? 'text-done' : 'text-ink')}>{s.word}</p>
+      <p className="text-muted-foreground">{s.hint}</p>
+      <p className="text-sm text-muted-foreground tabular-nums">
         Uploaded {formatIST(doc.createdAt, 'date-time')}, {fileSizeWord(doc.sizeBytes)}, {doc.pageCount} {doc.pageCount === 1 ? 'page' : 'pages'}
-      </p>
-      <p className={cn('mt-1', failed ? 'text-ink' : 'text-muted-foreground')}>
-        {failed && doc.status === 'ocr_failed' ? "We couldn't read this document. Staff will review it." : s.hint}
       </p>
     </li>
   );
@@ -62,7 +57,7 @@ function VerifiedInstructions({ patientId }: { patientId: string }) {
   if (!q.data || current.length === 0) return null;
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="mt-6">
-      <CollapsibleTrigger className="flex min-h-12 w-full items-center justify-between rounded-md px-1 text-left text-lg font-bold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+      <CollapsibleTrigger className="flex min-h-12 w-full items-center justify-between rounded-md px-1 text-left text-lg font-bold    ">
         <span>
           Instructions your doctor verified <span className="tabular-nums">({current.length})</span>
         </span>

@@ -119,8 +119,8 @@ function Outcome({ outcome, onDone }: { outcome: ArrivalOutcome; onDone: () => v
   const { result, name, verb } = outcome;
   const late = result.kind === 'late_admission';
   return (
-    <div role="status" data-testid="arrival-outcome" className="rounded-xl border border-l-[3px] border-rule border-l-done bg-surface p-4">
-      <p className="text-lg font-bold text-done">{verb}</p>
+    <div role="status" data-testid="arrival-outcome" className="rounded-xl border border-l-[3px] border-rule border-l-ink bg-surface p-4">
+      <p className="text-lg font-bold">{verb}</p>
       <p className="mt-0.5 font-bold">{name}</p>
       <div className="mt-2 flex items-center gap-3">
         <TokenText token={result.token} size="xl" className="[&_[data-token]]:text-[72px] [&_[data-token]]:leading-none" />
@@ -131,7 +131,7 @@ function Outcome({ outcome, onDone }: { outcome: ArrivalOutcome; onDone: () => v
       </div>
       <p className="mt-2 text-muted-foreground tabular-nums">Eligible to be called from {formatIST(result.eligibleAt)}. Tell the patient their token.</p>
       <Button variant="outline" className="mt-3" onClick={onDone}>
-        Done
+        Next arrival
       </Button>
     </div>
   );
@@ -168,7 +168,7 @@ function RegisterForm({ pending, disabled, onSubmit }: { pending: boolean; disab
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="mt-4 border-t border-rule pt-3">
-      <CollapsibleTrigger className="flex min-h-10 w-full items-center justify-between rounded-md text-left font-bold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+      <CollapsibleTrigger className="flex min-h-10 w-full items-center justify-between rounded-md text-left font-bold    ">
         Register new patient
         <ChevronDown aria-hidden="true" className={open ? 'size-4 rotate-180' : 'size-4'} />
       </CollapsibleTrigger>
@@ -178,7 +178,7 @@ function RegisterForm({ pending, disabled, onSubmit }: { pending: boolean; disab
             <Label htmlFor="reg-name">Full name</Label>
             <Input id="reg-name" value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="off" aria-invalid={Boolean(errors.fullName)} aria-describedby={errors.fullName ? 'reg-name-err' : undefined} />
             {errors.fullName ? (
-              <p id="reg-name-err" className="text-sm text-priority">
+              <p id="reg-name-err" className="text-sm font-bold text-ink">
                 {errors.fullName}
               </p>
             ) : null}
@@ -187,7 +187,7 @@ function RegisterForm({ pending, disabled, onSubmit }: { pending: boolean; disab
             <Label htmlFor="reg-phone">Phone (optional)</Label>
             <Input id="reg-phone" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="off" aria-invalid={Boolean(errors.phone)} aria-describedby={errors.phone ? 'reg-phone-err' : undefined} />
             {errors.phone ? (
-              <p id="reg-phone-err" className="text-sm text-priority">
+              <p id="reg-phone-err" className="text-sm font-bold text-ink">
                 {errors.phone}
               </p>
             ) : null}
@@ -195,7 +195,7 @@ function RegisterForm({ pending, disabled, onSubmit }: { pending: boolean; disab
           <div className="space-y-1">
             <Label htmlFor="reg-dob">Date of birth (optional)</Label>
             <Input id="reg-dob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} aria-invalid={Boolean(errors.dateOfBirth)} />
-            {errors.dateOfBirth ? <p className="text-sm text-priority">{errors.dateOfBirth}</p> : null}
+            {errors.dateOfBirth ? <p className="text-sm font-bold text-ink">{errors.dateOfBirth}</p> : null}
           </div>
           <Button type="submit" size="lg" className="w-full" disabled={pending || disabled}>
             {pending ? 'Registering…' : 'Register and admit walk-in'}

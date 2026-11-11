@@ -1,14 +1,21 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- specs assert on values they just created */
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import { installFakeEventSource, mockQueue } from './mocks-queue';
+import { routeLiveBoardToQueueMock } from './w3-mocks';
 import { mockApi, mockScheduling, type SchedulingMock, type SchedulingOptions } from './mocks';
 
 const SHOTS = path.resolve(import.meta.dirname, '../../../docs/evidence/screenshots');
-const shot = (page: Page, name: string, fullPage = true) => page.screenshot({ path: path.join(SHOTS, `w1-${name}.png`), fullPage });
+const shot = (page: Page, name: string, fullPage = true) => page.screenshot({ path: path.join(SHOTS, `w1-${name}.png`), fullPage, animations: 'disabled' });
 
 async function setup(page: Page, options: SchedulingOptions = {}): Promise<SchedulingMock> {
+  // The desk also mounts the live queue board: answer its snapshot and stream from the queue mock.
+  await installFakeEventSource(page);
   await mockApi(page, 'reception');
-  return mockScheduling(page, options);
+  await mockQueue(page);
+  const sched = await mockScheduling(page, options);
+  await routeLiveBoardToQueueMock(page);
+  return sched;
 }
 
 async function ready(page: Page) {
@@ -203,7 +210,7 @@ test.describe('reception desk keyboard only (NFR-08-b)', () => {
     await expect(search).toBeFocused();
     // The "/" itself is not typed into the box.
     await expect(search).toHaveValue('');
-    await expect.poll(() => search.evaluate((el) => getComputedStyle(el).boxShadow)).toContain('rgb(22, 35, 43)');
+    await expect.poll(() => search.evaluate((el) => getComputedStyle(el).outlineColor)).toBe('rgb(22, 35, 43)');
 
     await page.keyboard.type('z');
     await page.keyboard.type('q'); // "zq" is in no name: empty state

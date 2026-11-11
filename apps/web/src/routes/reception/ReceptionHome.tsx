@@ -319,7 +319,7 @@ export default function ReceptionHome() {
             activeKey={active?.key ?? null}
             onActive={setActiveKey}
             onEnter={onEnter}
-            loading={session !== null && (apptQ.isPending || searching) && items.length === 0}
+            loading={sessionsQ.isPending || (session !== null && (apptQ.isPending || searching) && items.length === 0)}
             error={apptQ.isError && !apptQ.data ? apptQ.error : patientsQ.isError ? patientsQ.error : null}
             onRetry={() => {
               void apptQ.refetch();

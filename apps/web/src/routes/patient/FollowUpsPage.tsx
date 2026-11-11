@@ -21,10 +21,8 @@ function TaskRow({ task }: { task: FollowUpTaskView }) {
   const closed = isClosed(task.status);
   return (
     <li className={cn('border-l-[3px] px-4 py-3', task.status === 'resolved' ? 'border-l-done' : 'border-l-rule')} data-status={task.status}>
-      <p className="flex items-baseline gap-3">
-        <span className="min-w-0 flex-1 font-bold">{task.title}</span>
-        <span className={cn('shrink-0 font-bold', task.status === 'resolved' ? 'text-done' : 'text-ink')}>{PATIENT_TASK_WORD[task.status]}</span>
-      </p>
+      <p className="font-bold">{task.title}</p>
+      <p className={cn('font-bold', task.status === 'resolved' ? 'text-done' : 'text-ink')}>{PATIENT_TASK_WORD[task.status]}</p>
       <p className="text-muted-foreground">{KIND_WORD[task.kind] ?? 'Follow-up'}</p>
       {!closed ? (
         <p className="mt-1 tabular-nums">You&apos;ll hear back by {formatIST(task.dueAt, 'date-time')}.</p>

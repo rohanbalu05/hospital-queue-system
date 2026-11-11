@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { HOSPITAL_NAME } from '@/lib/config';
 import { formatIST } from '@/lib/format';
@@ -39,11 +38,8 @@ export default function DisplayPage() {
           <div role="alert" className="flex h-full flex-col justify-center">
             <p className="text-4xl font-bold">The queue cannot be shown right now</p>
             <p className="mt-3 max-w-4xl text-2xl text-muted-foreground">
-              This screen keeps trying. If it stays like this, ask the front desk to check the display connection.
+              This screen tries again on its own every few seconds. If it stays like this, ask the front desk to check the display connection.
             </p>
-            <Button className="mt-6 h-14 w-fit px-8 text-lg" variant="outline" onClick={() => void query.refetch()}>
-              Try again
-            </Button>
           </div>
         ) : columns.length === 0 ? (
           <div className="flex h-full flex-col justify-center">

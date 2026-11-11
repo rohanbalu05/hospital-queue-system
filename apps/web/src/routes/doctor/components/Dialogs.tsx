@@ -19,7 +19,7 @@ function Field({ id, label, hint, error, children }: { id: string; label: string
         </p>
       ) : null}
       {error ? (
-        <p id={`${id}-error`} role="alert" className="text-sm font-bold text-priority">
+        <p id={`${id}-error`} role="alert" className="text-sm font-bold text-ink">
           {error}
         </p>
       ) : null}
