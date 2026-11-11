@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- tests index rows they have just created */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { ApiError, AssistantAnswer, ConversationMessage, FollowUpTask, InstructionVersion } from '@hqms/contracts';
+import { ApiError, AssistantAnswer, ConversationMessage, type FollowUpTask, InstructionVersion } from '@hqms/contracts';
 import { type Client, count, createTestApp, linkPatient, loginAs, makeSession, newLoginPatient, type TestApp } from './helpers.js';
 import { MemoryStorage, SpyLlm, makePng, openApiTransactions } from './fakes.js';
 

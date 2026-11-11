@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import {
-  AcknowledgeTaskRequest,
-  CancelTaskRequest,
-  FollowUpKind,
+  type AcknowledgeTaskRequest,
+  type CancelTaskRequest,
+  type FollowUpKind,
   FollowUpStatus,
   Id,
   type Disposition,
