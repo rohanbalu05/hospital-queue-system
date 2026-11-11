@@ -23,6 +23,30 @@ const EnvSchema = z.object({
   SSE_POLL_MS: z.coerce.number().int().min(50).default(500),
   SSE_PING_MS: z.coerce.number().int().min(50).default(15_000),
   ASSISTANT_TIMEOUT_MS: z.coerce.number().int().min(50).default(15_000),
+  /** Provider calls in flight at once on this instance; beyond it a question escalates ("busy"), never a 5xx. */
+  ASSISTANT_MAX_CONCURRENCY: z.coerce.number().int().min(1).default(4),
+  /** Questions per patient per window (429 RATE_LIMITED beyond it). */
+  ASSISTANT_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+  ASSISTANT_RATE_LIMIT_WINDOW_SEC: z.coerce.number().int().positive().default(600),
+  /** Open assistant_escalation tasks per patient; beyond it a new question joins the most recent one. */
+  ASSISTANT_MAX_OPEN_ESCALATIONS: z.coerce.number().int().positive().default(3),
+  /** Live (SSE) connection caps: authenticated streams, public display streams, and streams per client address. */
+  SSE_MAX_AUTHENTICATED: z.coerce.number().int().positive().default(1000),
+  SSE_MAX_DISPLAY: z.coerce.number().int().positive().default(50),
+  SSE_MAX_PER_IP: z.coerce.number().int().positive().default(20),
+  /** A stream ends after this long; the client reconnects (and is re-authenticated). */
+  SSE_MAX_LIFETIME_SEC: z.coerce.number().int().positive().default(1800),
+  /** A client whose socket buffer holds more than this many bytes is dropped. */
+  SSE_MAX_BUFFERED_BYTES: z.coerce.number().int().positive().default(65_536),
+  /** Concurrent document uploads being read into memory on this instance (503 beyond it). */
+  UPLOAD_MAX_CONCURRENT: z.coerce.number().int().positive().default(4),
+  /** Per-patient document quota (409 beyond either). */
+  UPLOAD_MAX_DOCUMENTS_PER_PATIENT: z.coerce.number().int().positive().default(50),
+  UPLOAD_MAX_BYTES_PER_PATIENT: z.coerce.number().int().positive().default(200 * 1024 * 1024),
+  /** Public display endpoint: requests per client address per minute. */
+  DISPLAY_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(120),
+  /** Shared cache of the public display snapshot (0 turns it off). */
+  DISPLAY_CACHE_MS: z.coerce.number().int().min(0).default(1000),
 });
 
 export interface AppConfig {
@@ -47,6 +71,20 @@ export interface AppConfig {
   ssePingMs: number;
   /** The LLM call is abandoned after this long and the question is escalated to staff (FR-14). */
   assistantTimeoutMs: number;
+  assistantMaxConcurrency: number;
+  assistantRateLimitMax: number;
+  assistantRateLimitWindowSec: number;
+  assistantMaxOpenEscalations: number;
+  sseMaxAuthenticated: number;
+  sseMaxDisplay: number;
+  sseMaxPerIp: number;
+  sseMaxLifetimeSec: number;
+  sseMaxBufferedBytes: number;
+  uploadMaxConcurrent: number;
+  uploadMaxDocumentsPerPatient: number;
+  uploadMaxBytesPerPatient: number;
+  displayRateLimitPerMin: number;
+  displayCacheMs: number;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -72,5 +110,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     ssePollMs: e.SSE_POLL_MS,
     ssePingMs: e.SSE_PING_MS,
     assistantTimeoutMs: e.ASSISTANT_TIMEOUT_MS,
+    assistantMaxConcurrency: e.ASSISTANT_MAX_CONCURRENCY,
+    assistantRateLimitMax: e.ASSISTANT_RATE_LIMIT_MAX,
+    assistantRateLimitWindowSec: e.ASSISTANT_RATE_LIMIT_WINDOW_SEC,
+    assistantMaxOpenEscalations: e.ASSISTANT_MAX_OPEN_ESCALATIONS,
+    sseMaxAuthenticated: e.SSE_MAX_AUTHENTICATED,
+    sseMaxDisplay: e.SSE_MAX_DISPLAY,
+    sseMaxPerIp: e.SSE_MAX_PER_IP,
+    sseMaxLifetimeSec: e.SSE_MAX_LIFETIME_SEC,
+    sseMaxBufferedBytes: e.SSE_MAX_BUFFERED_BYTES,
+    uploadMaxConcurrent: e.UPLOAD_MAX_CONCURRENT,
+    uploadMaxDocumentsPerPatient: e.UPLOAD_MAX_DOCUMENTS_PER_PATIENT,
+    uploadMaxBytesPerPatient: e.UPLOAD_MAX_BYTES_PER_PATIENT,
+    displayRateLimitPerMin: e.DISPLAY_RATE_LIMIT_PER_MIN,
+    displayCacheMs: e.DISPLAY_CACHE_MS,
   };
 }

@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Headers, Inject, Param, Post, Query, Res } from '@nestjs/common';
-import type { Response } from 'express';
+import { Body, Controller, Get, Headers, Inject, Param, Post, Query, Req, Res } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { z } from 'zod';
 import {
   MarkUnavailableRequest,
@@ -14,14 +14,13 @@ import {
   type Session,
   type StaffQueueSnapshot,
 } from '@hqms/contracts';
-import { LocalDate } from '@hqms/contracts';
+import { LocalDate, ReEnterRequest } from '@hqms/contracts';
 import type { RequestCtx } from '../common/request-context.js';
 import { optionalIdempotencyKey, requireIdempotencyKey, sendResult } from '../common/http.js';
 import { UuidPipe, ZodPipe } from '../common/zod.pipe.js';
 import { Ctx, Public, Roles } from '../identity/auth.decorators.js';
 import { ConsultationService } from './consultation.service.js';
 import {
-  ReEnterRequest,
   type QueueCommandResultDto,
   type MarkUnavailableRequestDto,
   type PauseSessionRequestDto,
@@ -226,7 +225,7 @@ export class QueueController {
   /** Public waiting-room display: tokens only (NFR-06). */
   @Public()
   @Get('display/sessions')
-  display(@Query(new ZodPipe(DisplayQuery)) query: { date?: string }): Promise<DisplaySnapshot> {
-    return this.snapshots.display(query.date);
+  display(@Req() req: Request, @Query(new ZodPipe(DisplayQuery)) _query: { date?: string }): Promise<DisplaySnapshot> {
+    return this.snapshots.display(req.ip ?? req.socket.remoteAddress ?? 'unknown');
   }
 }

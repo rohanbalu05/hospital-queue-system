@@ -1,19 +1,12 @@
-import { z } from 'zod';
-import {
+import type { z } from 'zod';
+import type {
+  MarkUnavailableRequest,
+  PauseSessionRequest,
+  QueueCommandResult,
   QueueEntryActionRequest,
-  type MarkUnavailableRequest,
-  type PauseSessionRequest,
-  type QueueCommandResult,
-  type SetPriorityRequest,
-  type VisitActionRequest,
+  SetPriorityRequest,
+  VisitActionRequest,
 } from '@hqms/contracts';
-
-/**
- * POST /queue-entries/{id}/re-enter. The contract's QueueEntryActionRequest plus `admitLate`, which
- * reception sets to confirm a returning group-A patient who is now past the grace period (FR-05-b / FR-08-b).
- */
-export const ReEnterRequest = QueueEntryActionRequest.extend({ admitLate: z.boolean().optional() });
-export type ReEnterRequest = z.infer<typeof ReEnterRequest>;
 
 /** The contracts package exports these without inferred types; infer them once here. */
 export type VisitActionRequestDto = z.infer<typeof VisitActionRequest>;
