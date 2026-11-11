@@ -93,14 +93,14 @@ describe('assistant messages', () => {
       },
     ],
   ]);
-  const base: ConversationMessage = { id: uuid(5), role: 'assistant', body: '', outcome: 'answered', citations: [], escalationTaskId: null, createdAt: '2026-11-11T09:12:00+05:30' };
+  const base: ConversationMessage = { id: uuid(5), role: 'assistant', body: '', outcome: 'answered', citations: [], escalationTaskId: null, escalationDueAt: null, createdAt: '2026-11-11T09:12:00+05:30' };
 
   it('cites the verified instruction version with its verified date', () => {
     expect(citationLine({ title: 'Care after viral fever', version: 2 }, '2026-11-09T12:40:00+05:30')).toBe('From: Care after viral fever (version 2, verified 9 Nov 2026)');
     expect(citationLine({ title: 'Care after viral fever', version: 2 }, undefined)).toBe('From: Care after viral fever (version 2)');
     render(
       <ul>
-        <MessageView message={{ ...base, body: 'Rest for 3 days.', citations: [{ instructionVersionId: uuid(1), title: 'Care after viral fever', version: 2 }] }} versions={versions} dueByTask={new Map()} />
+        <MessageView message={{ ...base, body: 'Rest for 3 days.', citations: [{ instructionVersionId: uuid(1), title: 'Care after viral fever', version: 2, verifiedAt: '2026-11-09T12:40:00+05:30' }] }} versions={versions} dueByTask={new Map()} />
       </ul>,
     );
     expect(screen.getByText('Rest for 3 days.')).toBeVisible();

@@ -56,6 +56,7 @@ export function decision(overrides: Partial<QueueDecision> = {}): QueueDecision 
 export function staffSnapshot(overrides: Partial<StaffQueueSnapshot> = {}): StaffQueueSnapshot {
   return {
     view: 'staff',
+    pressure: { level: 'normal', reasons: [] },
     sessionId: SESSION_ID,
     doctorId: DOCTOR_ID,
     status: 'open',
