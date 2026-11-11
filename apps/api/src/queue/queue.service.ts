@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { CallNextResult, QueueEntry } from '@hqms/contracts';
+import type { CallNextResult } from '@hqms/contracts';
 import {
   enqueueJob,
   getPolicyById,
@@ -26,6 +26,7 @@ import { AccessPolicy } from '../access/access-policy.service.js';
 import { toDomainPolicy } from '../scheduling/shared.js';
 import { assertVersion, runCommand } from './command.js';
 import type {
+  QueueCommandResultDto,
   QueueEntryActionRequestDto,
   ReEnterRequest,
   SetPriorityRequestDto,
@@ -374,8 +375,8 @@ export class QueueService {
       tx: Tx,
       entry: Awaited<ReturnType<typeof lockEntry>>,
       session: { status: 'scheduled' | 'open' | 'paused' | 'unavailable' | 'closed'; policy: Policy },
-    ) => Promise<{ status: number; body: QueueEntry }>,
-  ): Promise<IdempotentResult<QueueEntry>> {
+    ) => Promise<{ status: number; body: QueueCommandResultDto }>,
+  ): Promise<IdempotentResult<QueueCommandResultDto>> {
     const guards = await readGuards(this.pool, entryId, 'entry');
     if (!guards) throw notFound('Queue entry');
     this.access.assertDoctorScope(ctx.user, guards.doctorId);
@@ -402,7 +403,7 @@ export class QueueService {
       previousExtra?: Record<string, unknown>;
       next: Record<string, unknown>;
     },
-  ): Promise<{ status: number; body: QueueEntry }> {
+  ): Promise<{ status: number; body: QueueCommandResultDto }> {
     const queueVersion = await bumpQueueVersion(tx, before.sessionId);
     await writeAudit(tx, {
       actorId: ctx.user.userId,
@@ -426,6 +427,6 @@ export class QueueService {
       payload: { queueVersion, token: before.token, ...a.eventExtra },
     });
     const fresh = required(await readEntry(tx, before.id), 'queue entry');
-    return { status: 200, body: toQueueEntry(fresh) };
+    return { status: 200, body: { entry: toQueueEntry(fresh), queueVersion } };
   }
 }

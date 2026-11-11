@@ -9,7 +9,7 @@ import {
   DisplaySnapshot,
   PatientQueueSnapshot,
   QueueDecision,
-  QueueEntry,
+  QueueCommandResult,
   StaffQueueSnapshot,
   AuditEvent,
 } from '@hqms/contracts';
@@ -128,7 +128,7 @@ describe('FR-06 call-next: Table 8 end to end over HTTP', () => {
     t.clock.set(at(s, 17));
     const prio = await d.post(`/queue-entries/${p1.queueEntryId}/priority`, { priorityClass: 1, reason: 'Chest pain on arrival' });
     expect(prio.status).toBe(200);
-    expect(QueueEntry.parse(prio.body)).toMatchObject({ priorityClass: 1, priorityReason: 'Chest pain on arrival' });
+    expect(QueueCommandResult.parse(prio.body).entry).toMatchObject({ priorityClass: 1, priorityReason: 'Chest pain on arrival' });
 
     const c2 = await serve(s, d, 18);
     expect(c2.entry!.id).toBe(p1.queueEntryId);
@@ -344,7 +344,7 @@ describe('FR-08 session controls, skip, re-entry', () => {
     t.clock.set(at(s, 6));
     const skipped = await reception.post(`/queue-entries/${w.queueEntryId}/skip`, { expectedVersion: calledEntry.version, reason: 'Not in the waiting area' });
     expect(skipped.status).toBe(200);
-    expect(QueueEntry.parse(skipped.body).state).toBe('skipped');
+    expect(QueueCommandResult.parse(skipped.body).entry.state).toBe('skipped');
     expect(await count(t.pool, `SELECT 1 FROM jobs WHERE dedupe_key = $1 AND state = 'cancelled'`, [`call_timeout:${w.queueEntryId}:1`])).toBe(1);
     // The doctor is free again.
     const before = await t.pool.query(`SELECT eligible_at, called_at, call_count FROM queue_entries WHERE id = $1`, [w.queueEntryId]);
@@ -352,7 +352,7 @@ describe('FR-08 session controls, skip, re-entry', () => {
     t.clock.set(at(s, 20));
     const back = await reception.post(`/queue-entries/${w.queueEntryId}/re-enter`, {});
     expect(back.status).toBe(200);
-    const entry = QueueEntry.parse(back.body);
+    const entry = QueueCommandResult.parse(back.body).entry;
     expect(entry).toMatchObject({ id: w.queueEntryId, state: 'waiting', callCount: 1, token: w.token });
     const after = await t.pool.query(`SELECT eligible_at, called_at, call_count, skipped_at FROM queue_entries WHERE id = $1`, [w.queueEntryId]);
     expect(new Date(after.rows[0]!.eligible_at).getTime()).toBeGreaterThan(new Date(before.rows[0]!.eligible_at).getTime());
@@ -400,7 +400,7 @@ describe('FR-08 session controls, skip, re-entry', () => {
     expect(errorCode(refused.body)).toBe('LATE_ARRIVAL_REQUIRES_REVIEW');
     const admitted = await reception.post(`/queue-entries/${a.queueEntryId}/re-enter`, { admitLate: true });
     expect(admitted.status).toBe(200);
-    expect(QueueEntry.parse(admitted.body)).toMatchObject({ group: 'W', state: 'waiting', id: a.queueEntryId });
+    expect(QueueCommandResult.parse(admitted.body).entry).toMatchObject({ group: 'W', state: 'waiting', id: a.queueEntryId });
     // Capacity is untouched: the patient keeps the place consumed at first check-in.
     const cap = await t.pool.query(`SELECT booked_reserved, walkin_used FROM session_capacity WHERE session_id = $1`, [s.id]);
     expect(cap.rows[0]).toMatchObject({ booked_reserved: 1, walkin_used: 0 });
@@ -425,13 +425,16 @@ describe('FR-08 consultation, EWMA and aging', () => {
     t.clock.set(at(s, 2));
     const started = await doc(8).post(`/visits/${a.visitId}/start`, { expectedVersion: called.entry!.version });
     expect(started.status).toBe(200);
-    expect(QueueEntry.parse(started.body).state).toBe('in_service');
+    const startedBody = QueueCommandResult.parse(started.body);
+    expect(startedBody.entry.state).toBe('in_service');
+    expect(startedBody.entry.startedAt).toBe(at(s, 2).toISOString());
+    expect(startedBody.queueVersion).toBe(await queueVersion(s.id));
     expect(errorCode((await doc(8).post(`/visits/${a.visitId}/start`, {})).body)).toBe('INVALID_TRANSITION');
     // Complete before it is allowed? It is in service now, so it works; completing twice is invalid.
     t.clock.set(at(s, 9));
     const done = await doc(8).post(`/visits/${a.visitId}/complete`, {});
     expect(done.status).toBe(200);
-    expect(QueueEntry.parse(done.body).state).toBe('completed');
+    expect(QueueCommandResult.parse(done.body).entry.state).toBe('completed');
     expect(errorCode((await doc(8).post(`/visits/${a.visitId}/complete`, {})).body)).toBe('INVALID_TRANSITION');
 
     const visit = await t.pool.query(`SELECT status, started_at, completed_at FROM visits WHERE id = $1`, [a.visitId]);
@@ -520,7 +523,7 @@ describe('FR-15 clinical priority', () => {
     // Clearing needs a reason too and removes the class.
     const cleared = await doc(5).post(`/queue-entries/${w2.queueEntryId}/priority`, { priorityClass: null, reason: 'Re-assessed, stable' });
     expect(cleared.status).toBe(200);
-    expect(QueueEntry.parse(cleared.body).priorityClass).toBeNull();
+    expect(QueueCommandResult.parse(cleared.body).entry.priorityClass).toBeNull();
     // The class cannot be set on a completed patient.
     t.clock.set(at(s, 6));
     await doc(5).post(`/visits/${w1.visitId}/start`, {});

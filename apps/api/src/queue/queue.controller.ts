@@ -11,7 +11,6 @@ import {
   type DisplaySnapshot,
   type PatientQueueSnapshot,
   type QueueDecision,
-  type QueueEntry,
   type Session,
   type StaffQueueSnapshot,
 } from '@hqms/contracts';
@@ -23,6 +22,7 @@ import { Ctx, Public, Roles } from '../identity/auth.decorators.js';
 import { ConsultationService } from './consultation.service.js';
 import {
   ReEnterRequest,
+  type QueueCommandResultDto,
   type MarkUnavailableRequestDto,
   type PauseSessionRequestDto,
   type QueueEntryActionRequestDto,
@@ -71,7 +71,7 @@ export class QueueController {
     @Body(new ZodPipe(VisitActionRequest)) body: VisitActionRequestDto,
     @Headers('idempotency-key') key: string | undefined,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<QueueEntry> {
+  ): Promise<QueueCommandResultDto> {
     return sendResult(res, await this.consultation.start(ctx, id, body, optionalIdempotencyKey(key)));
   }
 
@@ -83,7 +83,7 @@ export class QueueController {
     @Body(new ZodPipe(VisitActionRequest)) body: VisitActionRequestDto,
     @Headers('idempotency-key') key: string | undefined,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<QueueEntry> {
+  ): Promise<QueueCommandResultDto> {
     return sendResult(res, await this.consultation.complete(ctx, id, body, optionalIdempotencyKey(key)));
   }
 
@@ -97,7 +97,7 @@ export class QueueController {
     @Body(new ZodPipe(QueueEntryActionRequest)) body: QueueEntryActionRequestDto,
     @Headers('idempotency-key') key: string | undefined,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<QueueEntry> {
+  ): Promise<QueueCommandResultDto> {
     return sendResult(res, await this.queue.skip(ctx, id, body, optionalIdempotencyKey(key)));
   }
 
@@ -109,7 +109,7 @@ export class QueueController {
     @Body(new ZodPipe(QueueEntryActionRequest)) body: QueueEntryActionRequestDto,
     @Headers('idempotency-key') key: string | undefined,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<QueueEntry> {
+  ): Promise<QueueCommandResultDto> {
     return sendResult(res, await this.queue.absent(ctx, id, body, optionalIdempotencyKey(key)));
   }
 
@@ -121,7 +121,7 @@ export class QueueController {
     @Body(new ZodPipe(ReEnterRequest)) body: ReEnterRequest,
     @Headers('idempotency-key') key: string | undefined,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<QueueEntry> {
+  ): Promise<QueueCommandResultDto> {
     return sendResult(res, await this.queue.reEnter(ctx, id, body, optionalIdempotencyKey(key)));
   }
 
@@ -134,7 +134,7 @@ export class QueueController {
     @Body(new ZodPipe(SetPriorityRequest)) body: SetPriorityRequestDto,
     @Headers('idempotency-key') key: string | undefined,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<QueueEntry> {
+  ): Promise<QueueCommandResultDto> {
     return sendResult(res, await this.queue.setPriority(ctx, id, body, optionalIdempotencyKey(key)));
   }
 

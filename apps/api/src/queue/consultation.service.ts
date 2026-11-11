@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { QueueEntry } from '@hqms/contracts';
 import {
   bumpQueueVersion,
   getAppointment,
@@ -23,7 +22,7 @@ import type { RequestCtx } from '../common/request-context.js';
 import { AccessPolicy } from '../access/access-policy.service.js';
 import { toDomainPolicy } from '../scheduling/shared.js';
 import { assertVersion, runCommand } from './command.js';
-import type { VisitActionRequestDto } from './dto.js';
+import type { QueueCommandResultDto, VisitActionRequestDto } from './dto.js';
 import { cancelCallTimeoutJob, lockEntry, readEntry, readGuards, toQueueEntry } from './queue.repo.js';
 
 /** A single consultation longer than this is capped before it enters the EWMA (clock faults, forgotten complete). */
@@ -43,7 +42,7 @@ export class ConsultationService {
     visitId: string,
     body: VisitActionRequestDto,
     key: string | undefined,
-  ): Promise<IdempotentResult<QueueEntry>> {
+  ): Promise<IdempotentResult<QueueCommandResultDto>> {
     const guards = await readGuards(this.pool, visitId, 'visit');
     if (!guards) throw notFound('Visit');
     this.access.assertDoctorScope(ctx.user, guards.doctorId);
@@ -88,7 +87,10 @@ export class ConsultationService {
         patientId: entry.patientId,
         payload: { queueVersion, token: entry.token },
       });
-      return { status: 200, body: toQueueEntry(required(await readEntry(tx, entry.id), 'queue entry')) };
+      return {
+        status: 200,
+        body: { entry: toQueueEntry(required(await readEntry(tx, entry.id), 'queue entry')), queueVersion },
+      };
     });
   }
 
@@ -101,7 +103,7 @@ export class ConsultationService {
     visitId: string,
     body: VisitActionRequestDto,
     key: string | undefined,
-  ): Promise<IdempotentResult<QueueEntry>> {
+  ): Promise<IdempotentResult<QueueCommandResultDto>> {
     const guards = await readGuards(this.pool, visitId, 'visit');
     if (!guards) throw notFound('Visit');
     this.access.assertDoctorScope(ctx.user, guards.doctorId);
@@ -175,7 +177,10 @@ export class ConsultationService {
         patientId: entry.patientId,
         payload: { queueVersion, token: entry.token },
       });
-      return { status: 200, body: toQueueEntry(required(await readEntry(tx, entry.id), 'queue entry')) };
+      return {
+        status: 200,
+        body: { entry: toQueueEntry(required(await readEntry(tx, entry.id), 'queue entry')), queueVersion },
+      };
     });
   }
 }

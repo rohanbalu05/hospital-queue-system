@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- tests index rows they have just created */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { ApiError, ArrivalResult, Appointment } from '@hqms/contracts';
+import { ApiError, ArrivalResult, type Appointment } from '@hqms/contracts';
 import { capacityInvariant } from '@hqms/db';
 import {
   type Client,
@@ -179,11 +179,29 @@ describe('D-022 late admission after the worker marked the appointment missed', 
     expect(
       await count(
         t.pool,
-        `SELECT 1 FROM outbox_events WHERE event_type = 'ReservationReleased' AND entity_id = $1`,
+        `SELECT 1 FROM outbox_events WHERE event_type = 'ReservationReleased' AND entity_id = $1 AND payload->>'reason' = 'late_admission'`,
         [appt.id],
       ),
     ).toBe(1);
     expect((await capacityInvariant(t.pool, s.id)).ok).toBe(true);
+  });
+});
+
+describe('ReservationReleased carries the reason the worker uses for notification wording', () => {
+  it("cancel -> 'cancelled', reschedule -> 'rescheduled'", async () => {
+    const a = await makeSession(admin, { doctor: 1 });
+    const b = await makeSession(admin, { doctor: 1 });
+    const x = (await reception.post('/appointments', { sessionId: a.id, patientId: patientId(13) })).body as Appointment;
+    const moved = await reception.post(`/appointments/${x.id}/reschedule`, { targetSessionId: b.id });
+    expect(moved.status).toBe(201);
+    expect(
+      await count(t.pool, `SELECT 1 FROM outbox_events WHERE event_type = 'ReservationReleased' AND entity_id = $1 AND payload->>'reason' = 'rescheduled'`, [x.id]),
+    ).toBe(1);
+    const cancel = await reception.post(`/appointments/${moved.body.id}/cancel`, {}, null);
+    expect(cancel.status).toBe(200);
+    expect(
+      await count(t.pool, `SELECT 1 FROM outbox_events WHERE event_type = 'ReservationReleased' AND entity_id = $1 AND payload->>'reason' = 'cancelled'`, [moved.body.id]),
+    ).toBe(1);
   });
 });
 

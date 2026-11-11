@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { QueueEntryActionRequest, VisitActionRequest, SetPriorityRequest, PauseSessionRequest, MarkUnavailableRequest } from '@hqms/contracts';
+import {
+  QueueEntryActionRequest,
+  type MarkUnavailableRequest,
+  type PauseSessionRequest,
+  type QueueCommandResult,
+  type SetPriorityRequest,
+  type VisitActionRequest,
+} from '@hqms/contracts';
 
 /**
  * POST /queue-entries/{id}/re-enter. The contract's QueueEntryActionRequest plus `admitLate`, which
@@ -14,3 +21,4 @@ export type QueueEntryActionRequestDto = z.infer<typeof QueueEntryActionRequest>
 export type SetPriorityRequestDto = z.infer<typeof SetPriorityRequest>;
 export type PauseSessionRequestDto = z.infer<typeof PauseSessionRequest>;
 export type MarkUnavailableRequestDto = z.infer<typeof MarkUnavailableRequest>;
+export type QueueCommandResultDto = z.infer<typeof QueueCommandResult>;
