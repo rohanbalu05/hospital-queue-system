@@ -1,0 +1,123 @@
+{
+  "generatedAt": "2026-11-11T13:54:45.335Z",
+  "procedure": "docs/runbook.md section 7.1 (backup) and 7.3 (restore), source run, local PostgreSQL 16 and local-disk storage on one machine",
+  "dataset": {
+    "loaded": {
+      "booked": 300,
+      "documents": 8,
+      "counts": {
+        "patients": 1540,
+        "sessions": 171,
+        "appointments": 315,
+        "queue_entries": 8,
+        "documents": 8,
+        "audit_events": 391,
+        "open_jobs": 301,
+        "last_audit_at": "2026-11-11T13:54:25.669Z"
+      }
+    },
+    "loadMs": 3682,
+    "openJobsAtBackup": 301
+  },
+  "backup": {
+    "dumpMs": 176,
+    "dumpBytes": 410810,
+    "storageArchiveMs": 81,
+    "storageArchiveBytes": 1602819,
+    "filesInArchive": 8,
+    "archiveListing": "docs/evidence/T5-restore-drill.archive-listing.txt"
+  },
+  "timestamps": {
+    "lastCommittedWriteBeforeBackup": "2026-11-11T13:54:25.669938Z",
+    "backupCompletedAt": "2026-11-11T13:54:26.482Z",
+    "writesAfterBackup": {
+      "bookingsAfterBackup": 10,
+      "lastAuditAt": "2026-11-11T13:54:27.482Z"
+    },
+    "lastCommittedWriteBeforeFailure": "2026-11-11T13:54:27.482Z",
+    "failureAt": "2026-11-11T13:54:42.572Z",
+    "latestWriteInRestoredDatabase": "2026-11-11T13:54:45.096460Z"
+  },
+  "counts": {
+    "appointments_auditEvents_documents_beforeFailure": "325 404 8",
+    "appointments_auditEvents_documents_afterRestore": "315 396 8"
+  },
+  "restore": {
+    "pgRestoreMs": 479,
+    "storageRestoreMs": 18,
+    "apiStartMs": 485,
+    "restoreStartToHealthyApiMs": 982
+  },
+  "reconciliation": {
+    "reconcileUploadsJob": "succeeded",
+    "reconcileMs": 405,
+    "checksMs": 674,
+    "migrationFilesInRepo": 6,
+    "checks": {
+      "migrations": {
+        "applied": 6,
+        "latest": "0006_audit_append_only"
+      },
+      "capacityCounterMismatchRows": 0,
+      "doctorsWithTwoActiveAllocations": 0,
+      "globalInvariantViolations": 0,
+      "invariantSample": [],
+      "documents": {
+        "total": 8,
+        "byStatus": {
+          "ocr_ready": 8
+        },
+        "objectsInStorage": 8,
+        "documentsWithMissingObject": 0,
+        "documentsWithSizeOrHashMismatch": 0,
+        "objectsWithoutDocument": 0
+      },
+      "jobs": [
+        {
+          "job_type": "call_timeout",
+          "state": "cancelled",
+          "n": 3
+        },
+        {
+          "job_type": "ocr_document",
+          "state": "succeeded",
+          "n": 8
+        },
+        {
+          "job_type": "reconcile_uploads",
+          "state": "pending",
+          "n": 1
+        },
+        {
+          "job_type": "reconcile_uploads",
+          "state": "succeeded",
+          "n": 2
+        },
+        {
+          "job_type": "reservation_release",
+          "state": "pending",
+          "n": 300
+        }
+      ],
+      "counts": {
+        "patients": 1540,
+        "sessions": 171,
+        "appointments": 315,
+        "queue_entries": 8,
+        "documents": 8,
+        "audit_events": 391,
+        "last_audit_at": "2026-11-11T13:54:25.669Z"
+      },
+      "checkMs": 0
+    }
+  },
+  "smoke": {
+    "exitCode": 0,
+    "ms": 427
+  },
+  "localRtoMs": {
+    "definition": "from the moment the failure was simulated (processes killed) until pnpm smoke passed; excludes detection and decision time and any human steps",
+    "value": 2585
+  },
+  "notMeasured": "Hosted PITR (RPO <= 15 min) and the hosted RTO <= 60 min are not exercised by this local procedure."
+}

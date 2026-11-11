@@ -1,5 +1,23 @@
 {
   "extends": "../tsconfig.base.json",
-  "compilerOptions": { "noEmit": true, "types": ["node"], "lib": ["ES2023", "DOM"] },
-  "include": ["*.ts", "integration", "concurrency", "support", "e2e", "helpers"]
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [
+      "node"
+    ],
+    "lib": [
+      "ES2023",
+      "DOM"
+    ]
+  },
+  "include": [
+    "*.ts",
+    "integration",
+    "concurrency",
+    "support",
+    "e2e",
+    "helpers",
+    "load",
+    "failure"
+  ]
 }

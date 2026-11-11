@@ -10,7 +10,11 @@
     "simulate": "tsx simulation/run.ts",
     "test:concurrency": "vitest run --dir concurrency --passWithNoTests",
     "e2e": "playwright test --trace off",
-    "test:coverage": "vitest run --config simulation/vitest.config.ts --coverage --coverage.include=simulation/** --coverage.exclude=simulation/**/*.test.ts --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reporter=lcov --coverage.reportsDirectory=coverage"
+    "test:coverage": "vitest run --config simulation/vitest.config.ts --coverage --coverage.include=simulation/** --coverage.exclude=simulation/**/*.test.ts --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reporter=lcov --coverage.reportsDirectory=coverage",
+    "load": "tsx load/run-load.ts",
+    "failure": "tsx failure/run-failure.ts",
+    "restore-drill": "bash failure/restore-drill.sh",
+    "load:sse": "tsx load/sse.ts"
   },
   "devDependencies": {
     "@hqms/db": "workspace:*",
