@@ -190,6 +190,10 @@ export async function startApi(opts: { dbName: string; port?: number; env?: Reco
       NODE_ENV: 'production',
       DB_POOL_MAX: '20',
       LOGIN_RATE_LIMIT_MAX: '1000000',
+      // All test clients come from one IP, which a hospital deployment would not have: lift the per-IP caps (declared in the evidence).
+      SSE_MAX_PER_IP: '1000',
+      SSE_MAX_DISPLAY: '200',
+      DISPLAY_RATE_LIMIT_PER_MIN: '100000',
       ...opts.env,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
