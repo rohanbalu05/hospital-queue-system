@@ -153,6 +153,7 @@ export function toQueueEntry(
     priorityClass: e.priorityClass,
     priorityReason: e.priorityReason,
     calledAt: e.calledAt,
+    startedAt: e.startedAt,
     callCount: e.callCount,
     waitingMinutes:
       waiting && extra.now

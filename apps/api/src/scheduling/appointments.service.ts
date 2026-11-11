@@ -161,6 +161,7 @@ export class AppointmentsService {
           entityVersion: updated.version,
           sessionId: cur.sessionId,
           patientId: cur.patientId,
+          ...(eventType === 'ReservationReleased' ? { payload: { reason: 'cancelled' } } : {}),
         });
       }
       return { status: 200, body: toAppointment(updated) };
@@ -265,6 +266,7 @@ export class AppointmentsService {
           entityVersion: cur.version + 1,
           sessionId: cur.sessionId,
           patientId: cur.patientId,
+          payload: { reason: 'rescheduled' },
         });
         return { status: 201, body: toAppointment(created) };
       },

@@ -127,7 +127,7 @@ export class ArrivalsService {
               entityVersion: appt.version,
               sessionId: session.id,
               patientId: appt.patientId,
-              payload: {},
+              payload: { reason: 'late_admission' },
             });
           }
           kind = 'late_admission';
