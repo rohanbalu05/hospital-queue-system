@@ -271,6 +271,43 @@ describe('FR-07 non-preemptive: one active allocation per doctor', () => {
     expect(snap.waiting).toHaveLength(1);
   });
 
+  it('D-015/D-025 check order: DOCTOR_OCCUPIED comes before selection, even when the session has no waiting entries', async () => {
+    const s1 = await mk(6);
+    const startsAt = `${s1.date}T11:00:00+05:30`;
+    const created = await admin.post(
+      '/sessions',
+      { doctorId: doctorId(6), sessionDate: s1.date, label: 'afternoon', startsAt, endsAt: `${s1.date}T15:00:00+05:30` },
+      null,
+    );
+    expect(created.status).toBe(201);
+    const s2: MadeSession = { id: created.body.id as string, date: s1.date, startsAt: new Date(startsAt).toISOString() };
+
+    const w1 = await walkIn(s1, 17, 0);
+    expect((await callNext(s1, doc(6), 5)).status).toBe(200); // W1 called in session 1; session 2 stays empty
+    const decisionsBefore = await count(t.pool, `SELECT 1 FROM queue_decisions WHERE session_id = $1`, [s2.id]);
+
+    // Empty second session while the doctor is occupied in the first: 409, not 200 NO_ALLOCATION.
+    const blocked = await callNext(s2, doc(6), 131);
+    expect(blocked.status).toBe(409);
+    expect(ApiError.parse(blocked.body).error).toMatchObject({
+      code: 'DOCTOR_OCCUPIED',
+      details: { token: w1.token, state: 'called', sessionId: s1.id },
+    });
+    // Same once the patient is in consultation.
+    t.clock.set(at(s1, 132));
+    expect((await doc(6).post(`/visits/${w1.visitId}/start`, {})).status).toBe(200);
+    const blocked2 = await callNext(s2, doc(6), 133);
+    expect(blocked2.status).toBe(409);
+    expect(ApiError.parse(blocked2.body).error).toMatchObject({ code: 'DOCTOR_OCCUPIED', details: { token: w1.token, state: 'in_service' } });
+    // Same session, nobody else waiting: still occupied.
+    expect(errorCode((await callNext(s1, doc(6), 134)).body)).toBe('DOCTOR_OCCUPIED');
+
+    // The refusal wrote nothing: no decision row, session 2 not auto-opened.
+    expect(await count(t.pool, `SELECT 1 FROM queue_decisions WHERE session_id = $1`, [s2.id])).toBe(decisionsBefore);
+    const status = await t.pool.query(`SELECT status FROM sessions WHERE id = $1`, [s2.id]);
+    expect(status.rows[0]!.status).toBe('scheduled');
+  });
+
   it('20 concurrent call-next across both sessions: exactly one call, the rest DOCTOR_OCCUPIED, never two active rows', async () => {
     const s1 = await mk(4);
     const startsAt = `${s1.date}T11:00:00+05:30`;
