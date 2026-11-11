@@ -1,17 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ME_PATIENT_ID } from './scheduling-mocks';
-import { CONVERSATION_ID } from './w3-mocks';
 import { setupW3, shot } from './w3-helpers';
-
-/** Reopen the conversation the way the page does: its id is remembered in this browser only. */
-async function rememberConversation(page: Page) {
-  await page.addInitScript(
-    ([key, id]) => {
-      window.localStorage.setItem(key as string, id as string);
-    },
-    [`hqms.assistant.${ME_PATIENT_ID}`, CONVERSATION_ID] as const,
-  );
-}
 
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
 
@@ -75,7 +63,6 @@ test.describe('patient at 390', () => {
 
   test('assistant: answers cite the verified version, escalations name the time, no sparkle', async ({ page }) => {
     await setupW3(page, 'patient');
-    await rememberConversation(page);
     await page.goto('/patient/questions');
     await expect(page.getByRole('heading', { name: 'Questions about your instructions', level: 1 })).toBeVisible();
     await expect(page.getByTestId('assistant-note')).toContainText('only uses instructions your doctor has verified');
@@ -93,7 +80,8 @@ test.describe('patient at 390', () => {
   });
 
   test('assistant: ask a question, get an answer, then one that is sent to the team', async ({ page }) => {
-    await setupW3(page, 'patient');
+    const { w3 } = await setupW3(page, 'patient');
+    w3.hasConversation = false;
     await page.goto('/patient/questions');
     await expect(page.getByText(/No questions yet/)).toBeVisible();
 
@@ -120,6 +108,7 @@ test.describe('patient at 390', () => {
     await page.goto('/patient/follow-ups');
     await expect(page.getByRole('heading', { name: 'Follow-ups', level: 1 })).toBeVisible();
     const open = page.locator('[data-status="open"]');
+    await expect(open).toContainText('Your question for the follow-up team');
     await expect(open).toContainText('Waiting for the follow-up team');
     await expect(open).toContainText("You'll hear back by 11 Nov, 2:00 pm.");
     await expect(page.locator('[data-status="resolved"]')).toContainText('Done');
@@ -127,6 +116,7 @@ test.describe('patient at 390', () => {
     expect(text).not.toContain('Internal');
     expect(text).not.toContain('Rakesh');
     expect(text).not.toContain('No verified instruction covers this');
+    expect(text).not.toContain('ibuprofen');
     expect(await noHorizontalScroll(page)).toBe(true);
     await shot(page, 'w3-patient-followups-390');
   });

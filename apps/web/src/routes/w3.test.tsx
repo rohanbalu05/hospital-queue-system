@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import type { ConversationMessage, InstructionVersion, QueuePolicy } from '@hqms/contracts';
+import type { Appointment, ConversationMessage, InstructionVersion, QueuePolicy } from '@hqms/contracts';
 import { Field } from '@/components/layout/Field';
 import { plainErrorMessage } from '@/components/queue';
 import { TaskStatusWord, TimingWord } from '@/components/followup/words';
@@ -15,6 +15,7 @@ import { VersionTag } from '@/routes/doctor/review/InstructionHistory';
 import { MessageView, citationLine } from '@/routes/patient/AssistantPage';
 import { PATIENT_TASK_WORD } from '@/routes/patient/FollowUpsPage';
 import { uploadErrorWords } from '@/routes/patient/DocumentsPage';
+import { todaysAppointments } from '@/routes/patient/TodayPage';
 import { DispositionForm } from '@/routes/follow-up/components/DispositionForm';
 import type { FollowUpTaskView } from '@/api';
 
@@ -279,5 +280,35 @@ describe('DispositionForm', () => {
     await user.click(screen.getByRole('button', { name: 'Resolve task' }));
     await waitFor(() => expect(screen.getByText('Book the return visit first, or choose another outcome.')).toBeVisible());
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('todaysAppointments', () => {
+  const appt = (id: string, scheduledAt: string, status: Appointment['status']): Appointment => ({
+    id,
+    patientId: uuid(1),
+    sessionId: uuid(2),
+    doctorId: uuid(3),
+    doctorName: 'Dr. Meenakshi Rao',
+    department: 'General Medicine',
+    scheduledAt,
+    status,
+    rescheduledFromId: null,
+    followUpTaskId: null,
+    version: 1,
+    createdAt: '2026-11-05T10:30:00+05:30',
+  });
+
+  it('keeps booked and checked-in appointments on today (IST), earliest first', () => {
+    const list = [
+      appt('late', '2026-11-11T11:40:00+05:30', 'booked'),
+      appt('early', '2026-11-11T09:20:00+05:30', 'checked_in'),
+      appt('done', '2026-11-11T09:00:00+05:30', 'completed'),
+      appt('cancelled', '2026-11-11T10:00:00+05:30', 'cancelled'),
+      appt('tomorrow', '2026-11-12T09:00:00+05:30', 'booked'),
+      // 11:30 pm UTC on 10 Nov is 5:00 am on 11 Nov in Bengaluru.
+      appt('utc-evening', '2026-11-10T23:30:00Z', 'booked'),
+    ];
+    expect(todaysAppointments(list, '2026-11-11').map((a) => a.id)).toEqual(['utc-evening', 'early', 'late']);
   });
 });

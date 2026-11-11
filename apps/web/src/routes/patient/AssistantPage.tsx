@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ConversationMessage, InstructionVersion } from '@hqms/contracts';
 import { AskAssistantRequest } from '@hqms/contracts';
-import { useAskAssistant, useConversationMessages, useFollowUpTasks, useInstructions } from '@/api';
+import { useAskAssistant, useConversationMessages, useConversations, useInstructions, useMyFollowUps } from '@/api';
 import { Field } from '@/components/layout/Field';
 import { PatientPage } from '@/components/layout/PatientPage';
 import { ErrorState, SkeletonRows } from '@/components/queue';
@@ -11,23 +11,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/lib/auth';
 import { formatIST } from '@/lib/format';
 import { cn } from '@/lib/utils';
-
-/** Per-viewer convenience only: which conversation to reopen. The messages themselves live on the server. */
-const storageKey = (patientId: string) => `hqms.assistant.${patientId}`;
-function readConversation(patientId: string): string | null {
-  try {
-    return window.localStorage.getItem(storageKey(patientId));
-  } catch {
-    return null;
-  }
-}
-function saveConversation(patientId: string, id: string) {
-  try {
-    window.localStorage.setItem(storageKey(patientId), id);
-  } catch {
-    // private window or blocked storage: the conversation simply is not reopened next time
-  }
-}
 
 export function citationLine(c: { title: string; version: number }, verifiedAt: string | undefined): string {
   return `From: ${c.title} (version ${c.version}${verifiedAt ? `, verified ${formatIST(verifiedAt, 'date')}` : ''})`;
@@ -80,20 +63,19 @@ export function MessageView({ message: m, versions, dueByTask }: MessageViewProp
 export default function AssistantPage() {
   const { me } = useAuth();
   const patientId = me?.patientId ?? null;
-  const [conversationId, setConversationId] = useState<string | null>(null);
+  const conversations = useConversations(patientId !== null);
+  // Reopen the latest conversation; a new one starts when the first question is sent.
+  const [started, setStarted] = useState<string | null>(null);
+  const conversationId = started ?? conversations.data?.[0]?.id ?? null;
   const [question, setQuestion] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [asked, setAsked] = useState<string | null>(null);
   const [dueNow, setDueNow] = useState<Record<string, string>>({});
   const endRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (patientId) setConversationId(readConversation(patientId));
-  }, [patientId]);
-
   const messages = useConversationMessages(conversationId);
   const instructions = useInstructions(patientId);
-  const tasks = useFollowUpTasks({ patientId: patientId ?? undefined, owner: 'all' }, { enabled: patientId !== null });
+  const tasks = useMyFollowUps(patientId !== null);
   const ask = useAskAssistant();
 
   const versions = useMemo(() => new Map((instructions.data ?? []).map((v) => [v.id, v])), [instructions.data]);
@@ -119,8 +101,7 @@ export default function AssistantPage() {
     setAsked(parsed.data.question);
     ask.mutate(parsed.data, {
       onSuccess: (a) => {
-        if (patientId) saveConversation(patientId, a.conversationId);
-        setConversationId(a.conversationId);
+        setStarted(a.conversationId);
         const esc = a.escalation;
         if (esc) setDueNow((d) => ({ ...d, [esc.taskId]: esc.dueAt }));
         setQuestion('');
@@ -137,7 +118,7 @@ export default function AssistantPage() {
       </p>
 
       <section aria-label="Conversation" className="mt-4">
-        {conversationId !== null && messages.isPending ? (
+        {conversations.isPending || (conversationId !== null && messages.isPending) ? (
           <SkeletonRows count={3} />
         ) : messages.isError && !messages.data ? (
           <ErrorState title="Your earlier questions could not be loaded" error={messages.error} onRetry={() => void messages.refetch()} />
