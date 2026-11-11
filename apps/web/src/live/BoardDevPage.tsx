@@ -15,7 +15,7 @@ export default function BoardDevPage() {
       title="Session board"
       description={selected ? `Selected ${selected.token}, ${selected.patientName}` : 'Dev view of the live board. Select a row to see selection.'}
     >
-      <div className="max-w-[900px]">
+      <div className="max-w-[640px]">
         <SessionBoardLive sessionId={sessionId} selectedEntryId={selected?.id ?? null} onSelectEntry={setSelected} />
       </div>
     </StaffShell>

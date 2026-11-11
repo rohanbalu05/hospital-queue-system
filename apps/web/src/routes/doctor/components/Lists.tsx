@@ -37,7 +37,7 @@ export function WaitingList({ entries, onSetPriority, onMarkAbsent }: WaitingLis
                 {e.patientName}
               </>
             }
-            detail={hasPriority ? `Priority ${e.priorityClass}: ${e.priorityReason ?? 'no reason recorded'}` : `Checked in ${formatIST(e.checkedInAt)}`}
+            detail={hasPriority ? `Priority ${e.priorityClass}: ${e.priorityReason ?? 'no reason recorded'}` : `In at ${formatIST(e.checkedInAt)}`}
             trailing={
               <span className="flex items-center gap-2">
                 <span title="Waiting since eligible">{minutes(e.waitingMinutes)}</span>

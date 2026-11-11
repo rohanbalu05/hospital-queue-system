@@ -1,12 +1,13 @@
 import { useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { z } from 'zod';
+import type { MarkUnavailableRequest } from '@hqms/contracts';
 import {
   CallNextResult,
-  type MarkUnavailableRequest,
   type PauseSessionRequest,
   type SetPriorityRequest,
 } from '@hqms/contracts';
-import { ApiRequestError, apiFetch, createKeyHolder } from '@/lib/api';
+import { apiFetch, createKeyHolder, type ApiRequestError } from '@/lib/api';
 import { queueKeys } from './queries';
 
 /**
@@ -27,7 +28,7 @@ const sessionPath = (sessionId: string) => `/sessions/${encodeURIComponent(sessi
 export function useCallNext(sessionId: string) {
   const refresh = useRefreshSnapshot(sessionId);
   const holder = useRef(createKeyHolder());
-  return useMutation<CallNextResult, ApiRequestError, void>({
+  return useMutation<CallNextResult, ApiRequestError, undefined>({
     mutationFn: () =>
       apiFetch(`${sessionPath(sessionId)}/call-next`, {
         method: 'POST',
@@ -118,7 +119,7 @@ export function usePauseSession(sessionId: string) {
 
 export function useResumeSession(sessionId: string) {
   const refresh = useRefreshSnapshot(sessionId);
-  return useMutation<unknown, ApiRequestError, void>({
+  return useMutation<unknown, ApiRequestError, undefined>({
     mutationFn: () => apiFetch(`${sessionPath(sessionId)}/resume`, { method: 'POST', body: {} }),
     onSettled: refresh,
   });
@@ -126,7 +127,7 @@ export function useResumeSession(sessionId: string) {
 
 export function useMarkUnavailable(sessionId: string) {
   const refresh = useRefreshSnapshot(sessionId);
-  return useMutation<unknown, ApiRequestError, MarkUnavailableRequest>({
+  return useMutation<unknown, ApiRequestError, z.infer<typeof MarkUnavailableRequest>>({
     mutationFn: (body) => apiFetch(`${sessionPath(sessionId)}/unavailable`, { method: 'POST', body }),
     onSettled: refresh,
   });

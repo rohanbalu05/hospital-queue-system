@@ -140,7 +140,7 @@ function BoardBody({ snapshot, status, lastUpdated, refreshFailed, selectedEntry
         </p>
       ) : null}
 
-      <div className="grid gap-3 @2xl:grid-cols-2">
+      <div className="grid gap-3 @3xl:grid-cols-2">
         <Lane title="Called" count={called.length} empty="Nobody is being called.">
           {called.map((e) => row(e, e.calledAt ? `Called ${formatIST(e.calledAt)}` : null, 'Waiting for the patient'))}
         </Lane>

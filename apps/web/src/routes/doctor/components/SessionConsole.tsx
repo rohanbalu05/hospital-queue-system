@@ -229,7 +229,7 @@ export function SessionConsole({ session, date, picker }: SessionConsoleProps) {
       ) : null}
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="lg:col-start-2 lg:row-start-1">
+        <div className="lg:col-start-2 lg:row-span-3 lg:row-start-1">
           <CallNextPanel
             snapshot={snapshot}
             decision={decision}
@@ -259,7 +259,7 @@ export function SessionConsole({ session, date, picker }: SessionConsoleProps) {
             onMarkAbsent={(entry) => setDialog({ kind: 'absent', entry })}
           />
         </div>
-        <div className="lg:col-start-2 lg:row-start-2">
+        <div className="lg:col-start-1 lg:row-start-3">
           <SkippedList entries={snapshot.skipped} onReEnter={onReEnter} busy={entryAction.isPending} />
         </div>
       </div>
