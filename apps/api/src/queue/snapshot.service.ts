@@ -43,11 +43,10 @@ interface QueueState {
 async function loadState(db: Queryable, sessionId: string): Promise<QueueState | null> {
   const session = await readSessionState(db, sessionId);
   if (!session) return null;
-  const [waiting, active, est] = await Promise.all([
-    readWaiting(db, sessionId),
-    readActiveForDoctor(db, session.doctorId),
-    getServiceEstimate(db, session.doctorId),
-  ]);
+  // Sequential: one transaction is one connection, which runs one query at a time.
+  const waiting = await readWaiting(db, sessionId);
+  const active = await readActiveForDoctor(db, session.doctorId);
+  const est = await getServiceEstimate(db, session.doctorId);
   return {
     session,
     waiting,
@@ -169,13 +168,12 @@ export class SnapshotService {
       }
 
       this.access.assertDoctorScope(user, state.session.doctorId);
-      const [skipped, completed, lastDecision] = await Promise.all([
-        readEntriesInStates(db, sessionId, ['skipped', 'absent']),
-        db.query<{ n: number }>(`SELECT count(*)::int AS n FROM queue_entries WHERE session_id = $1 AND state = 'completed'`, [
-          sessionId,
-        ]),
-        readLastDecision(db, sessionId),
-      ]);
+      const skipped = await readEntriesInStates(db, sessionId, ['skipped', 'absent']);
+      const completed = await db.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM queue_entries WHERE session_id = $1 AND state = 'completed'`,
+        [sessionId],
+      );
+      const lastDecision = await readLastDecision(db, sessionId);
       const byId = new Map(state.waiting.map((e) => [e.id, e]));
       const waiting = order.flatMap((id) => {
         const e = byId.get(id);
