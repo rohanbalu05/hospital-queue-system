@@ -67,3 +67,12 @@ W1 = api-engineer (bootstrap, identity, authz, scheduling, arrivals), ui-enginee
 
 ## D-019 Wave tags are local only
 The session's git proxy only accepts pushes to the session branch, so `wave-N` tags exist in the local clone and are recorded with their commit hashes in PROGRESS.md. HQ can recreate them (`git tag wave-N <hash>`) after merging. wave-0 = the G0 build-state commit.
+
+## D-020 API implementation choices (api-engineer, W1)
+- No emitted decorator metadata: every Nest constructor param uses explicit `@Inject(TOKEN)`, so esbuild (tsx dev, tsup build, Vitest) is enough; no SWC.
+- Check-in / walk-in accept `scheduled|open|paused` sessions on the session's own IST date (patients arrive before the doctor opens); `unavailable|closed` → 409 SESSION_NOT_CALLABLE. Booking needs `scheduled|open` and a session that hasn't ended.
+- Staff patient lookup is hospital-wide for staff roles (reception must find anyone to register/book); appointments, sessions and arrivals are scoped by assigned doctor (403 outside scope); patients get 404 for anything not their own (no existence disclosure).
+- Booking assigns the first free slot; repeat check-in returns the existing arrival (200) with no new audit/outbox/version bump.
+- Cancel/reschedule/check-in mark the pending `reservation_release` job `cancelled`; the worker also re-checks state.
+- Login rate limit in memory, 10 failures / 60 s per IP+email → 429; responses `Cache-Control: no-store`; error filter never logs bodies or SQL values.
+- Open (W2): an appointment already marked `missed` by the worker cannot be checked in; per report §6.2 ("a late return does not retain guaranteed admission") it should be admissible only as a late admission (walk-in capacity + order). W2 adds the `missed → checked_in` edge restricted to the late-admission path.
