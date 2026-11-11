@@ -222,6 +222,11 @@ async function main(): Promise<void> {
   // ---------------- generator ----------------
   let stats = new Map<Cls, Stat>(CLASSES.map((c) => [c, newStat()]));
   const unexpectedSamples: string[] = [];
+  let phaseT0 = performance.now();
+  const errTimeline: Record<string, number> = {};
+  const processEvents: string[] = [];
+  void api.exited.then((c) => processEvents.push(`api exited (${c}) at ${new Date().toISOString()}`));
+  void worker.exited.then((c) => processEvents.push(`worker exited (${c}) at ${new Date().toISOString()}`));
   let bookCtr = 0;
   let walkCtr = 0;
   let checkCtr = 0;
@@ -241,6 +246,10 @@ async function main(): Promise<void> {
     st.byStatus[r.status] = (st.byStatus[r.status] ?? 0) + 1;
     if (r.code) st.byCode[r.code] = (st.byCode[r.code] ?? 0) + 1;
     if (r.error) st.errors[r.error.slice(0, 80)] = (st.errors[r.error.slice(0, 80)] ?? 0) + 1;
+    if (r.status === 0) {
+      const bucket = String(Math.floor((performance.now() - phaseT0) / 10_000) * 10);
+      errTimeline[bucket] = (errTimeline[bucket] ?? 0) + 1;
+    }
     if (r.status === 0 || r.status >= 500 || (r.status >= 400 && r.status !== 409)) {
       if (unexpectedSamples.length < 30) unexpectedSamples.push(`${cls} ${r.status} ${r.code ?? ''} ${r.error ?? ''}`);
     }
@@ -422,6 +431,8 @@ async function main(): Promise<void> {
         if (r.violations.length) log(`INVARIANT VIOLATIONS: ${r.violations.slice(0, 3).join(' | ')}`);
       });
     }, 60_000);
+    phaseT0 = performance.now();
+    for (const k of Object.keys(errTimeline)) delete errTimeline[k];
     log(`phase ${phase.name}: ${phase.rps} req/s for ${phase.sec} s`);
     const startedAt = new Date().toISOString();
     const run = await runLoad(phase.name, phase.rps, phase.sec, true);
@@ -473,7 +484,7 @@ async function main(): Promise<void> {
       peakInFlight: peakInflight,
       schedulerLagMs: dist(run.lagMs),
       latencyMs: { overall: dist(allLat), reads: dist(reads), writes: dist(writes), perClass },
-      status: { total: issuedRequests, ok2xx: n2xx, expected409: n409, expected409ByCode: codes409, other4xxUnexpected: nOther4xx, serverError5xx: n5xx, networkErrorOrTimeout: nNet, unexpectedRatePct: round1(((nOther4xx + n5xx + nNet) / Math.max(1, issuedRequests)) * 1000) / 10, unexpectedSamples: [...unexpectedSamples] },
+      status: { total: issuedRequests, ok2xx: n2xx, expected409: n409, expected409ByCode: codes409, other4xxUnexpected: nOther4xx, serverError5xx: n5xx, networkErrorOrTimeout: nNet, unexpectedRatePct: round1(((nOther4xx + n5xx + nNet) / Math.max(1, issuedRequests)) * 1000) / 10, unexpectedSamples: [...unexpectedSamples], networkErrorsPer10sBucket: { ...errTimeline }, processEvents: [...processEvents], apiAliveAtEnd: api.alive(), workerAliveAtEnd: worker.alive() },
       cycles: { completed: completedCycles, skippedBecauseNoDoctorWithQueuedEntries: skippedCycles, callNextReturnedNoEntry: cycleNoEntry },
       durability: {
         before,

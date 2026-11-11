@@ -144,7 +144,13 @@ export interface Proc {
 }
 
 function wrap(child: ChildProcess, logs: string[]): Proc {
-  const exited = new Promise<string>((ok) => child.once('exit', (code, sig) => ok(String(code ?? sig))));
+  const exited = new Promise<string>((ok) =>
+    child.once('exit', (code, sig) => {
+      const what = `${String(code ?? sig)}`;
+      logs.push(`[t5-harness] process ${child.pid} exited (${what}) at ${new Date().toISOString()}`);
+      ok(what);
+    }),
+  );
   const keep = (b: Buffer): void => {
     for (const line of b.toString().split('\n')) if (line) logs.push(line);
     if (logs.length > 5000) logs.splice(0, logs.length - 5000);
@@ -277,7 +283,8 @@ export class Http {
       }
       return { status: res.status, body: parsed, ms, ...(parsed?.error?.code ? { code: String(parsed.error.code) } : {}) };
     } catch (err) {
-      return { status: 0, body: null, ms: performance.now() - t0, error: err instanceof Error ? `${err.name}: ${err.message}` : String(err) };
+      const cause = err instanceof Error ? (err.cause as { code?: string; message?: string } | undefined) : undefined;
+      return { status: 0, body: null, ms: performance.now() - t0, error: err instanceof Error ? `${err.name}: ${err.message}${cause ? ` (${cause.code ?? cause.message ?? 'cause'})` : ''}` : String(err) };
     }
   }
   get<T = any>(path: string) {
