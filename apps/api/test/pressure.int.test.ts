@@ -20,6 +20,12 @@ afterAll(async () => {
 beforeEach(() => t.clock.reset());
 
 async function fresh(opts: { walkin?: number } = {}): Promise<MadeSession> {
+  // Other test files complete consultations for this doctor; pin the estimator so the projection is predictable.
+  await t.pool.query(
+    `INSERT INTO service_estimates (doctor_id, mean_minutes, samples) VALUES ($1, 12, 0)
+     ON CONFLICT (doctor_id) DO UPDATE SET mean_minutes = 12, samples = 0`,
+    [doctorId(1)],
+  );
   await t.pool.query(
     `UPDATE queue_entries SET state = 'skipped', skipped_at = now() WHERE doctor_id = $1 AND state IN ('called','in_service')`,
     [doctorId(1)],

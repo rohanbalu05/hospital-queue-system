@@ -1,5 +1,6 @@
 import type { FollowUpTask } from '@hqms/contracts';
 import type { Queryable, Tx } from '@hqms/db';
+import { linkedToDoctorsSql } from '../access/patient-scope.service.js';
 import { notFound } from '../common/errors.js';
 
 /** SQL for follow-up tasks (FR-11). The service owns authorization, transitions, audit and outbox. */
@@ -63,21 +64,75 @@ export interface TaskListFilter {
   patientId?: string | undefined;
 }
 
+/**
+ * The task list query, built per filter so each predicate is a plain column comparison: for owner=me the plan is
+ * `owner_id = $n [AND status = $m] ORDER BY due_at`, which `follow_up_tasks_owner_idx (owner_id, status, due_at)`
+ * serves (Table 13). The doctor scope never hides a task from its owner: an escalation for a patient with no
+ * doctor link is visible to the user who owns it.
+ */
+export function buildTaskListQuery(now: Date, f: TaskListFilter): { text: string; values: unknown[] } {
+  const values: unknown[] = [];
+  const bind = (v: unknown): string => {
+    values.push(v);
+    return `$${values.length}`;
+  };
+  const where: string[] = [];
+  if (f.owner === 'me') where.push(`t.owner_id = ${bind(f.userId)}`);
+  else if (f.owner === 'unassigned') where.push('t.owner_id IS NULL');
+  if (f.status) where.push(`t.status = ${bind(f.status)}`);
+  if (f.patientId) where.push(`t.patient_id = ${bind(f.patientId)}`);
+  if (f.overdue !== undefined) {
+    const n = bind(now);
+    where.push(
+      f.overdue
+        ? `(t.status IN ('open','acknowledged') AND t.due_at < ${n}::timestamptz)`
+        : `NOT (t.status IN ('open','acknowledged') AND t.due_at < ${n}::timestamptz)`,
+    );
+  }
+  // owner=me needs no scope clause: the caller owns every row, and an owned task is always visible to its owner.
+  if (f.scopeDoctors !== null && f.owner !== 'me') {
+    const d = bind(f.scopeDoctors);
+    const n = bind(now);
+    const u = bind(f.userId);
+    where.push(`(${linkedToDoctorsSql('t.patient_id', d, n)} OR t.owner_id = ${u})`);
+  }
+  const order = f.status ? 't.due_at, t.id' : "(t.status IN ('open','acknowledged')) DESC, t.due_at, t.id";
+  return {
+    text: `SELECT ${TASK_COLS} ${TASK_FROM}${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY ${order}`,
+    values,
+  };
+}
+
 export async function listTasks(db: Queryable, now: Date, f: TaskListFilter): Promise<FollowUpTask[]> {
-  const res = await db.query(
-    `SELECT ${TASK_COLS} ${TASK_FROM}
-      WHERE ($1::uuid[] IS NULL
-             OR EXISTS (SELECT 1 FROM appointments a WHERE a.patient_id = t.patient_id AND a.doctor_id = ANY($1::uuid[]))
-             OR EXISTS (SELECT 1 FROM visits v WHERE v.patient_id = t.patient_id AND v.doctor_id = ANY($1::uuid[])))
-        AND ($2 = 'all' OR ($2 = 'me' AND t.owner_id = $3) OR ($2 = 'unassigned' AND t.owner_id IS NULL))
-        AND ($4::text IS NULL OR t.status = $4)
-        AND ($5::uuid IS NULL OR t.patient_id = $5)
-        AND ($6::boolean IS NULL
-             OR $6 = (t.status IN ('open','acknowledged') AND t.due_at < $7::timestamptz))
-      ORDER BY (t.status IN ('open','acknowledged')) DESC, t.due_at, t.id`,
-    [f.scopeDoctors, f.owner, f.userId, f.status ?? null, f.patientId ?? null, f.overdue ?? null, now],
-  );
+  const q = buildTaskListQuery(now, f);
+  const res = await db.query(q.text, q.values);
   return res.rows.map((r) => mapTask(r, now));
+}
+
+/**
+ * Owner of a task nobody was named for (escalations, doctor-created tasks): a follow-up user assigned to one of the
+ * patient's doctors, else any active follow-up user of the hospital; fewest open tasks first, then id, so the choice
+ * is deterministic. `null` only when the hospital has no active follow-up user at all.
+ */
+export async function pickOwner(db: Queryable, patientId: string, doctorIds: string[]): Promise<string | null> {
+  const load = `(SELECT count(*) FROM follow_up_tasks t WHERE t.owner_id = u.id AND t.status IN ('open','acknowledged'))`;
+  const assigned = await db.query<{ id: string }>(
+    `SELECT u.id FROM users u
+      WHERE u.role = 'followup' AND u.active
+        AND u.hospital_id = (SELECT hospital_id FROM patients WHERE id = $1)
+        AND EXISTS (SELECT 1 FROM staff_assignments sa WHERE sa.user_id = u.id AND sa.doctor_id = ANY($2::uuid[]))
+      ORDER BY ${load}, u.id LIMIT 1`,
+    [patientId, doctorIds],
+  );
+  if (assigned.rows[0]) return assigned.rows[0].id;
+  const any = await db.query<{ id: string }>(
+    `SELECT u.id FROM users u
+      WHERE u.role = 'followup' AND u.active
+        AND u.hospital_id = (SELECT hospital_id FROM patients WHERE id = $1)
+      ORDER BY ${load}, u.id LIMIT 1`,
+    [patientId],
+  );
+  return any.rows[0]?.id ?? null;
 }
 
 /** A patient's own tasks (the patient-safe projection is built by the service). */
