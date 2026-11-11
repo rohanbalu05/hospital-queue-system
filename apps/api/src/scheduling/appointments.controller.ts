@@ -19,7 +19,7 @@ import { AppointmentsService } from './appointments.service.js';
 export class AppointmentsController {
   constructor(@Inject(AppointmentsService) private readonly appointments: AppointmentsService) {}
 
-  @Roles('patient', 'reception', 'admin')
+  @Roles('patient', 'reception', 'admin', 'followup')
   @Post()
   async book(
     @Ctx() ctx: RequestCtx,
