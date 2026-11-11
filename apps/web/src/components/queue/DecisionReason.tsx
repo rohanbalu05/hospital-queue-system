@@ -9,7 +9,10 @@ interface DecisionReasonProps {
   className?: string;
 }
 
-/** The reason is the feature: shown after every call, in words, with the reason colour on the label and edge. */
+/**
+ * The reason is the feature: shown after every call, in plain words with the reason colour on the left edge.
+ * The explanation already names the reason ("Called by rotation", "Aging: waited 47 min"), so no second label repeats it.
+ */
 export function DecisionReason({ reason, explanation, className }: DecisionReasonProps) {
   const meta = REASONS[reason];
   return (
@@ -18,8 +21,7 @@ export function DecisionReason({ reason, explanation, className }: DecisionReaso
       data-reason={reason}
       className={cn('rounded-md border border-l-[3px] border-rule bg-surface px-3 py-2', meta.edge, className)}
     >
-      <p className={cn('text-sm font-bold', meta.text)}>{meta.word}</p>
-      <p className="text-base">{explanation}</p>
+      <p className={cn('text-base', meta.text)}>{explanation}</p>
     </div>
   );
 }

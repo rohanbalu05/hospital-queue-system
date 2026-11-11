@@ -28,7 +28,7 @@ function manyColumns(): DisplayColumnState[] {
     room,
     status: i === 5 ? 'paused' : 'open',
     nowCalling: i === 5 ? null : `${g}-0${10 + i}`,
-    next: [`A-0${20 + i}`, `W-00${i % 9}`, `A-0${30 + i}`],
+    next: [`A-0${20 + i}`, `W-00${(i % 9) + 1}`, `A-0${30 + i}`],
     queueVersion: 3 + i,
   }));
 }
@@ -69,6 +69,27 @@ test.describe('waiting-room display with many sessions at 1920', () => {
     await expect(page.getByTestId('display-page')).toHaveText('Page 2 of 2', { timeout: 10_000 });
     await expect(cols).toHaveCount(6);
     await expect(page.getByTestId('display-page')).toHaveText('Page 1 of 2', { timeout: 10_000 });
+  });
+
+  test('page 2 of 2 shows the remaining six sessions (pageSeconds=1)', async ({ page }) => {
+    await installFakeEventSource(page);
+    await mockApi(page);
+    const mock = await mockQueue(page);
+    mock.world.columns = manyColumns();
+    await page.goto('/display?pageSeconds=1');
+    const cols = page.getByTestId('display-column');
+    const label = page.getByTestId('display-page');
+    await expect(label).toHaveText('Page 2 of 2', { timeout: 10_000 });
+    await expect(cols).toHaveCount(6);
+    // The page turns every second here, so keep shooting until a frame was taken while page 2 was still showing.
+    let captured = false;
+    for (let attempt = 0; attempt < 6 && !captured; attempt += 1) {
+      await expect(label).toHaveText('Page 2 of 2', { timeout: 10_000 });
+      await page.waitForTimeout(400);
+      await shot(page, 'w3-display-many-page2-1920');
+      captured = (await label.textContent()) === 'Page 2 of 2';
+    }
+    expect(captured).toBe(true);
   });
 
   test('up to 6 sessions stay on one page with no page label', async ({ page }) => {

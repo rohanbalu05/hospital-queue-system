@@ -135,7 +135,7 @@ export function DispositionForm({ task, booked, focusOnMount, onBookReturn, onCa
         <Button type="button" variant="outline" size="lg" onClick={onBookReturn} disabled={resolve.isPending}>
           Book return visit
         </Button>
-        <Button type="button" variant="outline" size="lg" className="ml-auto text-priority" onClick={onCancel} disabled={resolve.isPending}>
+        <Button type="button" variant="outline" size="lg" className="text-priority" onClick={onCancel} disabled={resolve.isPending}>
           Cancel task
         </Button>
       </div>

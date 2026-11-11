@@ -14,7 +14,7 @@ test.describe('patient at 390', () => {
     await expect(list.locator('[data-status="verified"]')).toContainText('Verified');
     await expect(list.locator('[data-status="ocr_ready"]')).toContainText('Ready for review');
     await expect(list.locator('[data-status="processing"]')).toContainText('Processing');
-    await expect(list.locator('[data-status="ocr_failed"]')).toContainText("Couldn't read — staff will review");
+    await expect(list.locator('[data-status="ocr_failed"]')).toContainText("Couldn't read. Staff will review");
     await expect(page.getByText('PDF, PNG or JPEG, up to 10 MB and 10 pages.')).toBeVisible();
     // Nothing from OCR or the staff reaches the patient.
     await expect(page.locator('body')).not.toContainText('Cefixime');

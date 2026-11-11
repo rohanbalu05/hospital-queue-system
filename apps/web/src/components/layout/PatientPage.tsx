@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { PatientShell } from '@/components/layout/Shells';
 import { cn } from '@/lib/utils';
@@ -13,27 +13,21 @@ const NAV = [
 ] as const;
 
 function PatientNav() {
-  const listRef = useRef<HTMLUListElement>(null);
   const { pathname } = useLocation();
-  useEffect(() => {
-    // Six tabs scroll sideways on a phone: keep the current one in view.
-    listRef.current
-      ?.querySelector<HTMLElement>('[aria-current="page"]')
-      ?.scrollIntoView?.({ inline: 'center', block: 'nearest' });
-  }, []);
   return (
     <nav aria-label="Patient" className="border-b border-rule bg-surface">
-      <ul ref={listRef} className="mx-auto flex max-w-2xl overflow-x-auto px-2 [scrollbar-width:none]">
+      {/* Six tabs: two rows of three on a phone so no label is clipped or hidden behind a scroll; one row from 640 px. */}
+      <ul className="mx-auto grid max-w-2xl grid-cols-3 px-2 sm:flex">
         {NAV.map((n) => {
           // My visit (/patient/visit/:id) belongs to the Today tab.
           const forced = n.to === '/patient' && pathname.startsWith('/patient/visit/');
           const classes = (active: boolean) =>
             cn(
-              'flex min-h-12 items-center justify-center border-b-[3px] px-3 text-center text-base leading-5 font-bold whitespace-nowrap sm:px-4',
+              'flex min-h-12 items-center justify-center border-b-[3px] px-2 text-center text-base leading-5 font-bold whitespace-nowrap sm:px-4',
               active ? 'border-ink text-ink' : 'border-transparent text-muted-foreground hover:text-ink',
             );
           return (
-            <li key={n.to} className="shrink-0">
+            <li key={n.to} className="sm:shrink-0">
               {forced ? (
                 <Link to={n.to} aria-current="page" className={classes(true)}>
                   {n.label}

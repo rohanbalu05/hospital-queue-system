@@ -1,12 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { z } from 'zod';
 import {
   AuditEvent,
-  Id,
   OperationsReport,
   QueuePolicy,
-  Role,
   Session,
+  StaffMember,
   type Id as IdT,
   type LocalDate,
   type UpdateCapacityRequest,
@@ -14,15 +12,6 @@ import {
 import { apiFetch, type ApiRequestError } from '@/lib/api';
 import { get } from './queries';
 import { listOf } from './schemas';
-
-/** GET /admin/staff rows. Gap: no staff directory endpoint in the contract; the assignments screen needs one. */
-export const StaffMember = z.object({
-  userId: Id,
-  displayName: z.string(),
-  role: Role,
-  doctorIds: z.array(Id),
-});
-export type StaffMember = z.infer<typeof StaffMember>;
 
 export const adminKeys = {
   policy: ['admin', 'policy'] as const,

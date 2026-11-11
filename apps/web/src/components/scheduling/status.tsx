@@ -11,13 +11,13 @@ const WORDS: Record<AppointmentStatus, { word: string; className: string }> = {
   rescheduled: { word: 'Rescheduled', className: 'text-muted-foreground' },
 };
 
-/** Status is always a word. Colour only reinforces it (done = green, missed = red). */
+/** Status is always a word. Colour only reinforces it (done = green). */
 export function StatusWord({ status, className }: { status: AppointmentStatus; className?: string }) {
   const m = WORDS[status];
   return <span className={cn('font-bold', m.className, className)}>{m.word}</span>;
 }
 
-/** Inline message with an edge: priority red for errors, ink for notices. Announced to screen readers. */
+/** Inline message with an edge: ink edge for errors, rule edge for notices. Announced to screen readers. */
 export function InlineAlert({
   tone = 'error',
   title,

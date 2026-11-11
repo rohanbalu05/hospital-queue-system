@@ -87,6 +87,7 @@ test.describe('follow-up staff at 1440', () => {
     const outcome = page.getByRole('combobox', { name: 'Outcome' });
     await expect(outcome).toBeFocused();
     await page.keyboard.press('Enter');
+    await expect(page.getByRole('listbox')).toBeVisible();
     await page.keyboard.press('ArrowDown'); // advice given -> return booked
     await page.keyboard.press('ArrowUp');
     await page.keyboard.press('Enter');
@@ -127,8 +128,8 @@ test.describe('follow-up staff at 1440', () => {
     await shot(page, 'w3-followup-return-1440', false);
 
     // Choose by keyboard: Tab into the list, arrow to a free session.
-    const radios = dialog.getByRole('radio');
-    const free = radios.filter({ hasNot: page.locator('[disabled]') }).first();
+    // A return visit is for a later day: pick Thursday's afternoon session, not one that is today.
+    const free = dialog.getByRole('radio', { name: /Thu, 12 Nov.*Afternoon/ });
     await free.click();
     await dialog.getByRole('button', { name: 'Book return visit' }).click();
 
@@ -139,6 +140,7 @@ test.describe('follow-up staff at 1440', () => {
     const call = w3.requests.find((r) => r.line.endsWith('/return-booking'))!;
     expect(call.key).toBeTruthy();
     expect(sched.appointments.some((a) => a.followUpTaskId === T_RECOVERY)).toBe(true);
+    await expect(page.getByText(/Thu, 12 Nov/).first()).toBeVisible();
     await shot(page, 'w3-followup-return-booked-1440');
 
     await page.getByRole('button', { name: 'Resolve task' }).click();

@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatIST } from '@/lib/format';
-import { reasonWord, shortId } from '@/lib/followup';
+import { entityLabel, operationSentence, roleWord } from '@/lib/audit';
+import { reasonWord } from '@/lib/followup';
 
 export const ENTITY_TYPES: Array<{ value: string; label: string }> = [
   { value: 'all', label: 'Everything' },
@@ -107,12 +108,15 @@ export default function AuditPage() {
               {q.data.map((e) => (
                 <TableRow key={e.id} className="h-10" data-testid="audit-row">
                   <TableCell className="pl-3 tabular-nums">{formatIST(e.occurredAt, 'time-seconds')} <span className="text-muted-foreground">{formatIST(e.occurredAt, 'date')}</span></TableCell>
-                  <TableCell>
-                    <span className="font-bold">{e.actorRole}</span> <span className="text-muted-foreground tabular-nums">{shortId(e.actorId)}</span>
+                  <TableCell title={e.actorId ?? undefined}>
+                    <span className="font-bold">{e.actorName ?? 'System'}</span>{' '}
+                    <span className="text-muted-foreground">{roleWord(e.actorRole)}</span>
                   </TableCell>
-                  <TableCell className="font-bold">{e.operation}</TableCell>
-                  <TableCell>
-                    {e.entityType} <span className="text-muted-foreground tabular-nums">{shortId(e.entityId)}</span>
+                  <TableCell className="font-bold" title={e.operation}>
+                    {operationSentence(e.operation)}
+                  </TableCell>
+                  <TableCell title={e.entityId}>
+                    {entityLabel(e.entityType)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{e.policyVersion === null ? '-' : `v${e.policyVersion}`}</TableCell>
                   <TableCell className="pr-3 whitespace-normal">{e.reason ? reasonWord(e.reason) : <span className="text-muted-foreground">-</span>}</TableCell>

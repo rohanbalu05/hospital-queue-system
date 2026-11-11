@@ -54,7 +54,7 @@ function ReportBody({ report }: { report: OperationsReport }) {
   const names = [...new Set(report.metrics.map((m) => m.name))];
   const noSamples = report.throughput.completedVisits === 0;
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="grid items-start gap-4 xl:grid-cols-2">
       <Block id="throughput-h" title="Throughput" kind="measured">
         <Table>
           <TableBody>
