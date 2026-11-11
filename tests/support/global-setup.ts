@@ -8,7 +8,8 @@
  * 4. Wait for GET /health, hand the URLs to the tests with `provide`, and stop the child on teardown.
  */
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { createServer } from 'node:net';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +22,8 @@ declare module 'vitest' {
   export interface ProvidedContext {
     apiUrl: string;
     databaseUrl: string;
+    /** Private object-storage directory shared by the API child and any worker the suite starts (STORAGE_DIR). */
+    storageDir: string;
   }
 }
 
@@ -96,6 +99,7 @@ async function waitForHealth(url: string, child: ChildProcess, logs: string[]): 
 export default async function setup({ provide }: GlobalSetupContext): Promise<() => Promise<void>> {
   const databaseUrl = await recreateDatabase();
   buildApi();
+  const storageDir = mkdtempSync(resolve(tmpdir(), 'hqms-blackbox-storage-'));
   const port = await freePort();
   const logs: string[] = [];
   const child = spawn(process.execPath, ['dist/main.js'], {
@@ -105,8 +109,14 @@ export default async function setup({ provide }: GlobalSetupContext): Promise<()
       DATABASE_URL: databaseUrl,
       PORT: String(port),
       NODE_ENV: 'test',
+      STORAGE_DIR: storageDir,
       DB_POOL_MAX: process.env['DB_POOL_MAX'] ?? '30',
       LOGIN_RATE_LIMIT_MAX: '100000',
+      // All test clients share one IP; lift per-IP caps for the harness (declared in evidence).
+      SSE_MAX_PER_IP: '1000',
+      SSE_MAX_DISPLAY: '500',
+      DISPLAY_RATE_LIMIT_PER_MIN: '100000',
+      ASSISTANT_RATE_LIMIT_MAX: '1000',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -125,6 +135,7 @@ export default async function setup({ provide }: GlobalSetupContext): Promise<()
   }
   provide('apiUrl', apiUrl);
   provide('databaseUrl', databaseUrl);
+  provide('storageDir', storageDir);
 
   return async () => {
     if (child.exitCode === null) {
@@ -140,6 +151,7 @@ export default async function setup({ provide }: GlobalSetupContext): Promise<()
         });
       });
     }
+    rmSync(storageDir, { recursive: true, force: true });
     // Server-side error lines are surfaced so a 5xx or deadlock never goes unnoticed.
     const bad = logs
       .join('')

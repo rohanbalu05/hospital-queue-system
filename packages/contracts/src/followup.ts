@@ -11,12 +11,23 @@ export const Disposition = z.enum(['advice_given', 'return_booked', 'referred', 
 export type FollowUpStatus = z.infer<typeof FollowUpStatus>;
 export type Disposition = z.infer<typeof Disposition>;
 
+/** The visit a task came from, for display (when and with whom). */
+export const FollowUpSourceVisit = z.object({
+  sessionDate: z.string(),
+  doctorId: Id,
+  doctorName: z.string(),
+  department: z.string(),
+});
+export type FollowUpSourceVisit = z.infer<typeof FollowUpSourceVisit>;
+
 export const FollowUpTask = z.object({
   id: Id,
   patientId: Id,
   patientName: z.string(),
   sourceVisitId: Id.nullable(),
   sourceMessageId: Id.nullable(),
+  /** Filled on staff reads when the task has a source visit; null otherwise. */
+  sourceVisit: FollowUpSourceVisit.nullable().optional(),
   kind: FollowUpKind,
   title: z.string(),
   detail: z.string().nullable(),
@@ -72,6 +83,23 @@ export const CancelTaskRequest = ExpectedVersion.extend({ reason: z.string().min
 /** POST /follow-up-tasks/{id}/return-booking: books via normal capacity, links appointment to task. Idempotency-Key. */
 export const ReturnBookingRequest = z.object({ sessionId: Id });
 
+/**
+ * GET /me/follow-ups: what a patient sees of a staff task (status and timing only). Staff titles, details,
+ * outcome notes and owner names stay on the staff side; the summary is fixed wording per kind.
+ */
+export const PatientFollowUp = z.object({
+  id: Id,
+  kind: FollowUpKind,
+  summary: z.string(),
+  status: FollowUpStatus,
+  dueAt: Instant,
+  disposition: Disposition.nullable(),
+  returnAppointmentId: Id.nullable(),
+  createdAt: Instant,
+  resolvedAt: Instant.nullable(),
+});
+export type PatientFollowUp = z.infer<typeof PatientFollowUp>;
+
 // ---------------------------------------------------------------------------
 // Documents, OCR drafts, instruction verification (FR-12, FR-13)
 // ---------------------------------------------------------------------------
@@ -104,6 +132,10 @@ export type DocumentMeta = z.infer<typeof DocumentMeta>;
  * Bytes go to ObjectStorage (private); OCR runs in the worker after commit.
  */
 export const UploadDocumentFields = z.object({ patientId: Id, visitId: Id.optional() });
+
+/** GET /review-inbox item: a document waiting for clinical review or manual transcription. */
+export const ReviewInboxItem = DocumentMeta.extend({ patientName: z.string() });
+export type ReviewInboxItem = z.infer<typeof ReviewInboxItem>;
 
 /** POST /documents/{id}/retry-ocr (staff): controlled retry after ocr_failed. */
 export const RetryOcrRequest = ExpectedVersion;
@@ -142,6 +174,11 @@ export type InstructionVersion = z.infer<typeof InstructionVersion>;
  */
 export const VerifyInstructionRequest = z.object({
   instructionId: Id.optional(),
+  /**
+   * Compare-and-set: the instruction_versions id the clinician was looking at as "current". Required when
+   * instructionId is given (the API answers 400 without it); a mismatch is 409 CONFLICT.
+   */
+  expectedCurrentVersionId: Id.optional(),
   title: z.string().min(3).max(160),
   body: z.string().min(3).max(5000),
   sourceDraftId: Id.optional(),
@@ -159,6 +196,15 @@ export const AskAssistantRequest = z.object({
 });
 export type AskAssistantRequest = z.infer<typeof AskAssistantRequest>;
 
+/** A verified instruction version an answer cites. */
+export const AssistantCitation = z.object({
+  instructionVersionId: Id,
+  title: z.string(),
+  version: z.number().int().positive(),
+  verifiedAt: Instant,
+});
+export type AssistantCitation = z.infer<typeof AssistantCitation>;
+
 export const AssistantOutcome = z.enum(['answered', 'escalated', 'refused']);
 export const AssistantAnswer = z.object({
   conversationId: Id,
@@ -166,20 +212,30 @@ export const AssistantAnswer = z.object({
   outcome: AssistantOutcome,
   answer: z.string(),
   /** Instruction versions the answer relies on (answered => at least one). */
-  citations: z.array(z.object({ instructionVersionId: Id, title: z.string(), version: z.number().int().positive() })),
+  citations: z.array(AssistantCitation),
   /** Present when escalated: the owned staff task and when the patient will hear back. */
   escalation: z.object({ taskId: Id, dueAt: Instant }).nullable(),
   createdAt: Instant,
 });
 export type AssistantAnswer = z.infer<typeof AssistantAnswer>;
 
+/** GET /assistant/conversations item. */
+export const AssistantConversation = z.object({
+  id: Id,
+  createdAt: Instant,
+  lastMessageAt: Instant.nullable(),
+});
+export type AssistantConversation = z.infer<typeof AssistantConversation>;
+
 export const ConversationMessage = z.object({
   id: Id,
   role: z.enum(['patient', 'assistant']),
   body: z.string(),
   outcome: AssistantOutcome.nullable(),
-  citations: z.array(z.object({ instructionVersionId: Id, title: z.string(), version: z.number().int().positive() })),
+  citations: z.array(AssistantCitation),
   escalationTaskId: Id.nullable(),
+  /** When the care team will have followed up (the escalation task's due time); null when not escalated. */
+  escalationDueAt: Instant.nullable(),
   createdAt: Instant,
 });
 export type ConversationMessage = z.infer<typeof ConversationMessage>;

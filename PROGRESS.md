@@ -32,3 +32,5 @@ Read this first on resume, then `git log --oneline -30`.
 - ui-reviewer on W0–W2: P0 = reception lacks live lanes + absent/re-enter; P1 = patient text 14px, red/green misuse, paused copy, mid-animation screenshots. All forwarded to the W3 ui builder.
 - Running: ui W3 (+ review fixes), worker W3 (providers, OCR, reconciler), test T2 + full-visit e2e, api W3 (follow-up, documents, verify, assistant, return booking, reports).
 - Gate 2 met; wave-2 tag (local) = 54600bb. W3 api + W4 devops merged; verify 554 tests; feature_list 43/50.
+- W3 web merged (97 unit, 105 Playwright w/ mocks, all UI review fixes). verify: 1 flaky api probe (cluster-wide tx count during parallel load) → sent to api fix pass.
+- Gate 3 met (T4); wave-3 tag (local) = 13ea11d. W3 web + T4/T6 merged.

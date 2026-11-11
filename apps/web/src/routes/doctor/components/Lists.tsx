@@ -43,7 +43,7 @@ export function WaitingList({ entries, onSetPriority, onMarkAbsent }: WaitingLis
                 <span title="Waiting since eligible">{minutes(e.waitingMinutes)}</span>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" aria-label={`Actions for ${e.token}, ${e.patientName}`}>
+                    <Button variant="outline" aria-label={`Actions for ${e.token}, ${e.patientName}`}>
                       Actions
                       <ChevronDown aria-hidden="true" />
                     </Button>
@@ -85,7 +85,7 @@ export function SkippedList({ entries, onReEnter, busy }: SkippedListProps) {
           title={e.patientName}
           detail={e.state === 'absent' ? 'Absent' : 'Skipped'}
           trailing={
-            <Button variant="outline" size="sm" disabled={busy} onClick={() => onReEnter(e)} aria-label={`Re-enter ${e.token}, ${e.patientName}`}>
+            <Button variant="outline" disabled={busy} onClick={() => onReEnter(e)} aria-label={`Re-enter ${e.token}, ${e.patientName}`}>
               Re-enter
             </Button>
           }

@@ -28,6 +28,7 @@ let followup2: Client; // doctors 1-4
 let followup3: Client; // doctors 5-8
 let patient1: Client;
 let patient2: Client;
+let F1: string; // followup@'s user id: the default owner of tasks the helper creates
 let P1: string; // isolated patients with logins (the seeded ones are shared across test files)
 
 beforeAll(async () => {
@@ -39,6 +40,7 @@ beforeAll(async () => {
   followup = await loginAs(t.server, 'followup@hqms.test');
   followup2 = await loginAs(t.server, 'followup2@hqms.test');
   followup3 = await loginAs(t.server, 'followup3@hqms.test');
+  F1 = (await followup.get('/me')).body.userId as string;
   const a = await newLoginPatient(t, reception, 'Follow Up One');
   const b = await newLoginPatient(t, reception, 'Follow Up Two');
   patient1 = a.client;
@@ -64,6 +66,7 @@ async function taskFor(
     title: 'Call about wound care',
     detail: 'Check dressing, ask about fever',
     dueAt: inHours(24),
+    ownerId: F1,
     ...extra,
   });
   expect(res.status).toBe(201);
@@ -75,7 +78,10 @@ describe('FR-11 follow-up tasks: create, scope, ownership', () => {
     const p = await newPatient(reception, 'Follow Up Patient');
     await linkPatient(admin, reception, p, 1);
     const task = await taskFor(p, { ownerId: undefined });
-    expect(task).toMatchObject({ status: 'open', ownerId: null, kind: 'post_visit', overdue: false, version: 1 });
+    // No owner named: the assignment rule picks a follow-up user (task 3 of the W2-W3 review: never unowned).
+    expect(task).toMatchObject({ status: 'open', kind: 'post_visit', overdue: false, version: 1 });
+    expect(task.ownerId).toBeTruthy();
+    expect((await t.pool.query(`SELECT role FROM users WHERE id = $1`, [task.ownerId])).rows[0]!.role).toBe('followup');
     expect(await count(t.pool, `SELECT 1 FROM audit_events WHERE operation = 'follow_up.create' AND entity_id = $1`, [task.id])).toBe(1);
     const ev = await t.pool.query(`SELECT payload FROM outbox_events WHERE event_type = 'FollowUpOpened' AND entity_id = $1`, [task.id]);
     expect(ev.rows).toHaveLength(1);
@@ -173,7 +179,7 @@ describe('FR-11 overdue and lifecycle', () => {
     // A cancelled one leaves the overdue list too, and the reason is recorded.
     const second = await taskFor(p, { dueAt: '2041-03-01T09:00:00Z' });
     expect((await doctor1.get(`/follow-up-tasks?owner=all&overdue=true&patientId=${p}`)).body).toHaveLength(1);
-    const cancelled = await doctor1.post(`/follow-up-tasks/${second.id}/cancel`, { reason: 'Duplicate of an earlier task' });
+    const cancelled = await followup.post(`/follow-up-tasks/${second.id}/cancel`, { reason: 'Duplicate of an earlier task' });
     expect(cancelled.body).toMatchObject({ status: 'cancelled', outcomeNote: 'Duplicate of an earlier task', overdue: false });
     expect((await doctor1.get(`/follow-up-tasks?owner=all&overdue=true&patientId=${p}`)).body).toEqual([]);
   });
@@ -182,6 +188,8 @@ describe('FR-11 overdue and lifecycle', () => {
     const p = await newPatient(reception, 'Follow Up Patient');
     await linkPatient(admin, reception, p, 1);
     const task = await taskFor(p);
+    // Tasks are created owned; an unowned one (legacy or after a staff change) is made by SQL here.
+    await t.pool.query(`UPDATE follow_up_tasks SET owner_id = NULL WHERE id = $1`, [task.id]);
     const unassigned = await followup.get(`/follow-up-tasks?owner=unassigned&patientId=${p}`);
     expect((unassigned.body as FollowUpTask[]).map((x) => x.id)).toContain(task.id);
 

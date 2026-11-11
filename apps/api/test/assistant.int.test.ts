@@ -81,7 +81,7 @@ describe('FR-14 answers from verified context only', () => {
     const answer = AssistantAnswer.parse(res.body);
     expect(answer.outcome).toBe('answered');
     expect(answer.escalation).toBeNull();
-    expect(answer.citations).toEqual([{ instructionVersionId: v1.id, title: 'Antibiotic course', version: 1 }]);
+    expect(answer.citations).toEqual([{ instructionVersionId: v1.id, title: 'Antibiotic course', version: 1, verifiedAt: expect.any(String) }]);
     expect(answer.answer).toContain('amoxicillin 500 mg');
     expect(llm.calls).toHaveLength(1);
     expect(llm.calls[0]!.context.map((c) => c.instructionVersionId)).toEqual([v1.id]);
@@ -130,6 +130,7 @@ describe('FR-14 answers from verified context only', () => {
     const v1 = InstructionVersion.parse(v1res.body);
     const v2res = await doctor1.post(`/documents/${doc}/verify`, {
       instructionId: v1.instructionId,
+      expectedCurrentVersionId: v1.id,
       title: 'Pain relief',
       body: 'Take ibuprofen 200 mg twice daily with meals.',
     });
@@ -138,7 +139,7 @@ describe('FR-14 answers from verified context only', () => {
     const res = await ask(patient2, 'How much ibuprofen should I take?');
     const answer = AssistantAnswer.parse(res.body);
     expect(answer.outcome).toBe('answered');
-    expect(answer.citations).toEqual([{ instructionVersionId: v2.id, title: 'Pain relief', version: 2 }]);
+    expect(answer.citations).toEqual([{ instructionVersionId: v2.id, title: 'Pain relief', version: 2, verifiedAt: expect.any(String) }]);
     expect(answer.answer).toContain('200 mg');
     expect(answer.answer).not.toContain('400 mg');
     expect(JSON.stringify(answer)).not.toMatch(/zebracadabra/i);
@@ -197,12 +198,20 @@ describe('FR-14-a unsupported questions reach staff', () => {
     expect(mine.find((x) => x['id'] === task.id)).toMatchObject({ kind: 'assistant_escalation', status: 'open' });
   });
 
-  it('a patient with no doctor yet gets an unassigned task (still visible to staff once they are linked)', async () => {
+  it('a patient with no doctor link still gets an OWNED task (any active follow-up user), visible to that owner', async () => {
     const lone = (await newLoginPatient(t, reception, 'Assist Lone')).client;
     const res = await ask(lone, 'What should I eat?');
     expect(res.body.outcome).toBe('escalated');
     const row = (await t.pool.query(`SELECT owner_id, status FROM follow_up_tasks WHERE id = $1`, [res.body.escalation.taskId])).rows[0]!;
-    expect(row).toMatchObject({ owner_id: null, status: 'open' });
+    expect(row.status).toBe('open');
+    expect(row.owner_id).toBeTruthy();
+    const owner = (await t.pool.query(`SELECT email, role FROM users WHERE id = $1`, [row.owner_id])).rows[0]!;
+    expect(owner.role).toBe('followup');
+    const ownerClient = await loginAs(t.server, owner.email as string);
+    const mine = (await ownerClient.get('/follow-up-tasks?owner=me')).body as FollowUpTask[];
+    expect(mine.map((x) => x.id)).toContain(res.body.escalation.taskId);
+    // The owner can open it and see the patient's context even though no doctor links them.
+    expect((await ownerClient.get(`/follow-up-tasks/${res.body.escalation.taskId}`)).status).toBe(200);
   });
 
   it('provider errors, timeouts and answers that cite unknown versions all become staff tasks, never guesses', async () => {

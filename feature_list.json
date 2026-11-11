@@ -75,9 +75,9 @@
     "id": "FR-04-c",
     "requirement": "FR-04",
     "acceptance": "Completed visits never reopen consumed capacity.",
-    "test": "apps/api/test/arrivals.int.test.ts",
-    "passes": false,
-    "note": "Checked-in case green; completed-visit case pending W2 complete route — spec review P0"
+    "test": "apps/api/test/arrivals.int.test.ts (checked-in and COMPLETED visit cases)",
+    "passes": true,
+    "verified": "2026-11-11 api suite 169/169 green"
   },
   {
     "id": "FR-05-a",
@@ -390,7 +390,8 @@
     "id": "NFR-08-c",
     "requirement": "NFR-08",
     "acceptance": "Explicit error, empty and stale states in the UI.",
-    "test": "tests/e2e/states.spec.ts",
-    "passes": false
+    "test": "apps/web/e2e/{booking,reception,screenshots,w2-queue,w3-*}.spec.ts (loading/empty/error/reconnecting states per screen) + ui-reviewer pass",
+    "passes": true,
+    "verified": "2026-11-11: W3 web merge, 105 Playwright specs green (mocked API), states reviewed in screenshots"
   }
 ]

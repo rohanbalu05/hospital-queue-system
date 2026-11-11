@@ -1,16 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { CreateFollowUpTaskRequest, FollowUpTask, ResolveTaskRequest } from '@hqms/contracts';
+import type { CreateFollowUpTaskRequest, FollowUpTask, PatientFollowUp, ResolveTaskRequest } from '@hqms/contracts';
 import { getPatient, writeAudit, writeOutbox, type IdempotentResult, type Pool, type Tx } from '@hqms/db';
 import { assertTransition } from '@hqms/domain';
 import { AccessPolicy } from '../access/access-policy.service.js';
 import { PatientScope } from '../access/patient-scope.service.js';
 import type { Clock } from '../common/clock.js';
 import { forbidden, notFound, validationFailed, conflict } from '../common/errors.js';
-import type { RequestCtx } from '../common/request-context.js';
+import type { AuthUser, RequestCtx } from '../common/request-context.js';
 import { CLOCK, DB_POOL } from '../common/tokens.js';
 import { assertVersion, runCommand } from '../queue/command.js';
-import type { AcknowledgeTaskRequestDto, CancelTaskRequestDto, FollowUpListQueryDto, PatientFollowUp } from './dto.js';
-import { listTasks, listTasksOfPatient, lockTask, readTask } from './followup.repo.js';
+import type { AcknowledgeTaskRequestDto, CancelTaskRequestDto, FollowUpListQueryDto } from './dto.js';
+import { listTasks, listTasksOfPatient, lockTask, pickOwner, readTask } from './followup.repo.js';
 
 const KIND_SUMMARY: Record<string, string> = {
   post_visit: 'The care team will follow up with you after your visit.',
@@ -18,6 +18,19 @@ const KIND_SUMMARY: Record<string, string> = {
   document_review: 'The care team is reviewing a document you shared.',
   return_visit: 'The care team will arrange a return visit with you.',
 };
+
+/** Free-text reasons are kept whole on the task, but an audit row carries at most this many characters. */
+export const AUDIT_REASON_MAX = 200;
+
+/**
+ * Only the owner works a task (resolve, cancel); an unowned task is taken by whoever acts on it (the UPDATE sets
+ * the owner); admin may act on any.
+ */
+function assertMayWork(task: FollowUpTask, user: AuthUser): void {
+  if (task.ownerId && task.ownerId !== user.userId && user.role !== 'admin') {
+    throw forbidden('This task is owned by another staff member');
+  }
+}
 
 /**
  * FR-11 owned follow-up: a task has an owner, a due time, a status and a recorded outcome. It is closed only by a
@@ -50,6 +63,7 @@ export class FollowUpService {
 
     // The doctors this task is "about": the source visit's doctor, else the patient's doctors in the caller's scope.
     let relevantDoctors: string[];
+    let ownerDoctors: string[];
     if (body.sourceVisitId) {
       const v = await this.pool.query<{ patient_id: string; doctor_id: string }>(
         `SELECT patient_id, doctor_id FROM visits WHERE id = $1`,
@@ -59,12 +73,18 @@ export class FollowUpService {
       if (!visit || visit.patient_id !== body.patientId) throw validationFailed('The source visit is not a visit of this patient');
       if (!this.access.canActOnDoctor(user, visit.doctor_id)) throw notFound('Visit');
       relevantDoctors = [visit.doctor_id];
+      ownerDoctors = relevantDoctors;
     } else {
       relevantDoctors = await this.scope.scopedDoctorIds(user, body.patientId);
+      ownerDoctors = await this.scope.linkedDoctorIds(body.patientId);
     }
     if (body.ownerId) await this.assertValidOwner(body.ownerId, relevantDoctors);
 
     return runCommand(this.pool, ctx, 'follow_up.create', key, body, async (tx) => {
+      // A task always has an owner: the one named, else the creating follow-up user, else the assignment rule
+      // (a follow-up user assigned to the patient's doctors with the fewest open tasks, else any follow-up user).
+      const ownerId =
+        body.ownerId ?? (user.role === 'followup' ? user.userId : await pickOwner(tx, body.patientId, ownerDoctors));
       const ins = await tx.query<{ id: string }>(
         `INSERT INTO follow_up_tasks (patient_id, source_visit_id, kind, title, detail, owner_id, due_at, created_by)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
@@ -74,7 +94,7 @@ export class FollowUpService {
           body.kind,
           body.title.trim(),
           body.detail?.trim() || null,
-          body.ownerId ?? null,
+          ownerId,
           body.dueAt,
           user.userId,
         ],
@@ -86,7 +106,7 @@ export class FollowUpService {
         operation: 'follow_up.create',
         entityType: 'follow_up_task',
         entityId: id,
-        next: { status: 'open', kind: body.kind, ownerId: body.ownerId ?? null, dueAt: body.dueAt },
+        next: { status: 'open', kind: body.kind, ownerId, dueAt: body.dueAt },
         correlationId: ctx.correlationId,
       });
       await writeOutbox(tx, {
@@ -95,7 +115,7 @@ export class FollowUpService {
         entityId: id,
         entityVersion: 1,
         patientId: body.patientId,
-        payload: { kind: body.kind, ownerId: body.ownerId ?? null },
+        payload: { kind: body.kind, ownerId },
       });
       const task = await readTask(tx, id, this.clock.now());
       if (!task) throw notFound('Follow-up task');
@@ -208,10 +228,13 @@ export class FollowUpService {
       const task = await lockTask(tx, id, now);
       assertVersion(body.expectedVersion, task.version, 'The task');
       assertTransition('followUpTask', task.status, 'resolved');
+      assertMayWork(task, user);
       let returnAppointmentId = task.returnAppointmentId;
       if (body.disposition === 'return_booked') {
+        // Lock order: task, then appointment (FOR NO KEY UPDATE), so a concurrent cancel of the return
+        // appointment cannot slip between this check and the resolve.
         const appt = await tx.query<{ status: string; follow_up_task_id: string | null }>(
-          `SELECT status, follow_up_task_id FROM appointments WHERE id = $1`,
+          `SELECT status, follow_up_task_id FROM appointments WHERE id = $1 FOR NO KEY UPDATE`,
           [body.returnAppointmentId],
         );
         const a = appt.rows[0];
@@ -240,7 +263,7 @@ export class FollowUpService {
         entityId: id,
         previous: { status: task.status },
         next: { status: 'resolved', disposition: body.disposition, returnAppointmentId },
-        reason: body.outcomeNote.trim(),
+        reason: body.outcomeNote.trim().slice(0, AUDIT_REASON_MAX),
         correlationId: ctx.correlationId,
       });
       await writeOutbox(tx, {
@@ -269,11 +292,12 @@ export class FollowUpService {
       const task = await lockTask(tx, id, now);
       assertVersion(body.expectedVersion, task.version, 'The task');
       assertTransition('followUpTask', task.status, 'cancelled');
+      assertMayWork(task, user);
       await tx.query(
         `UPDATE follow_up_tasks
-            SET status = 'cancelled', outcome_note = $2, version = version + 1, updated_at = $3
+            SET status = 'cancelled', outcome_note = $2, owner_id = COALESCE(owner_id, $4), version = version + 1, updated_at = $3
           WHERE id = $1`,
-        [id, body.reason.trim(), now],
+        [id, body.reason.trim(), now, user.userId],
       );
       await writeAudit(tx, {
         actorId: user.userId,
@@ -283,7 +307,7 @@ export class FollowUpService {
         entityId: id,
         previous: { status: task.status },
         next: { status: 'cancelled' },
-        reason: body.reason.trim(),
+        reason: body.reason.trim().slice(0, AUDIT_REASON_MAX),
         correlationId: ctx.correlationId,
       });
       await writeOutbox(tx, {

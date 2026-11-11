@@ -172,6 +172,8 @@ export interface SessionState {
   department: string;
   room: string;
   sessionDate: string;
+  startsAt: string;
+  endsAt: string;
   status: 'scheduled' | 'open' | 'paused' | 'unavailable' | 'closed';
   pauseUntil: string | null;
   rotationPointer: number;
@@ -182,7 +184,7 @@ export interface SessionState {
 
 export async function readSessionState(db: Queryable, sessionId: string): Promise<SessionState | null> {
   const res = await db.query(
-    `SELECT s.id, s.doctor_id, d.full_name, d.department, d.room, s.session_date, s.status, s.pause_until,
+    `SELECT s.id, s.doctor_id, d.full_name, d.department, d.room, s.session_date, s.starts_at, s.ends_at, s.status, s.pause_until,
             s.rotation_pointer, s.queue_version, s.policy_id,
             c.booked_capacity, c.walkin_capacity, c.booked_reserved, c.walkin_used
        FROM sessions s
@@ -202,6 +204,8 @@ export async function readSessionState(db: Queryable, sessionId: string): Promis
     department: r.department,
     room: r.room,
     sessionDate: r.session_date,
+    startsAt: new Date(r.starts_at).toISOString(),
+    endsAt: new Date(r.ends_at).toISOString(),
     status: r.status,
     pauseUntil: r.pause_until,
     rotationPointer: r.rotation_pointer,

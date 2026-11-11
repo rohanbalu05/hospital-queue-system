@@ -32,7 +32,7 @@ export function EtaBlock({ eta }: { eta: Eta }) {
   if (eta.status === 'ok' && eta.lowMinutes !== null && eta.highMinutes !== null) {
     return (
       <div data-testid="eta">
-        <p className="text-sm text-muted-foreground">Estimated wait</p>
+        <p className="text-base text-muted-foreground">Estimated wait</p>
         <p className="text-2xl font-bold tabular-nums">{formatMinuteRange(eta.lowMinutes, eta.highMinutes)}</p>
         <p className="mt-1 text-muted-foreground">
           {eta.uncertainty ? UNCERTAINTY_WORDS[eta.uncertainty] : null} Worked out at {formatIST(eta.computedAt)}. It can change if someone with a
@@ -43,9 +43,13 @@ export function EtaBlock({ eta }: { eta: Eta }) {
   }
   return (
     <div data-testid="eta">
-      <p className="text-sm text-muted-foreground">Estimated wait</p>
+      <p className="text-base text-muted-foreground">Estimated wait</p>
       <p className="text-2xl font-bold">Estimate paused</p>
-      <p className="mt-1 text-muted-foreground">{eta.note ?? 'No estimate is available right now.'} The front desk can tell you more.</p>
+      <p className="mt-1 text-muted-foreground">
+        {eta.status === 'withheld'
+          ? "The doctor has paused this session. We'll show a new estimate when it resumes."
+          : `${eta.note ?? 'No estimate is available right now.'} The front desk can tell you more.`}
+      </p>
     </div>
   );
 }
@@ -76,7 +80,7 @@ function VisitBody({ snapshot, status, lastUpdated }: { snapshot: PatientQueueSn
       {mine ? (
         <>
           <Panel edge={GROUPS[mine.group].edge}>
-            <p className="text-sm text-muted-foreground">Your token</p>
+            <p className="text-base text-muted-foreground">Your token</p>
             <div className="mt-1 flex flex-wrap items-center gap-3">
               <TokenText token={mine.token} size="display" />
             </div>
@@ -93,7 +97,7 @@ function VisitBody({ snapshot, status, lastUpdated }: { snapshot: PatientQueueSn
             <Panel>
               <div className="grid gap-5 sm:grid-cols-2">
                 <div data-testid="position">
-                  <p className="text-sm text-muted-foreground">Your place in the queue</p>
+                  <p className="text-base text-muted-foreground">Your place in the queue</p>
                   <p className="text-2xl font-bold tabular-nums">{mine.position !== null ? `Number ${mine.position}` : 'Not yet placed'}</p>
                   {mine.position !== null && mine.position > 1 ? (
                     <p className="mt-1 text-muted-foreground tabular-nums">{mine.position - 1} ahead of you</p>
@@ -120,7 +124,7 @@ function VisitBody({ snapshot, status, lastUpdated }: { snapshot: PatientQueueSn
       )}
 
       <Panel>
-        <p className="text-sm text-muted-foreground">Now calling</p>
+        <p className="text-base text-muted-foreground">Now calling</p>
         {snapshot.nowCalling ? (
           <TokenText token={snapshot.nowCalling} size="xl" className="mt-1" />
         ) : (
