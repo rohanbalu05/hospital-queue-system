@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { LoginRequest, Me, type Role } from '@hqms/contracts';
+import { Me, type LoginRequest, type Role } from '@hqms/contracts';
 import { ApiRequestError, apiFetch } from './api';
 
 export const ME_KEY = ['me'] as const;
@@ -60,8 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       qc.setQueryData(ME_KEY, me);
     },
   });
-  const logoutMutation = useMutation<void, ApiRequestError>({
-    mutationFn: () => apiFetch<void>('/auth/logout', { method: 'POST' }),
+  const logoutMutation = useMutation<undefined, ApiRequestError>({
+    mutationFn: () => apiFetch<undefined>('/auth/logout', { method: 'POST' }),
     onSettled: () => {
       // Whatever the server said, this browser no longer treats the user as signed in.
       qc.setQueryData(ME_KEY, null);
