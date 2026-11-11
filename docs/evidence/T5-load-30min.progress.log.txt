@@ -1,0 +1,33 @@
+2026-11-11T14:25:30.801Z phase a t=60s reqs=5991 inflight=0 load1=2.94 api=true worker=true busy=[chrome-headless:92.5 node:36.2 node:20.3 chrome-headless:19.5 node:13.9 node:10.3 postgres:10.3 chrome-headless:9.2] unexpected=0
+2026-11-11T14:26:30.798Z phase a t=120s reqs=11977 inflight=1 load1=2.48 api=true worker=true busy=[node:32.4 chrome-headless:31.5 node:20.6 chrome-headless:19.6 node:12.4 chrome-headless:11.1 postgres:10.2 postgres:9.6] unexpected=0
+2026-11-11T14:27:30.823Z phase a t=180s reqs=18006 inflight=2 load1=2.90 api=true worker=true busy=[chrome-headless:86.7 node:30.7 node:19.9 chrome-headless:19.5 node:11.9 chrome-headless:11.6 postgres:8.9 chrome-headless:7.6] unexpected=0
+2026-11-11T14:28:30.800Z phase a t=240s reqs=24017 inflight=1 load1=2.40 api=true worker=true busy=[node:29.6 node:11.5 postgres:9.9 postgres:7.8 postgres:5.9 postgres:5.2] unexpected=0
+2026-11-11T14:29:30.803Z phase a t=300s reqs=30027 inflight=1 load1=2.91 api=true worker=true busy=[chrome-headless:88.9 node:29.0 node:21.3 node:20.8 chrome-headless:14.4 node:11.3 postgres:8.5 postgres:8.1] unexpected=0
+2026-11-11T14:30:30.810Z phase a t=360s reqs=36033 inflight=1 load1=2.47 api=true worker=true busy=[chrome-headless:71.4 node:28.5 node:22.1 chrome-headless:22.1 chrome-headless:12.4 node:11.1 node:8.8 postgres:8.3] unexpected=0
+2026-11-11T14:31:30.803Z phase a t=420s reqs=41999 inflight=1 load1=2.22 api=true worker=true busy=[chrome-headless:68.5 node:28.1 node:19.5 chrome-headless:19.2 chrome-headless:11.3 node:10.9 postgres:9.5 postgres:7.9] unexpected=0
+2026-11-11T14:32:30.799Z phase a t=480s reqs=47989 inflight=1 load1=2.32 api=true worker=true busy=[chrome-headless:90.3 node:30.4 node:27.8 chrome-headless:24.8 postgres:17.3 chrome-headless:15.2 node:10.8 postgres:9.9] unexpected=0
+2026-11-11T14:33:30.799Z phase a t=540s reqs=54011 inflight=1 load1=2.16 api=true worker=true busy=[chrome-headless:87.3 node:27.5 node:26.8 node:23.1 chrome-headless:14.1 postgres:11.8 postgres:10.7 node:10.7] unexpected=0
+2026-11-11T14:34:30.801Z phase a t=600s reqs=60051 inflight=1 load1=2.56 api=true worker=true busy=[node:27.3 node:10.6 postgres:9.1 postgres:8.8 postgres:7.2 postgres:5.8] unexpected=0
+2026-11-11T14:35:30.800Z phase a t=660s reqs=66045 inflight=1 load1=1.42 api=true worker=true busy=[node:27.1 postgres:12.3 node:10.5 postgres:9.1 postgres:7.2 postgres:6.3] unexpected=0
+2026-11-11T14:36:30.801Z phase a t=720s reqs=72031 inflight=1 load1=1.21 api=true worker=true busy=[node:26.9 postgres:11.0 node:10.4 postgres:9.1 postgres:7.8] unexpected=0
+2026-11-11T14:37:30.799Z phase a t=780s reqs=78003 inflight=1 load1=0.92 api=true worker=true busy=[node:26.8 postgres:16.4 node:10.4 postgres:7.9 postgres:5.2] unexpected=0
+2026-11-11T14:38:30.799Z phase a t=840s reqs=83999 inflight=1 load1=0.72 api=true worker=true busy=[node:26.6 postgres:11.5 postgres:11.1 node:10.4 postgres:6.9] unexpected=0
+2026-11-11T14:39:30.799Z phase a t=900s reqs=90011 inflight=1 load1=0.68 api=true worker=true busy=[node:26.5 postgres:11.8 node:10.4 postgres:10.3 postgres:9.2 postgres:5.6] unexpected=0
+2026-11-11T14:40:30.800Z phase a t=960s reqs=96007 inflight=1 load1=0.79 api=true worker=true busy=[node:26.4 postgres:11.8 postgres:10.7 node:10.3 postgres:8.8] unexpected=0
+2026-11-11T14:41:30.801Z phase a t=1020s reqs=102042 inflight=0 load1=0.80 api=true worker=true busy=[node:26.4 postgres:11.6 node:10.3 postgres:9.8 postgres:9.4] unexpected=0
+2026-11-11T14:42:30.799Z phase a t=1080s reqs=108071 inflight=1 load1=0.94 api=true worker=true busy=[node:26.4 postgres:10.5 node:10.3 postgres:9.3 postgres:6.0] unexpected=0
+2026-11-11T14:43:30.802Z phase a t=1140s reqs=114073 inflight=1 load1=0.62 api=true worker=true busy=[node:26.3 node:10.3 postgres:10.3 postgres:10.0 postgres:5.6] unexpected=0
+2026-11-11T14:44:30.802Z phase a t=1200s reqs=120076 inflight=0 load1=0.54 api=true worker=true busy=[node:26.2 node:10.3 postgres:10.2 postgres:9.8 postgres:7.9] unexpected=0
+2026-11-11T14:45:30.800Z phase a t=1260s reqs=126053 inflight=1 load1=0.46 api=true worker=true busy=[node:26.1 node:10.3 postgres:9.9 postgres:9.8 postgres:6.1] unexpected=0
+2026-11-11T14:46:30.800Z phase a t=1320s reqs=132067 inflight=1 load1=0.46 api=true worker=true busy=[node:25.9 postgres:11.3 node:10.2 postgres:9.5 postgres:7.5] unexpected=0
+2026-11-11T14:47:30.801Z phase a t=1380s reqs=138087 inflight=1 load1=0.75 api=true worker=true busy=[node:25.9 postgres:11.9 node:10.2 postgres:10.0 postgres:9.6] unexpected=0
+2026-11-11T14:48:30.802Z phase a t=1440s reqs=144068 inflight=0 load1=0.68 api=true worker=true busy=[node:25.8 postgres:12.1 node:10.2 postgres:10.1 postgres:9.4] unexpected=0
+2026-11-11T14:49:30.800Z phase a t=1500s reqs=150079 inflight=1 load1=0.65 api=true worker=true busy=[node:25.7 postgres:12.4 postgres:10.6 node:10.2 postgres:9.4] unexpected=0
+2026-11-11T14:50:30.801Z phase a t=1560s reqs=156082 inflight=0 load1=0.61 api=true worker=true busy=[node:25.7 postgres:11.6 node:10.2 postgres:9.9 postgres:9.5] unexpected=0
+2026-11-11T14:51:30.799Z phase a t=1620s reqs=162092 inflight=0 load1=0.52 api=true worker=true busy=[node:25.7 postgres:12.1 node:10.2 postgres:9.7 postgres:9.5] unexpected=0
+2026-11-11T14:52:30.799Z phase a t=1680s reqs=168065 inflight=1 load1=0.61 api=true worker=true busy=[node:25.7 postgres:11.4 postgres:10.2 node:10.2 postgres:9.4] unexpected=0
+2026-11-11T14:53:30.803Z phase a t=1740s reqs=174067 inflight=1 load1=0.66 api=true worker=true busy=[node:25.6 postgres:10.9 node:10.2 postgres:9.7 postgres:9.7] unexpected=0
+2026-11-11T14:54:30.798Z phase a t=1800s reqs=180070 inflight=0 load1=0.46 api=true worker=true busy=[node:25.6 postgres:10.6 postgres:10.2 node:10.2 postgres:9.5] unexpected=0
+2026-11-11T14:55:46.148Z phase b t=60s reqs=12028 inflight=2 load1=1.02 api=true worker=true busy=[postgres:68.4 node:25.9 postgres:17.0 postgres:12.3 node:10.3 postgres:9.7 postgres:9.7 postgres:9.3] unexpected=0
+2026-11-11T14:56:24.855Z DEATH worker pid 15957 {"code":0,"signal":null,"at":"2026-11-11T14:56:24.821Z"}
+2026-11-11T14:56:24.898Z DEATH api pid 15945 {"code":null,"signal":"SIGTERM","at":"2026-11-11T14:56:24.866Z"}

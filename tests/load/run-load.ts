@@ -10,7 +10,9 @@
  * hosted reference environment. The script writes docs/evidence/T5-load.raw.json; it never reports a target as achieved.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- response bodies are JSON of known shapes that each step narrows */
-import { writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { loadavg } from 'node:os';
 import { resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import {
@@ -49,6 +51,21 @@ const PHASES = [
 const WARMUP_SEC = Number(process.env['LOAD_WARMUP_SEC'] ?? 20);
 const OUT = process.env['LOAD_OUT'] ?? resolve(evidenceDir, 'T5-load.raw.json');
 const KEEP_DB = process.env['LOAD_KEEP_DB'] === '1';
+const SAMPLE_MS = Number(process.env['LOAD_SAMPLE_MS'] ?? 5000);
+const LOG_DIR = process.env['LOAD_LOG_DIR'];
+if (LOG_DIR) mkdirSync(LOG_DIR, { recursive: true });
+
+/** Best-effort shell capture for diagnosis (never throws). */
+function sh(cmd: string, args: string[]): string {
+  try {
+    return execFileSync(cmd, args, { encoding: 'utf8', timeout: 8000, stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  } catch (e) {
+    return `(unavailable: ${String((e as Error).message).slice(0, 120)})`;
+  }
+}
+const progress = (m: string): void => {
+  if (LOG_DIR) appendFileSync(`${LOG_DIR}/progress.log`, `${new Date().toISOString()} ${m}\n`);
+};
 
 type Cls = 'snapshot_patient' | 'snapshot_staff' | 'appointments_list' | 'sessions_list' | 'book' | 'check_in' | 'walk_in' | 'call_next' | 'start' | 'complete';
 const CLASSES: Cls[] = ['snapshot_patient', 'snapshot_staff', 'appointments_list', 'sessions_list', 'book', 'check_in', 'walk_in', 'call_next', 'start', 'complete'];
@@ -225,8 +242,31 @@ async function main(): Promise<void> {
   let phaseT0 = performance.now();
   const errTimeline: Record<string, number> = {};
   const processEvents: string[] = [];
-  void api.exited.then((c) => processEvents.push(`api exited (${c}) at ${new Date().toISOString()}`));
-  void worker.exited.then((c) => processEvents.push(`worker exited (${c}) at ${new Date().toISOString()}`));
+  const deaths: any[] = [];
+  const onDeath = (name: string, p: typeof api | typeof worker): void => {
+    void p.exited.then((c) => {
+      const at = new Date().toISOString();
+      processEvents.push(`${name} exited (${c}) at ${at}`);
+      deaths.push({
+        process: name,
+        pid: p.pid,
+        at,
+        exitInfo: p.exitInfo(),
+        secondsIntoPhase: round1((performance.now() - phaseT0) / 1000),
+        lastLogLines: p.logs.slice(-25),
+        logFile: p.logFile,
+        loadAvg: loadavg().map((x) => round1(x)),
+        dmesgTail: sh('dmesg', ['--ctime']).split('\n').slice(-25),
+        dmesgOomOrKill: sh('sh', ['-c', "dmesg | grep -iE 'oom|killed process|out of memory|segfault|invoked' | tail -10"]),
+        psTopCpu: sh('sh', ['-c', 'ps -eo pid,ppid,etimes,pcpu,rss,args --sort=-pcpu | head -12 | cut -c1-200']),
+        killersInHistory: sh('sh', ['-c', "ps -eo pid,args | grep -E 'pkill|killall|kill -9' | grep -v grep | head -5"]),
+      });
+      progress(`DEATH ${name} pid ${p.pid} ${JSON.stringify(p.exitInfo())}`);
+      log(`!!! ${name} (pid ${p.pid}) exited: ${JSON.stringify(p.exitInfo())}`);
+    });
+  };
+  onDeath('api', api);
+  onDeath('worker', worker);
   let bookCtr = 0;
   let walkCtr = 0;
   let checkCtr = 0;
@@ -401,7 +441,7 @@ async function main(): Promise<void> {
     environment: {
       machine: machineInfo(),
       config: {
-        api: 'apps/api/dist/main.js, NODE_ENV=production, DB_POOL_MAX=' + POOL_MAX + ', SSE_POLL_MS=500, LOGIN_RATE_LIMIT_MAX=1000000',
+        api: 'apps/api/dist/main.js, NODE_ENV=production, DB_POOL_MAX=' + POOL_MAX + ', SSE_POLL_MS=500, LOGIN_RATE_LIMIT_MAX=1000000, SSE_MAX_PER_IP=1000, SSE_MAX_DISPLAY=200, DISPLAY_RATE_LIMIT_PER_MIN=100000 (per-IP caps lifted: one generator IP)',
         worker: 'apps/worker/dist/main.js (default settings: poll 500 ms, concurrency 4, outbox dispatcher on)',
         database: 'PostgreSQL 16 on localhost, default server configuration, database ' + DB,
         provider: 'identity local, OCR fake, LLM fake, storage local-disk (no external provider is called in this run)',
@@ -420,7 +460,7 @@ async function main(): Promise<void> {
     cycleNoEntry = 0;
     completedCycles = 0;
     const before = (await pool.query(`SELECT (SELECT count(*)::int FROM appointments) AS appointments, (SELECT count(*)::int FROM queue_entries) AS entries, (SELECT count(*)::int FROM queue_entries WHERE state = 'completed') AS completed, (SELECT count(*)::int FROM idempotency_records) AS idem, (SELECT count(*)::int FROM audit_events) AS audit, (SELECT count(*)::int FROM jobs) AS jobs, (SELECT count(*)::int FROM outbox_events) AS outbox`)).rows[0];
-    const sampler = new Sampler(pool, DB, { api: () => (api.alive() ? api.pid : undefined), worker: () => (worker.alive() ? worker.pid : undefined) }, 5000);
+    const sampler = new Sampler(pool, DB, { api: () => (api.alive() ? api.pid : undefined), worker: () => (worker.alive() ? worker.pid : undefined) }, SAMPLE_MS);
     sampler.start();
     const invariantChecks: Array<{ tSec: number; violations: number; ms: number }> = [];
     const monStart = performance.now();
@@ -431,11 +471,20 @@ async function main(): Promise<void> {
       });
     }, 60_000);
     phaseT0 = performance.now();
+    const machineTimeline: any[] = [];
+    const heartbeat = setInterval(() => {
+      const tSec = round1((performance.now() - phaseT0) / 1000);
+      const reqs = [...stats.values()].reduce((a, st) => a + st.lat.length, 0);
+      const busyProcs = sh('sh', ['-c', "ps -eo pcpu,comm --sort=-pcpu | awk 'NR>1 && $1>5 {print $2\":\"$1}' | head -8 | tr '\\n' ' '"]);
+      machineTimeline.push({ tSec, load1: round1(loadavg()[0] ?? 0), requestsSoFar: reqs, inFlight: inflight, apiAlive: api.alive(), workerAlive: worker.alive(), busyProcesses: busyProcs });
+      progress(`phase ${phase.name} t=${tSec}s reqs=${reqs} inflight=${inflight} load1=${loadavg()[0]?.toFixed(2)} api=${api.alive()} worker=${worker.alive()} busy=[${busyProcs}] unexpected=${unexpectedSamples.length}`);
+    }, 60_000);
     for (const k of Object.keys(errTimeline)) Reflect.deleteProperty(errTimeline, k);
     log(`phase ${phase.name}: ${phase.rps} req/s for ${phase.sec} s`);
     const startedAt = new Date().toISOString();
     const run = await runLoad(phase.name, phase.rps, phase.sec, true);
     clearInterval(monitor);
+    clearInterval(heartbeat);
     const samples = await sampler.stop();
     const finalInv = await checkInvariants(pool);
     const after = (await pool.query(`SELECT (SELECT count(*)::int FROM appointments) AS appointments, (SELECT count(*)::int FROM queue_entries) AS entries, (SELECT count(*)::int FROM queue_entries WHERE state = 'completed') AS completed, (SELECT count(*)::int FROM idempotency_records) AS idem, (SELECT count(*)::int FROM audit_events) AS audit, (SELECT count(*)::int FROM jobs) AS jobs, (SELECT count(*)::int FROM outbox_events) AS outbox`)).rows[0];
@@ -483,7 +532,7 @@ async function main(): Promise<void> {
       peakInFlight: peakInflight,
       schedulerLagMs: dist(run.lagMs),
       latencyMs: { overall: dist(allLat), reads: dist(reads), writes: dist(writes), perClass },
-      status: { total: issuedRequests, ok2xx: n2xx, expected409: n409, expected409ByCode: codes409, other4xxUnexpected: nOther4xx, serverError5xx: n5xx, networkErrorOrTimeout: nNet, unexpectedRatePct: round1(((nOther4xx + n5xx + nNet) / Math.max(1, issuedRequests)) * 1000) / 10, unexpectedSamples: [...unexpectedSamples], networkErrorsPer10sBucket: { ...errTimeline }, processEvents: [...processEvents], apiAliveAtEnd: api.alive(), workerAliveAtEnd: worker.alive() },
+      status: { total: issuedRequests, ok2xx: n2xx, expected409: n409, expected409ByCode: codes409, other4xxUnexpected: nOther4xx, serverError5xx: n5xx, networkErrorOrTimeout: nNet, unexpectedRatePct: round1(((nOther4xx + n5xx + nNet) / Math.max(1, issuedRequests)) * 1000) / 10, unexpectedSamples: [...unexpectedSamples], networkErrorsPer10sBucket: { ...errTimeline }, processEvents: [...processEvents], apiAliveAtEnd: api.alive(), workerAliveAtEnd: worker.alive(), apiExit: api.exitInfo(), workerExit: worker.exitInfo() },
       cycles: { completed: completedCycles, skippedBecauseNoDoctorWithQueuedEntries: skippedCycles, callNextReturnedNoEntry: cycleNoEntry },
       durability: {
         before,
@@ -500,6 +549,7 @@ async function main(): Promise<void> {
         note: 'deltaAppointments must equal successfulBook201; deltaQueueEntries must equal successfulArrivals; deltaCompletedEntries must equal completed cycles (a response is only sent after the commit).',
       },
       invariants: { monitorChecks: invariantChecks, final: { sessionsChecked: finalInv.sessionsChecked, violations: finalInv.violations.length, sample: finalInv.violations.slice(0, 5) } },
+      machineTimeline,
       resources: summariseSamples(samples),
       apiRssTrend: rssTrend(samples, (s) => s.apiRssMb) ?? null,
       workerRssTrend: rssTrend(samples, (s) => s.workerRssMb) ?? null,
@@ -513,12 +563,15 @@ async function main(): Promise<void> {
   // idle RSS after the run (does memory come back?)
   const idle = await (async () => {
     await sleep(20_000);
-    const s = new Sampler(pool, DB, { api: () => api.pid, worker: () => worker.pid }, 1000);
+    const s = new Sampler(pool, DB, { api: () => (api.alive() ? api.pid : undefined), worker: () => (worker.alive() ? worker.pid : undefined) }, 1000);
     s.start();
     await sleep(3500);
     return (await s.stop()).slice(-1)[0];
   })();
   results.idleAfterRun = { apiRssMb: idle?.apiRssMb, workerRssMb: idle?.workerRssMb, note: '~25 s after the last phase, no traffic' };
+  results.processDeaths = deaths;
+  results.processLogs = { api: api.logFile, worker: worker.logFile, apiLogLines: api.logs.length, workerLogLines: worker.logs.length, apiTail: api.logs.slice(-15), workerTail: worker.logs.slice(-15) };
+  results.loadAvgAtEnd = loadavg().map((x) => round1(x));
   results.apiLogErrorLines = api.logs.filter((l) => /ERROR|Unhandled|deadlock/i.test(l)).slice(0, 20);
   results.apiLogErrorCount = api.logs.filter((l) => /ERROR|Unhandled|deadlock/i.test(l)).length;
   results.workerLogErrorCount = worker.logs.filter((l) => /"level":"error"|ERROR|Unhandled/i.test(l)).length;
