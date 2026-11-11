@@ -35,3 +35,10 @@ Read this first on resume, then `git log --oneline -30`.
 - W3 web merged (97 unit, 105 Playwright w/ mocks, all UI review fixes). verify: 1 flaky api probe (cluster-wide tx count during parallel load) → sent to api fix pass.
 - Gate 3 met (T4); wave-3 tag (local) = 13ea11d. W3 web + T4/T6 merged.
 - T4/T6 updated to D-028 semantics, merged. verify green: 695 tests (contracts 5, providers 79, domain 129, db 64, web 97, worker 78, api 169, tests 58+16). feature_list 45/50. Running: T5 (load/SSE/failure/restore), call-next order fix. Next: regenerate evidence (coverage/static/unit), SUMMARY.md, G4.md (HARD gate).
+
+## Final state of session 1 — stopped at GATE 4 (HARD) for HQ
+- Integration branch `claude/wonderful-galileo-2es87v`; local tags wave-0..wave-3, wave-4 at the G4 commit.
+- feature_list 48/50 (NFR-04 not measurable; NFR-05 hosted not exercised). See docs/gates/G4.md and docs/evidence/SUMMARY.md.
+- Last runs: `pnpm verify` green (725 tests), `pnpm test:concurrency` 17/17, `pnpm e2e` green ×2, evidence regenerated (coverage/static/unit).
+- Late fixes: F1/F2 DB connection loss (D-027.. see T5 update), display cache staleness (D-030), two API test flakes.
+- Next (HQ): review G4 + DECISIONS (start with D-001, D-002/023, D-025/028, D-026/028, D-029); PR to main + Codex review; run UAT checklist; second-teammate deploy; optional hosted T5.
