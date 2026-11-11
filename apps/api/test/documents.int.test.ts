@@ -322,6 +322,7 @@ describe('FR-13 verification and immutable versions', () => {
     expect(dup.status).toBe(409);
     const v2res = await doctor1.post(`/documents/${id}/verify`, {
       instructionId: v1.instructionId,
+      expectedCurrentVersionId: v1.id,
       title: 'Antibiotic course (revised)',
       body: 'Take amoxicillin 250 mg three times daily after food for seven days.',
     });
@@ -361,7 +362,7 @@ describe('FR-13 verification and immutable versions', () => {
     await linkPatient(admin, reception, p3, 1);
     const up = await upload(doctor1, makePng(), p3);
     await t.pool.query(`UPDATE documents SET status = 'ocr_ready' WHERE id = $1`, [up.body.id]);
-    const cross = await doctor1.post(`/documents/${up.body.id}/verify`, { instructionId: v.body.instructionId, title: 'Hijack', body: 'Not your lineage' });
+    const cross = await doctor1.post(`/documents/${up.body.id}/verify`, { instructionId: v.body.instructionId, expectedCurrentVersionId: v.body.id, title: 'Hijack', body: 'Not your lineage' });
     expect(cross.status).toBe(400);
     const wrongDraft = await doctor1.post(`/documents/${up.body.id}/verify`, { title: 'Wrong draft', body: 'Body text here', sourceDraftId: a.draftId });
     expect(wrongDraft.status).toBe(400);

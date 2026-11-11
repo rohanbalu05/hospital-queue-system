@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import type { Doctor, LocalDate, Session } from '@hqms/contracts';
 import { useBookAppointment, useDoctorsQuery, useSessionsQuery, useSlotsQuery } from '@/api';
 import { PatientPage } from '@/components/layout/PatientPage';
@@ -64,7 +63,7 @@ export default function BookPage() {
 
   return (
     <PatientPage title="Book appointment" description="Pick a department, doctor, day and session.">
-      <p className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
+      <p className="text-base text-muted-foreground tabular-nums" aria-live="polite">
         Step {stepIndex + 1} of {STEPS.length}
       </p>
       <h2 ref={headingRef} tabIndex={-1} className="mt-1 text-xl font-bold outline-none">
@@ -273,7 +272,6 @@ function ConfirmStep({ session, doctor, onBack, onChooseAnother }: { session: Se
       { sessionId: session.id },
       {
         onSuccess: (appt) => {
-          toast.success('Booked', { description: `${formatIST(appt.scheduledAt, 'date-time')} with ${appt.doctorName}` });
           navigate('/patient/visits', { state: { bookedId: appt.id } });
         },
       },
@@ -292,7 +290,7 @@ function ConfirmStep({ session, doctor, onBack, onChooseAnother }: { session: Se
           value={
             <>
               <span className="block">{sessionLabelWord(session)}</span>
-              <span className="block text-sm text-muted-foreground">{sessionTimes(session)}</span>
+              <span className="block text-base text-muted-foreground">{sessionTimes(session)}</span>
             </>
           }
         />
@@ -304,7 +302,7 @@ function ConfirmStep({ session, doctor, onBack, onChooseAnother }: { session: Se
             ) : nextFree ? (
               <>
                 <span className="font-bold">{formatIST(nextFree)}</span>
-                <span className="block text-sm text-muted-foreground">The next free time. It is confirmed when you book.</span>
+                <span className="block text-base text-muted-foreground">The next free time. It is confirmed when you book.</span>
               </>
             ) : (
               <span className="text-muted-foreground">Assigned when you book.</span>

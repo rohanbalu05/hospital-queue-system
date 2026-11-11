@@ -58,5 +58,16 @@ export type Doctor = z.infer<typeof Doctor>;
 export const StaffAssignment = z.object({ userId: Id, doctorId: Id });
 export type StaffAssignment = z.infer<typeof StaffAssignment>;
 
+/** GET /admin/staff (admin): staff users with the doctors they are assigned to. */
+export const StaffMember = z.object({
+  userId: Id,
+  displayName: z.string(),
+  email: z.string(),
+  role: z.enum(['reception', 'doctor', 'followup', 'admin']),
+  doctorIds: z.array(Id),
+});
+export type StaffMember = z.infer<typeof StaffMember>;
+
 /** PUT /admin/staff/{userId}/assignments */
 export const SetAssignmentsRequest = z.object({ doctorIds: z.array(Id).max(50) });
+export type SetAssignmentsRequest = z.infer<typeof SetAssignmentsRequest>;

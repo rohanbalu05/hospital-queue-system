@@ -28,9 +28,9 @@ import { assertVersion, runCommand } from './command.js';
 import type {
   QueueCommandResultDto,
   QueueEntryActionRequestDto,
-  ReEnterRequest,
   SetPriorityRequestDto,
 } from './dto.js';
+import type { ReEnterRequest } from '@hqms/contracts';
 import {
   cancelCallTimeoutJob,
   insertDecision,
@@ -413,7 +413,7 @@ export class QueueService {
       entityId: before.id,
       previous: { state: before.state, version: before.version, token: before.token, ...(a.previousExtra ?? {}) },
       next: { ...a.next, version: before.version + 1, queueVersion },
-      reason: a.reason,
+      reason: a.reason.slice(0, 200), // the full text stays on the queue entry; the audit row keeps 200 characters
       policyVersion: policy.version,
       correlationId: ctx.correlationId,
     });

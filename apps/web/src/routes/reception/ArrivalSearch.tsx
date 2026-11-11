@@ -120,7 +120,7 @@ export function ArrivalSearch(p: ArrivalSearchProps) {
 
       {!p.loading && !p.error ? (
         p.items.length === 0 ? (
-          <p role="status" className="rounded-xl border border-dashed border-rule bg-surface px-3 py-6 text-muted-foreground">
+          <p role="status" className="rounded-xl border border-rule bg-surface px-3 py-6 text-muted-foreground">
             {p.query.trim()
               ? `No patient matches "${p.query.trim()}". Check the spelling, or register them as a new patient in the action panel.`
               : 'No appointments in this session yet. Search for a patient to admit a walk-in.'}

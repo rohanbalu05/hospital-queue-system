@@ -4,16 +4,16 @@ import type { ZodType, ZodTypeDef } from 'zod';
 import { apiFetch, type ApiRequestError } from '@/lib/api';
 import { AppointmentList, DoctorList, PatientList, SessionList, StaffAppointmentList } from './schemas';
 
-type Params = Record<string, string | undefined>;
+export type Params = Record<string, string | undefined>;
 
-function withQuery(path: string, params: Params): string {
+export function withQuery(path: string, params: Params): string {
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') qs.set(k, v);
   const q = qs.toString();
   return q ? `${path}?${q}` : path;
 }
 
-function get<O, I>(path: string, params: Params, schema: ZodType<O, ZodTypeDef, I>, signal: AbortSignal): Promise<O> {
+export function get<O, I>(path: string, params: Params, schema: ZodType<O, ZodTypeDef, I>, signal: AbortSignal): Promise<O> {
   return apiFetch<O>(withQuery(path, params), { schema: schema as unknown as ZodType<O>, signal });
 }
 

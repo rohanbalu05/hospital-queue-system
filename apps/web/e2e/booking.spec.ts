@@ -4,7 +4,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { mockApi, mockScheduling, type SchedulingMock } from './mocks';
 
 const SHOTS = path.resolve(import.meta.dirname, '../../../docs/evidence/screenshots');
-const shot = (page: Page, name: string, fullPage = true) => page.screenshot({ path: path.join(SHOTS, `w1-${name}.png`), fullPage });
+const shot = (page: Page, name: string, fullPage = true) => page.screenshot({ path: path.join(SHOTS, `w1-${name}.png`), fullPage, animations: 'disabled' });
 const noOverflow = async (page: Page) => expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
 
 async function setup(page: Page): Promise<SchedulingMock> {
@@ -176,7 +176,7 @@ test.describe('keyboard only (NFR-08-b, booking)', () => {
     await chooseByArrows(page, 'Department', 'General Medicine');
     await expect(page.getByRole('radio', { name: 'General Medicine' })).toBeFocused();
     // A visible 2px ink focus ring is on the focused radio.
-    await expect.poll(() => page.getByRole('radio', { name: 'General Medicine' }).evaluate((el) => getComputedStyle(el).boxShadow)).toContain('rgb(22, 35, 43)');
+    await expect.poll(() => page.getByRole('radio', { name: 'General Medicine' }).evaluate((el) => getComputedStyle(el).outlineColor)).toBe('rgb(22, 35, 43)');
     await page.keyboard.press('Enter');
 
     // Doctor: focus moved to the step heading; Tab enters the group.
@@ -201,7 +201,7 @@ test.describe('keyboard only (NFR-08-b, booking)', () => {
     await expect(page.getByRole('heading', { name: 'Check and book' })).toBeFocused();
     const book = page.getByRole('button', { name: 'Book appointment' });
     await tabTo(page, book);
-    await expect.poll(() => book.evaluate((el) => getComputedStyle(el).boxShadow)).toContain('rgb(22, 35, 43)');
+    await expect.poll(() => book.evaluate((el) => getComputedStyle(el).outlineColor)).toBe('rgb(22, 35, 43)');
     await page.keyboard.press('Enter');
 
     await expect(page).toHaveURL(/\/patient\/visits$/);

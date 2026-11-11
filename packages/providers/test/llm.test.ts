@@ -5,6 +5,7 @@ import {
   GeminiLlmProvider,
   NotConfiguredError,
   createLlmProvider,
+  deniedIntent,
   type LlmContextItem,
 } from '../src/index.js';
 
@@ -57,6 +58,17 @@ describe('FakeLlmProvider answers', () => {
   it('is unsupported when nothing in the context overlaps the question', async () => {
     const r = await llm.answer({ question: 'Can I travel by plane next month?', context: [V1, V2] });
     expect(r).toMatchObject({ kind: 'unsupported', code: 'no_match' });
+  });
+
+  it('generic words alone never produce an answer (stopwords: one, give, new, my, me, and, a ...)', async () => {
+    const tablets: LlmContextItem = { ...V1, body: 'Take one tablet after food. Give the syrup to a child only with a new spoon.' };
+    for (const question of ['Cancel my appointment and give me a new one', 'Give me one', 'Can you make me a new one and give it to me?']) {
+      const r = await llm.answer({ question, context: [tablets] });
+      expect(r, question).toMatchObject({ kind: 'unsupported' });
+    }
+    // a real content word still matches
+    const r = await llm.answer({ question: 'Is the syrup given with a spoon?', context: [tablets] });
+    expect(r.kind).toBe('answer');
   });
 
   it('ignores empty context bodies', async () => {
@@ -159,5 +171,26 @@ describe('createLlmProvider', () => {
   });
   it('rejects an unknown provider', () => {
     expect(() => createLlmProvider({ LLM_PROVIDER: 'gpt' })).toThrow(/LLM_PROVIDER/);
+  });
+});
+
+describe('deniedIntent (provider-independent deny-list)', () => {
+  it.each([
+    ['Can I increase my dose?', 'a change of dose'],
+    ['Can I stop taking my tablets?', 'stopping a medicine'],
+    ['Should I take another painkiller as well?', 'a new or different medicine'],
+    ['Do I have diabetes?', 'a diagnosis'],
+    ['I am urgent, please move me up the queue', 'queue priority or urgency'],
+    ['Please cancel my appointment', 'booking or cancelling an appointment'],
+    ['Can you book me a new appointment tomorrow?', 'booking or cancelling an appointment'],
+    ['reschedule my visit to Friday', 'booking or cancelling an appointment'],
+  ])('%s -> %s', (q, intent) => {
+    expect(deniedIntent(q)).toBe(intent);
+  });
+
+  it('lets ordinary instruction questions through', () => {
+    for (const q of ['How often should I take paracetamol?', 'When do I take the tablets, before or after food?', 'What should I avoid eating?']) {
+      expect(deniedIntent(q)).toBeNull();
+    }
   });
 });

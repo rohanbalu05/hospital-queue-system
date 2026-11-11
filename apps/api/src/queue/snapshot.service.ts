@@ -15,10 +15,12 @@ import {
 import { APP_CONFIG, CLOCK, DB_POOL } from '../common/tokens.js';
 import type { AppConfig } from '../common/config.js';
 import type { Clock } from '../common/clock.js';
-import { notFound } from '../common/errors.js';
+import { notFound, rateLimited } from '../common/errors.js';
+import { LoginRateLimiter } from '../identity/rate-limiter.js';
 import { localDate } from '../common/http.js';
 import type { RequestCtx } from '../common/request-context.js';
 import { AccessPolicy } from '../access/access-policy.service.js';
+import { computePressure } from './pressure.js';
 import {
   readActiveForDoctor,
   readDecisions,
@@ -74,13 +76,19 @@ function residualMinutes(state: QueueState, now: Date): number {
   return m;
 }
 
-/** Waiting ids in projected policy order, starting when the doctor is next free (and any known pause is over). */
-function projectedOrder(state: QueueState, now: Date): string[] {
-  if (state.waiting.length === 0) return [];
+/** When the doctor is next free (and any known pause is over): where the projection starts, epoch ms. */
+function projectionStartMs(state: QueueState, now: Date): number {
   let startMs = now.getTime() + residualMinutes(state, now) * 60_000;
   if (state.session.status === 'paused' && state.session.pauseUntil) {
     startMs = Math.max(startMs, new Date(state.session.pauseUntil).getTime());
   }
+  return startMs;
+}
+
+/** Waiting ids in projected policy order, starting when the doctor is next free (and any known pause is over). */
+function projectedOrder(state: QueueState, now: Date): string[] {
+  if (state.waiting.length === 0) return [];
+  const startMs = projectionStartMs(state, now);
   return projectOrder(
     { entries: state.waiting.map(toCandidate), rotationPointer: state.session.rotationPointer },
     state.session.policy,
@@ -102,7 +110,9 @@ export class SnapshotService {
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     @Inject(AccessPolicy) private readonly access: AccessPolicy,
-  ) {}
+  ) {
+    this.displayLimiter = new LoginRateLimiter(config.displayRateLimitPerMin, 60_000);
+  }
 
   /** Run reads against one consistent snapshot so `queueVersion` always matches the rows returned. */
   private readConsistent<T>(fn: (db: Queryable) => Promise<T>): Promise<T> {
@@ -196,20 +206,64 @@ export class SnapshotService {
         completedCount: completed.rows[0]?.n ?? 0,
         lastDecision,
         capacity: state.session.capacity,
+        pressure: computePressure({
+          entries: state.waiting.map(toCandidate),
+          rotationPointer: state.session.rotationPointer,
+          policy: state.session.policy,
+          startMs: projectionStartMs(state, now),
+          serviceMin: state.estimator.meanMinutes,
+          nowMs: now.getTime(),
+          sessionEndsAtMs: new Date(state.session.endsAt).getTime(),
+          sessionStatus: state.session.status,
+          capacity: state.session.capacity,
+        }),
       } satisfies StaffQueueSnapshot;
     });
   }
 
-  /** GET /display/sessions: today's open or paused sessions, tokens only. No names, no patient ids, nothing clinical. */
-  async display(date?: string): Promise<DisplaySnapshot> {
+  /**
+   * GET /display/sessions (public): today's open or paused sessions whose time window covers now
+   * (starts 30 minutes early, ends 60 minutes late) or that still have patients called or waiting; tokens only.
+   * No names, no patient ids, nothing clinical. Always "today": a date parameter is ignored, so the public screen
+   * cannot be used to browse other days. Per-address rate limit, and one shared short cache so a crowd of
+   * screens costs one computation per second, not one per request.
+   */
+  async display(ip: string): Promise<DisplaySnapshot> {
+    const wall = Date.now();
+    const retry = this.displayLimiter.retryAfterSec(ip, wall);
+    if (retry > 0) throw rateLimited(retry);
+    this.displayLimiter.recordFailure(ip, wall); // counts every request in the window
+
+    const ttl = this.config.displayCacheMs;
+    if (ttl > 0 && this.displayCache && wall - this.displayCache.at < ttl) return this.displayCache.value;
+    if (this.displayInflight) return this.displayInflight;
+    const run = this.computeDisplay()
+      .then((value) => {
+        if (ttl > 0) this.displayCache = { at: Date.now(), value };
+        return value;
+      })
+      .finally(() => {
+        this.displayInflight = null;
+      });
+    this.displayInflight = run;
+    return run;
+  }
+
+  private displayCache: { at: number; value: DisplaySnapshot } | null = null;
+  private displayInflight: Promise<DisplaySnapshot> | null = null;
+  private readonly displayLimiter: LoginRateLimiter;
+
+  private computeDisplay(): Promise<DisplaySnapshot> {
     return this.readConsistent(async (db) => {
       const now = this.clock.now();
-      const day = date ?? localDate(now, this.config.hospitalTz);
+      const day = localDate(now, this.config.hospitalTz);
       const ids = await db.query<{ id: string }>(
         `SELECT s.id FROM sessions s JOIN doctors d ON d.id = s.doctor_id
           WHERE s.session_date = $1 AND s.status IN ('open','paused')
+            AND ((s.starts_at - interval '30 minutes' <= $2::timestamptz AND $2::timestamptz <= s.ends_at + interval '60 minutes')
+                 OR EXISTS (SELECT 1 FROM queue_entries qe WHERE qe.session_id = s.id AND qe.state IN ('waiting','called')))
           ORDER BY s.starts_at, d.full_name`,
-        [day],
+        [day, now],
       );
       const columns: DisplaySnapshot['columns'] = [];
       for (const { id } of ids.rows) {
