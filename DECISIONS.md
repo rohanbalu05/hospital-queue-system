@@ -121,3 +121,10 @@ worker-engineer (providers package, OCR job, upload reconciler) and ui-engineer 
 
 ## D-027 Black-box test database isolation
 `tests/` suites recreate a scratch DB; parallel runs (orchestrator + builders) must set `BLACKBOX_DB_NAME` to a unique name. Two flaky failures this session (ECONNREFUSED, "database does not exist") were caused by concurrent runs sharing `hqms_test_blackbox`, not by the app.
+
+## D-028 Wave 2–3 review dispositions
+Spec + concurrency-security reviews of W2–W3: no P0. All P1s and most P2s assigned to one API fix pass: overload/pressure exposure in the staff snapshot (§6.6), escalations always owned (fallback pool), provider-independent deny-list before any LLM call, sargable owner/status/due_at task query (Table 13), follow-up resolve/cancel owner checks, verification compare-and-set + idempotency, assistant idempotency + per-patient caps, SSE caps checked before headers + display/IP caps + max lifetime + backpressure + generic `queue.changed` for display/patient streams, display returns only in-window sessions, stricter PDF page counting + upload quota, patient scope limited to recent/active links, IST in patient-facing text, FR-04-c completed-visit test.
+- **Assistant LLM call stays synchronous in the API request** (report §6.2 says provider work runs in a worker): it is a bounded adapter call with a 15 s timeout, a concurrency cap (`ASSISTANT_MAX_CONCURRENCY`) and no transaction or lock held; on timeout/cap the question escalates to staff. OCR stays a durable worker job. Accepted deviation for answer latency in the patient chat.
+- **Paused session call-next returns 409 SESSION_NOT_CALLABLE** rather than a NO_ALLOCATION decision row (§6.4 pseudocode); FR-08-a is met and the 409 tells the caller why.
+- **Late re-entry does not re-check capacity** (Q&A 18 says reception rechecks): the re-entering patient's place was consumed at first check-in and consumed places never reopen (D-025); reception's confirmation (`admitLate`) is the review step.
+- **ConsultationCompleted does not auto-open a follow-up task** (D-026); the doctor opens it explicitly. HQ to confirm.
