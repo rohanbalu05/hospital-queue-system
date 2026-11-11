@@ -34,3 +34,4 @@ Read this first on resume, then `git log --oneline -30`.
 - Gate 2 met; wave-2 tag (local) = 54600bb. W3 api + W4 devops merged; verify 554 tests; feature_list 43/50.
 - W3 web merged (97 unit, 105 Playwright w/ mocks, all UI review fixes). verify: 1 flaky api probe (cluster-wide tx count during parallel load) → sent to api fix pass.
 - Gate 3 met (T4); wave-3 tag (local) = 13ea11d. W3 web + T4/T6 merged.
+- T4/T6 updated to D-028 semantics, merged. verify green: 695 tests (contracts 5, providers 79, domain 129, db 64, web 97, worker 78, api 169, tests 58+16). feature_list 45/50. Running: T5 (load/SSE/failure/restore), call-next order fix. Next: regenerate evidence (coverage/static/unit), SUMMARY.md, G4.md (HARD gate).
