@@ -166,3 +166,14 @@ reported: **0** in every file of every run.
 - Late-arrival, `missed` and no-show timer paths are outside T1 and are not covered here.
 - Behaviour that D-022 plans to change (one active appointment per patient per session, past-slot rule, patient
   search) is not asserted; fixtures use a distinct patient per booking and future sessions only.
+
+## Update (session 2): Codex P1 — parked entries and duplicate admission (FR-05, NFR-03)
+
+Finding: a walk-in marked absent or skipped kept an open visit and a consumed place, but admission no longer saw it, so reception could admit the same patient again (second place, second token); re-entering the original then left two waiting entries for one patient in one session.
+
+Test-first record:
+- Failing tests committed first (`65661f7`, `apps/api/test/duplicate-admission.int.test.ts`): 6 of 11 failed — second walk-in after absent → 201 (expected 409); after skip → 201; re-entry beside another live / parked-open entry → 200 (expected 409); 10 parallel walk-ins for an absent patient → 1 success (expected 0); a second open visit inserted without error (expected 23505).
+- Fix (`bdacda5`): `hasLivePlace` counts waiting/called/in-service entries and skipped/absent entries with an open visit (under doctor → session → capacity locks); `reEnter` refuses when another live or parked-open entry exists; migration 0007 adds a unique index on `visits (session_id, patient_id) WHERE status IN ('open','in_service')` (D-031).
+- After the fix: 11/11; API suite 187/187; `pnpm verify` green; `pnpm test:concurrency` 17/17 (T1 + T2 unchanged).
+
+Measured: 10 parallel walk-ins for a patient whose entry is absent → 0 successes, capacity unchanged; 10 parallel walk-ins for a patient with no place → exactly 1 success; a patient whose earlier visit was completed or left can still be admitted.

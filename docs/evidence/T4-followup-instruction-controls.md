@@ -284,3 +284,14 @@ escalated` in the raw file in all 3 runs). The test still accepts either outcome
 9. The latency numbers are client-side on a shared 4-vCPU machine with the load generator, API, worker and database all
    local; they are not a performance claim.
 10. Run counts: 3 consecutive green runs. That is not a bound on flakiness.
+
+## Update (session 2): Codex P1 — treatment-change questions that name the medicine
+
+Finding: `deniedIntent('Should I stop metformin?')` returned no intent, so with a verified instruction "Take metformin 500 mg twice daily." the fake provider answered and cited it instead of escalating (FR-14: changed treatment must reach staff).
+
+Test-first record:
+- Failing tests committed first (`38429b5`): `packages/providers` 23 failed / 82 passed (21 of 22 direct medicine-name questions not flagged, 2 FakeLlmProvider cases answered); `apps/api/test/assistant-denylist.int.test.ts` 2 failed (`expected 'answered' to be 'escalated'`).
+- Fix (`3787d9a`): modal / approval / "I want to" frames with stop- and dose-verbs, frequency-change and "still need to take" patterns; question-only matching (D-031).
+- After the fix: providers 105/105; assistant + deny-list API suites 13/13; full `pnpm verify` green.
+
+Measured on this tree: 22 direct medicine-name treatment-change questions → all refused before any provider call, escalated to an owned task with a due time, audit reason `denied_intent`, zero provider calls, no instruction text in the reply. 32 benign questions (including every question the T4 and assistant suites expect to be answered) → still answered. Known gap: "Should I take X only when I have pain?" is not caught; "Can I lower my fever?" now escalates (safe direction).

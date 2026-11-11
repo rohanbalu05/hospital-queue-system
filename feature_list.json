@@ -83,9 +83,9 @@
     "id": "FR-05-a",
     "requirement": "FR-05",
     "acceptance": "Repeated check-in produces no duplicate visit or queue entry.",
-    "test": "apps/api/test/arrivals.int.test.ts",
+    "test": "apps/api/test/arrivals.int.test.ts + apps/api/test/duplicate-admission.int.test.ts (parked entries hold their place; re-entry cannot duplicate; one open visit per patient/session, D-031)",
     "passes": true,
-    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge; re-verified after Codex P1 fixes (session 2)"
   },
   {
     "id": "FR-05-b",
@@ -283,9 +283,9 @@
     "id": "FR-14-b",
     "requirement": "FR-14",
     "acceptance": "The assistant cannot change treatment, assign priority or bypass return capacity.",
-    "test": "apps/api/test/assistant.int.test.ts",
+    "test": "apps/api/test/assistant.int.test.ts + apps/api/test/assistant-denylist.int.test.ts + packages/providers/test/llm.test.ts (direct medicine-name treatment changes, D-031)",
     "passes": true,
-    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge; re-verified after Codex P1 fixes (session 2)"
   },
   {
     "id": "FR-14-c",
@@ -339,9 +339,9 @@
     "id": "NFR-03",
     "requirement": "NFR-03",
     "acceptance": "Zero capacity oversubscriptions, duplicate active entries or concurrent doctor allocations in T1/T2.",
-    "test": "tests/concurrency/t1-*.test.ts + t2-*.test.ts (global invariant checks after every file: 0 violations)",
+    "test": "tests/concurrency/t1-*.test.ts + t2-*.test.ts (global invariant checks after every file: 0 violations) + apps/api/test/duplicate-admission.int.test.ts (no duplicate live entries per patient/session, D-031)",
     "passes": true,
-    "verified": "T1+T2 3 runs each, 0 violations"
+    "verified": "T1+T2 3 runs each, 0 violations; re-verified after Codex P1 fixes (session 2)"
   },
   {
     "id": "NFR-04",
@@ -371,9 +371,9 @@
     "id": "NFR-07",
     "requirement": "NFR-07",
     "acceptance": "Committed operations survive restarts; OCR/AI provider failure does not block booking or queue.",
-    "test": "tests/failure/run-failure.ts + tests/integration/t4-ocr-failure-isolation.test.ts + apps/worker/test/isolation.int.test.ts",
+    "test": "tests/failure/run-failure.ts + tests/integration/t4-ocr-failure-isolation.test.ts + apps/worker/test/isolation.int.test.ts + apps/worker/test/documents-fencing.int.test.ts (superseded OCR attempts cannot write, D-031)",
     "passes": true,
-    "verified": "api-kill 0 lost commits; worker-kill jobs exactly once; OCR failure: 1,200/1,200 bookings, p95 unchanged; db connection loss (after F1/F2 fix): API survives, 503 + Retry-After, 102/102 idempotent retries succeed, invariants clean"
+    "verified": "api-kill 0 lost commits; worker-kill jobs exactly once; OCR failure: 1,200/1,200 bookings, p95 unchanged; db connection loss (after F1/F2 fix): API survives, 503 + Retry-After, 102/102 idempotent retries succeed, invariants clean; re-verified after Codex P1 fixes (session 2)"
   },
   {
     "id": "NFR-08-a",

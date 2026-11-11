@@ -271,3 +271,14 @@ None occurred during the measured phases. Instrumentation that would have captur
 * Client-side latency includes the generator's own queueing on a shared machine; the generator used about 10% of one core.
 * Supply capacities exceed Table 7 (declared in section 2), and the same patients are reused across sessions.
 * Phase b is only 60 s and started with a warmed but different memory state than the end of phase a.
+
+## Update (session 2): Codex P1 — OCR writes fenced against superseded job attempts (NFR-07)
+
+Finding: if an OCR worker lost its lease during the provider call and another worker reclaimed the job, the old attempt's late failure could flip the document to `ocr_failed`; the replacement's success then saw a non-processing document, skipped the draft, and the job was marked succeeded — zero drafts, document stuck.
+
+Test-first record:
+- Failing tests committed first (`a64a722`, `apps/worker/test/documents-fencing.int.test.ts`, real Postgres + real handler/runner, provider released one call at a time): 5 of 9 failed — late failure before B finished flipped B's document (`expected 'ocr_failed' to be 'processing'`); late success while B was in its provider call wrote A's draft; a stale attempt reaching tx1 re-started OCR. Each for different worker ids and the same worker id.
+- Fix (`f6fb3c9`): every OCR transaction first verifies the job row (`state='running'`, `lease_owner`, `attempts`) under `FOR NO KEY UPDATE`, job row before document row; a superseded attempt writes nothing and the runner records no outcome for it (D-031).
+- After the fix: 9/9; worker suite 88/88; `pnpm verify` green.
+
+Measured: in every interleaving (late failure or late success of the superseded attempt, before or after the replacement finishes) the document ends `ocr_ready` with exactly one draft and one completion event; the superseded attempt's job outcome never overwrites the replacement's.
