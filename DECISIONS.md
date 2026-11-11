@@ -95,3 +95,16 @@ Spec reviewer and concurrency-security reviewer ran on W0–W1 (no P0 invariant 
 
 ## D-024 W3 started early in parallel with W2 api
 worker-engineer (providers package, OCR job, upload reconciler) and ui-engineer (follow-up inbox, review inbox, patient documents/assistant/follow-ups, admin) start before the W2 API merges because they don't touch `apps/api`. W3 api work starts after W2 api merges.
+
+## D-025 Queue API choices (api-engineer, W2)
+(API code comments cite these as "D-023" — read D-025.)
+- First call-next on a `scheduled` session dated today auto-opens it (audited `session.open`).
+- Check order: doctor occupied → session callable → selection (D-015). NO_ALLOCATION records a decision row, no audit row, no queue bump.
+- Late re-entry (group A past grace) needs `admitLate: true`; the entry converts to W ordering (`checked_in_at` = now, visit kind `late_admission`), keeps its token, and does NOT take a second walk-in place — the patient's place was consumed at first check-in and consumed places never reopen.
+- `expectedVersion` on start/complete is the queue-entry version (what clients see).
+- Roles: start/complete and priority doctor-only; open/pause/resume/unavailable doctor+reception+admin; close doctor+admin.
+- Display `nowCalling` = entry in state `called` only.
+- Consultation duration sanitised (>0, ≤180 min) before the EWMA; invalid → no update.
+- Skip and start cancel the pending `call_timeout` job; absent emits `QueuePatientSkipped` with `kind:'absent'`; open/close emit no outbox event (no event type in §6.7) but audit + bump.
+- SSE: one batched poller per API instance (500 ms) over watched sessions' `queue_version`; immediate version on connect; ping 15 s; no LISTEN/NOTIFY needed for the 2 s objective.
+- Past-slot booking fixed (slot + grace > now); one active appointment per patient per session (migration 0003); patient search reception/admin only, ≥3 chars, audited by length only.
