@@ -28,3 +28,12 @@ Parallel builders each touch `pnpm-lock.yaml`. On merge conflict the orchestrato
 
 ## D-009 Estimator context is per doctor
 EWMA state (`service_estimates`) is keyed by doctor, carried across that doctor's sessions, starting at 12 min. Report says "relevant doctor/session context"; per-doctor gives the estimator more samples at 10–15 visits per session.
+
+## D-010 Internal packages ship TypeScript source
+`@hqms/contracts`, `@hqms/domain`, `@hqms/db` export `./src/index.ts` directly (no build step). Vite and Vitest compile them natively; `apps/api` and `apps/worker` run through a TS-aware runtime (SWC/tsx) in dev and bundle for the Docker image. Avoids stale `dist/` during parallel builds. Relative imports use `.js` suffixes (NodeNext).
+
+## D-011 zod 3 for contracts
+`zod@^3.24` (widely known API, stable with NestJS pipes). Upgrade to zod 4 is a later, isolated change.
+
+## D-012 Auth on state-changing POSTs
+Every state-changing POST that creates something (book, check-in, walk-in, call-next, follow-up task, return booking, verify) accepts an `Idempotency-Key` header; book/check-in/walk-in/call-next/return-booking require it. Idempotency is scoped to (actor, operation, key) with a SHA-256 of the canonical request body.
