@@ -4,5 +4,5 @@ export * from './log.js';
 export * from './runner.js';
 export * from './outbox.js';
 export * from './service.js';
-export { defaultHandlers, handleCallTimeout, handleReservationRelease } from './handlers/index.js';
+export * from './handlers/index.js';
 export { notImplementedYet, STUB_RECHECK_MS } from './handlers/stubs.js';

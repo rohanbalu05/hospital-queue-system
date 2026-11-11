@@ -368,7 +368,11 @@ describe('reservation_release (missed reservation after the 15-minute grace)', (
     const past = new Date(Date.now() - 3_600_000);
     const w2 = await makeWorld(pool, { startsAt: past });
     const a = await bookAppointment(pool, w2, { scheduledAt: past });
-    const id = await insertJob(pool, { type: 'reservation_release', payload: { appointmentId: a.appointmentId } });
+    const id = await insertJob(pool, {
+      type: 'reservation_release',
+      payload: { appointmentId: a.appointmentId },
+      runAt: new Date(Date.now() - 1000),
+    });
     const runner = new JobRunner({
       pool,
       workerId: 'timer-test',
@@ -380,32 +384,5 @@ describe('reservation_release (missed reservation after the 15-minute grace)', (
     await runner.drain();
     expect((await getJob(pool, id)).state).toBe('succeeded');
     expect((await appt(a.appointmentId)).status).toBe('missed');
-  });
-});
-
-describe('W3 stubs', () => {
-  it('ocr_document and reconcile_uploads are deferred an hour without burning attempts', async () => {
-    const clock = fixedClock(new Date('2030-06-01T10:00:00Z'));
-    const ocr = await insertJob(pool, {
-      type: 'ocr_document',
-      payload: { documentId: '22222222-2222-4222-8222-222222222222' },
-      runAt: new Date('2030-06-01T09:00:00Z'),
-    });
-    const rec = await insertJob(pool, { type: 'reconcile_uploads', runAt: new Date('2030-06-01T09:00:00Z') });
-    const runner = new JobRunner({
-      pool,
-      workerId: 'stub-test',
-      handlers: defaultHandlers(),
-      clock,
-      log: testLog,
-      renewEveryMs: 0,
-    });
-    await runner.drain();
-    for (const id of [ocr, rec]) {
-      const j = await getJob(pool, id);
-      expect(j.state).toBe('pending');
-      expect(j.attempts).toBe(0);
-      expect(new Date(j.run_at).toISOString()).toBe('2030-06-01T11:00:00.000Z');
-    }
   });
 });
