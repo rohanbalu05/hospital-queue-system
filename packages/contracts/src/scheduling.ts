@@ -94,6 +94,13 @@ export const Appointment = z.object({
   followUpTaskId: Id.nullable(),
   version: z.number().int().positive(),
   createdAt: Instant,
+  /** Staff reads only (reception desk); never present on patient reads. D-021. */
+  patientName: z.string().optional(),
+  patientMrn: z.string().optional(),
+  patientPhone: z.string().nullable().optional(),
+  /** Present once checked in (staff + own patient reads). */
+  queueEntryId: Id.nullable().optional(),
+  token: z.string().nullable().optional(),
 });
 export type Appointment = z.infer<typeof Appointment>;
 
@@ -127,3 +134,8 @@ export const SlotAvailability = z.object({
   capacity: Capacity,
 });
 export type SlotAvailability = z.infer<typeof SlotAvailability>;
+
+export type SessionListQuery = z.infer<typeof SessionListQuery>;
+export type CreateSessionRequest = z.infer<typeof CreateSessionRequest>;
+export type CancelAppointmentRequest = z.infer<typeof CancelAppointmentRequest>;
+export type AppointmentListQuery = z.infer<typeof AppointmentListQuery>;

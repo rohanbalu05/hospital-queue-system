@@ -1,15 +1,37 @@
-import { PatientShell } from '@/components/layout/Shells';
+import { Link, Route, Routes } from 'react-router-dom';
+import { PatientPage } from '@/components/layout/PatientPage';
 import { EmptyState } from '@/components/queue';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
+import BookPage from './BookPage';
+import VisitsPage from './VisitsPage';
 
-/** W0 placeholder. W1 adds booking; W2 adds My visit; W3 adds documents, follow-ups and the assistant. */
-export default function PatientHome() {
+/** W2 adds the live visit (token, position, ETA) here. */
+function TodayPage() {
   const { me } = useAuth();
   return (
-    <PatientShell title="My visit" description={me ? `Signed in as ${me.displayName}.` : undefined}>
-      <EmptyState title="No visit today">
-        Your token, your place in the queue and the estimated wait appear here once you check in. Booking an appointment opens from this screen.
+    <PatientPage title="My visit" {...(me ? { description: `Signed in as ${me.displayName}.` } : {})}>
+      <EmptyState
+        title="No visit today"
+        action={
+          <Button asChild size="lg">
+            <Link to="/patient/book">Book appointment</Link>
+          </Button>
+        }
+      >
+        Your token, your place in the queue and the estimated wait appear here once you check in at the hospital.
       </EmptyState>
-    </PatientShell>
+    </PatientPage>
+  );
+}
+
+export default function PatientHome() {
+  return (
+    <Routes>
+      <Route index element={<TodayPage />} />
+      <Route path="book" element={<BookPage />} />
+      <Route path="visits" element={<VisitsPage />} />
+      <Route path="*" element={<TodayPage />} />
+    </Routes>
   );
 }
