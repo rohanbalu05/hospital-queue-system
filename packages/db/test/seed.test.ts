@@ -24,11 +24,13 @@ import {
   withTransaction,
 } from '../src/index.js';
 import { istDate, seed } from '../../../db/seed/seed.js';
-import { createDatabase, dropDatabase, testUrl } from './helpers.js';
+import { createDatabase, dropDatabase, must, nth, testUrl } from './helpers.js';
 
 const DB = 'hqms_test_db_engineer_seed';
 let pool: Pool;
 let first: Awaited<ReturnType<typeof seed>>;
+
+const meOf = async (email: string) => must(await getMe(pool, must(await getUserByEmail(pool, email), email).id), `me ${email}`);
 
 const counts = async () => {
   const tables = [
@@ -78,7 +80,7 @@ describe('seed', () => {
   });
 
   it('adds only the new day when re-run on a later date', async () => {
-    const before = (await counts()).sessions!;
+    const before = must((await counts()).sessions, 'session count');
     const tomorrow = new Date(Date.now() + 86_400_000);
     const again = await seed(pool, { now: tomorrow });
     expect(again.sessionsCreated).toBe(20); // one new day: 10 doctors x 2
@@ -97,7 +99,7 @@ describe('seed', () => {
       expect(r).toMatchObject({ booked_capacity: 10, walkin_capacity: 5, version: 1, slot_minutes: 20 });
       expect(r.status).toBe(r.session_date === today ? 'open' : 'scheduled');
     }
-    const morning = rows.rows.find((r) => r.label === 'morning')!;
+    const morning = must(rows.rows.find((r) => r.label === 'morning'), 'morning session');
     // 09:00-13:00 IST is 03:30-07:30 UTC
     expect(morning.starts_at.slice(11, 16)).toBe('03:30');
     expect(morning.ends_at.slice(11, 16)).toBe('07:30');
@@ -115,31 +117,30 @@ describe('seed', () => {
   it('demo accounts exist with password demo1234 and the right scope', async () => {
     const emails = ['admin@hqms.test', 'reception@hqms.test', 'doctor@hqms.test', 'followup@hqms.test', 'patient@hqms.test', 'patient2@hqms.test'];
     for (const email of emails) {
-      const u = await getUserByEmail(pool, email);
-      expect(u, email).not.toBeNull();
-      expect(await verifyPassword(u!.passwordHash, 'demo1234'), email).toBe(true);
-      expect(await verifyPassword(u!.passwordHash, 'wrong')).toBe(false);
+      const u = must(await getUserByEmail(pool, email), email);
+      expect(await verifyPassword(u.passwordHash, 'demo1234'), email).toBe(true);
+      expect(await verifyPassword(u.passwordHash, 'wrong')).toBe(false);
     }
     expect(u_role(await getUserByEmail(pool, 'Admin@HQMS.test'))).toBe('admin'); // case-insensitive
 
     const all = (await listDoctors(pool)).map((d) => d.id);
-    expect((await getMe(pool, (await getUserByEmail(pool, 'reception@hqms.test'))!.id))!.assignedDoctorIds.sort()).toEqual([...all].sort());
-    expect((await getMe(pool, (await getUserByEmail(pool, 'followup@hqms.test'))!.id))!.assignedDoctorIds).toHaveLength(10);
-    expect((await getMe(pool, (await getUserByEmail(pool, 'admin@hqms.test'))!.id))!.assignedDoctorIds).toHaveLength(10);
-    expect((await getMe(pool, (await getUserByEmail(pool, 'reception2@hqms.test'))!.id))!.assignedDoctorIds).toHaveLength(2);
+    expect((await meOf('reception@hqms.test')).assignedDoctorIds.sort()).toEqual([...all].sort());
+    expect((await meOf('followup@hqms.test')).assignedDoctorIds).toHaveLength(10);
+    expect((await meOf('admin@hqms.test')).assignedDoctorIds).toHaveLength(10);
+    expect((await meOf('reception2@hqms.test')).assignedDoctorIds).toHaveLength(2);
 
-    const doc = (await getMe(pool, (await getUserByEmail(pool, 'doctor@hqms.test'))!.id))!;
-    const gm = (await listDoctors(pool, { department: 'General Medicine' }))[0]!;
+    const doc = await meOf('doctor@hqms.test');
+    const gm = nth(await listDoctors(pool, { department: 'General Medicine' }), 0);
     expect(doc.doctorId).toBeTruthy();
     expect(['Dr. Suresh Hegde', 'Dr. Lakshmi Narayan']).toContain(gm.fullName);
     const first = await pool.query(`SELECT full_name FROM doctors WHERE id = $1`, [doc.doctorId]);
     expect(first.rows[0].full_name).toBe('Dr. Suresh Hegde');
 
-    const p = (await getMe(pool, (await getUserByEmail(pool, 'patient@hqms.test'))!.id))!;
+    const p = await meOf('patient@hqms.test');
     expect(p).toMatchObject({ role: 'patient', assignedDoctorIds: [] });
     expect(p.patientId).toBeTruthy();
     // the demo patient has an appointment today with the demo doctor
-    const appts = await listAppointmentsByPatient(pool, p.patientId!);
+    const appts = await listAppointmentsByPatient(pool, must(p.patientId, 'patient id'));
     expect(appts.some((a) => a.doctorId === doc.doctorId && a.sessionId)).toBe(true);
   });
 
@@ -166,7 +167,7 @@ describe('repositories', () => {
     expect(list).toHaveLength(20);
     const gm = await listSessions(pool, { date: today, department: 'General Medicine' });
     expect(gm).toHaveLength(4);
-    const s = gm.find((x) => x.label === 'morning' && x.doctorName === 'Dr. Suresh Hegde')!;
+    const s = must(gm.find((x) => x.label === 'morning' && x.doctorName === 'Dr. Suresh Hegde'), 'GM morning session');
     expect(s).toMatchObject({
       sessionDate: today,
       policyVersion: 1,
@@ -184,13 +185,16 @@ describe('repositories', () => {
 
   it('appointments: get and list by session / patient', async () => {
     const today = istDate(0);
-    const s = (await listSessions(pool, { date: today, department: 'General Medicine' })).find(
-      (x) => x.label === 'morning' && x.doctorName === 'Dr. Suresh Hegde',
-    )!;
+    const s = must(
+      (await listSessions(pool, { date: today, department: 'General Medicine' })).find(
+        (x) => x.label === 'morning' && x.doctorName === 'Dr. Suresh Hegde',
+      ),
+      'GM morning session',
+    );
     const inSession = await listAppointmentsBySession(pool, s.id);
     expect(inSession).toHaveLength(3);
-    expect(inSession[0]!.scheduledAt <= inSession[2]!.scheduledAt).toBe(true);
-    const one = await getAppointment(pool, inSession[0]!.id);
+    expect(nth(inSession, 0).scheduledAt <= nth(inSession, 2).scheduledAt).toBe(true);
+    const one = await getAppointment(pool, nth(inSession, 0).id);
     expect(one).toMatchObject({ status: 'booked', department: 'General Medicine', rescheduledFromId: null });
     expect(await listAppointmentsBySession(pool, s.id, { statuses: ['cancelled'] })).toHaveLength(0);
   });
@@ -201,33 +205,35 @@ describe('repositories', () => {
       rotation: ['A', 'A', 'W'], earlyEligibilityMin: 10, lateGraceMin: 15, agingTriggerMin: 45,
       calledTimeoutSec: 120, ewmaAlpha: 0.2, initialEstimateMin: 12, defaultBookedCapacity: 10, defaultWalkinCapacity: 5,
     });
-    expect((await getLatestPolicy(pool))!.version).toBe(1);
+    expect(must(await getLatestPolicy(pool), 'policy').version).toBe(1);
     expect(await getPolicyByVersion(pool, 99)).toBeNull();
     expect(await listDoctors(pool, { activeOnly: true })).toHaveLength(10);
 
     const hits = await searchPatients(pool, 'ramesh');
     expect(hits.map((h) => h.fullName)).toContain('Ramesh Kumar');
-    expect((await searchPatients(pool, 'BLR-000002'))[0]!.fullName).toBe('Sunita Devi');
-    const phone = hits[0]!.phone!;
-    expect((await searchPatients(pool, phone.slice(-6))).some((h) => h.id === hits[0]!.id)).toBe(true);
+    expect(nth(await searchPatients(pool, 'BLR-000002'), 0).fullName).toBe('Sunita Devi');
+    const phone = must(nth(hits, 0).phone, 'phone');
+    expect((await searchPatients(pool, phone.slice(-6))).some((h) => h.id === nth(hits, 0).id)).toBe(true);
     expect(await searchPatients(pool, '%')).toEqual([]); // wildcard is escaped, not a match-all
-    expect(hits[0]!.hasLogin).toBe(true);
-    expect((await searchPatients(pool, 'Chandrashekar'))[0]!.hasLogin).toBe(false);
+    expect(nth(hits, 0).hasLogin).toBe(true);
+    expect(nth(await searchPatients(pool, 'Chandrashekar'), 0).hasLogin).toBe(false);
   });
 
   it('createPatient generates sequential MRNs like BLR-001000', async () => {
-    const [a, b] = await withTransaction(pool, async (tx) => [
+    const created = await withTransaction(pool, async (tx) => [
       await createPatient(tx, { fullName: 'Walk In One', phone: '+91 9800000001', dateOfBirth: '1990-05-17' }),
       await createPatient(tx, { fullName: 'Walk In Two' }),
     ]);
-    expect(a!.mrn).toMatch(/^BLR-\d{6}$/);
-    expect(Number(b!.mrn.slice(4))).toBe(Number(a!.mrn.slice(4)) + 1);
+    const a = nth(created, 0);
+    const b = nth(created, 1);
+    expect(a.mrn).toMatch(/^BLR-\d{6}$/);
+    expect(Number(b.mrn.slice(4))).toBe(Number(a.mrn.slice(4)) + 1);
     expect(a).toMatchObject({ fullName: 'Walk In One', dateOfBirth: '1990-05-17', hasLogin: false });
-    expect(await getPatient(pool, a!.id)).toEqual(a);
+    expect(await getPatient(pool, a.id)).toEqual(a);
   });
 
   it('service estimates: absent until first upsert, then updated in place', async () => {
-    const d = (await listDoctors(pool))[0]!;
+    const d = nth(await listDoctors(pool), 0);
     expect(await getServiceEstimate(pool, d.id)).toBeNull();
     await withTransaction(pool, (tx) => upsertServiceEstimate(tx, { doctorId: d.id, meanMinutes: 12, samples: 0 }));
     const e = await withTransaction(pool, (tx) => upsertServiceEstimate(tx, { doctorId: d.id, meanMinutes: 11.2, samples: 1 }));
@@ -236,7 +242,7 @@ describe('repositories', () => {
   });
 
   it('users by id round-trip', async () => {
-    const u = (await getUserByEmail(pool, 'patient@hqms.test'))!;
+    const u = must(await getUserByEmail(pool, 'patient@hqms.test'), 'patient user');
     expect(await getUserById(pool, u.id)).toEqual(u);
     expect(await getUserByEmail(pool, 'nobody@hqms.test')).toBeNull();
   });

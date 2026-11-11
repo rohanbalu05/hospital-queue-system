@@ -1,5 +1,5 @@
 import type { Me, Role } from '@hqms/contracts';
-import { maybeOne, many, type Queryable } from '../pool.js';
+import { maybeOne, many, type Queryable, type QueryResultRow } from '../pool.js';
 import type { Tx } from '../tx.js';
 
 /** Full user row including the password hash: for the identity provider only, never serialise it. */
@@ -21,7 +21,7 @@ export interface UserRecord {
 const USER_COLS = `id, hospital_id, email, display_name, role, identity_provider, idp_subject, password_hash,
                    patient_id, doctor_id, active, created_at`;
 
-const mapUser = (r: any): UserRecord => ({
+const mapUser = (r: QueryResultRow): UserRecord => ({
   id: r.id,
   hospitalId: r.hospital_id,
   email: r.email,

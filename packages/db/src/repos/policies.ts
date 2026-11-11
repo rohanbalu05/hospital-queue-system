@@ -1,10 +1,10 @@
 import type { QueuePolicy } from '@hqms/contracts';
-import { maybeOne, type Queryable } from '../pool.js';
+import { maybeOne, type Queryable, type QueryResultRow } from '../pool.js';
 
 const COLS = `id, version, rotation, early_eligibility_min, late_grace_min, aging_trigger_min, called_timeout_sec,
               ewma_alpha, initial_estimate_min, default_booked_capacity, default_walkin_capacity, created_at`;
 
-const mapPolicy = (r: any): QueuePolicy => ({
+const mapPolicy = (r: QueryResultRow): QueuePolicy => ({
   id: r.id,
   version: r.version,
   rotation: r.rotation,

@@ -1,4 +1,4 @@
-import { maybeOne, type Queryable } from '../pool.js';
+import { firstRow, maybeOne, type Queryable, type QueryResultRow } from '../pool.js';
 import type { Tx } from '../tx.js';
 
 /** EWMA state per doctor (DECISIONS D-009). The estimator maths lives in @hqms/domain. */
@@ -9,7 +9,7 @@ export interface ServiceEstimate {
   updatedAt: string;
 }
 
-const mapEstimate = (r: any): ServiceEstimate => ({
+const mapEstimate = (r: QueryResultRow): ServiceEstimate => ({
   doctorId: r.doctor_id,
   meanMinutes: r.mean_minutes,
   samples: r.samples,
@@ -34,5 +34,5 @@ export async function upsertServiceEstimate(
      RETURNING doctor_id, mean_minutes, samples, updated_at`,
     [e.doctorId, e.meanMinutes, e.samples],
   );
-  return mapEstimate(res.rows[0]);
+  return mapEstimate(firstRow(res, 'service_estimate'));
 }
