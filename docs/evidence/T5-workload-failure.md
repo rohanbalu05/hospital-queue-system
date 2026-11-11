@@ -177,3 +177,97 @@ Remeasured with `cd tests && pnpm failure <scenario>` after the fix (raw: `T5-fa
 | db-conn (connections terminated + database closed 8 s) | API crashed in 2 of 3 executions; outage answered 500 | 7 of 7 checks pass; API and worker survive; outage answered 243 × `503 SERVICE_UNAVAILABLE`, 0 × 500, slowest 19.4 ms; first success 0 s after reopening; 102/102 failed bookings succeeded on idempotent retry; 847 appointments = 847 idempotency records = 847 keys; invariants clean |
 
 F1 and F2 are closed. The 30-minute sustained load run (NFR-01) has not been repeated.
+
+## 30-minute sustained run (rerun)
+
+NFR-01 profile rerun after the F1/F2 connection-loss fix. **All numbers are measured on the declared development machine (section 1), not on the hosted reference environment, and nothing here is a hosted-environment result.** Raw: `T5-load-30min.raw.json` (all samples, per-class distributions, invariant checks, 60-second machine timeline). Process logs: `T5-load-30min.api.log.txt`, `T5-load-30min.worker.log.txt` (stdout and stderr of the two processes), `T5-load-30min.progress.log.txt` (one line per minute: requests, in-flight, load average, process liveness, busiest processes), `T5-load-30min.generator.log.txt`. Summary tables were produced from the raw file with `node tests/load/summarise-raw.mjs`.
+
+### Declaration
+
+| Item | Value |
+| --- | --- |
+| Application code measured | `f4ecc97` (merge of branch `claude/wonderful-galileo-2es87v`, includes the F1/F2 fix `1db1b89`/`4a37787`); production bundles rebuilt at this commit (`pnpm --filter @hqms/api build`, `@hqms/worker build`) |
+| Harness | `dc5b148` on this branch (adds log capture to files, exit code and signal, death diagnosis, 10-second sampling, 60-second heartbeat; the load logic is unchanged) |
+| Machine | as in section 1: 4 vCPU Intel Xeon @ 2.10 GHz VM, kernel 6.18.44-fc, 15.7 GB RAM, no swap, Node v22.23.4, PostgreSQL 16.15, API + worker + PostgreSQL + generator all on this one machine |
+| API config | `NODE_ENV=production`, `DB_POOL_MAX=20`, `SSE_POLL_MS=500`, login rate limit raised (`LOGIN_RATE_LIMIT_MAX=1000000`); **per-IP caps lifted** because every simulated client comes from one IP: `SSE_MAX_PER_IP=1000`, `SSE_MAX_DISPLAY=200`, `DISPLAY_RATE_LIMIT_PER_MIN=100000`. Worker with defaults (poll 500 ms, concurrency 4, outbox dispatcher on). Providers fake/local (no external provider latency measured). |
+| Mix and dataset | exactly as in section 2 (same classes and shares; 10 doctors, 10,040 patients, 170 patient logins; at the start of the run 1,684 sessions, 6,025 appointments, 170 queue entries; larger supply capacities than Table 7, declared) |
+| Profile | 20 s warm-up at 50 req/s (excluded), then **phase a: 100 req/s for 1,800 s**, 15 s pause, **phase b: 200 req/s for 60 s** |
+| Times (UTC, 2026-11-11) | process start 14:23:35; phase a 14:24:30 to 14:54:30; phase b 14:54:46 to 14:55:46; shutdown by the harness 14:56:24 |
+| Shared machine | **Not quiet.** Other agents ran Playwright (headless Chrome) and node test runs on the same machine during roughly the first 10 minutes of phase a (the per-minute log shows `chrome-headless` at 70 to 92% CPU up to about t = 540 s). Load average (1-minute) over phase a: mean 1.4, min 0.4, max 3.5; **mean 2.6 during the first 600 s and 0.7 afterwards**; whole-machine CPU mean 29.9%, max 72.4% (mean 50% in the first 600 s, 20% afterwards). Other databases on the PostgreSQL server: mean 0.7, max 4.8 transactions/s. Phase b ran at load average about 0.7 to 1.0, a quiet machine, so it is not comparable with the contended start of phase a. Latency was not recorded per time slice, so the effect of the contended first 10 minutes on the percentiles cannot be separated out. |
+| Instrumentation | API and worker stdout/stderr to files; exit code and signal recorded by the parent (`exit` event); RSS and CPU of both from `/proc` every 10 s (179 samples in phase a); invariant monitor every 60 s (30 checks) plus a final check; `dmesg` readable (checked after the run) |
+
+### Outcome
+
+**The run completed: 30 minutes at 100 req/s and 60 s at 200 req/s, with no transport error, no 5xx and no unexpected 4xx.** Neither process died during the run (no exit event, both alive at the end, process liveness logged every minute). The two exits at 14:56:24 are the harness stopping them after the results were written (worker exit code 0 after `worker.signal SIGTERM`, API signal SIGTERM; flagged `expectedShutdownByHarness` in the raw file). The processes were not killed at about 1,100 s as in the contaminated run.
+
+### Latency and throughput (client side, send to full body, ms)
+
+| | Phase a (1,800 s, 100 req/s target) | Phase b (60 s, 200 req/s target) |
+| --- | ---: | ---: |
+| Requests completed | 180,070 | 12,031 |
+| Achieved rate | 100.0 req/s (open loop; scheduler lag p99 2.3 ms) | 200.6 req/s (scheduler lag p99 1.7 ms) |
+| Overall p50 / p95 / p99 / max | 6.5 / 13.8 / 21.3 / 286.4 | 5.6 / 11.7 / 16.4 / 44.3 |
+| Reads p50 / p95 / p99 | 6.1 / 10.3 / 16.4 | 5.2 / 8.5 / 12.8 |
+| Writes p50 / p95 / p99 | 10.7 / 20.1 / 31.0 | 9.8 / 15.7 / 22.1 |
+| Peak requests in flight | 22 | 22 |
+
+Per endpoint class (ms):
+
+| Class | (a) n | (a) p50 | (a) p95 | (a) p99 | (a) max | (b) n | (b) p50 | (b) p95 | (b) p99 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| snapshot_patient | 86,480 | 6.5 | 10.7 | 17.1 | 282.6 | 5,656 | 5.6 | 8.5 | 13.6 |
+| snapshot_staff | 21,670 | 7.8 | 12.6 | 19.4 | 162.7 | 1,452 | 6.9 | 10.2 | 15.2 |
+| appointments_list | 26,726 | 3.2 | 5.4 | 9.3 | 134.7 | 1,845 | 2.8 | 4.1 | 7.7 |
+| sessions_list | 18,253 | 4.2 | 6.7 | 10.8 | 104.2 | 1,234 | 3.7 | 5.2 | 8.2 |
+| book | 8,890 | 9.9 | 18.6 | 29.3 | 286.4 | 564 | 9.2 | 14.8 | 26.7 |
+| check_in | 4,515 | 12.2 | 21.8 | 33.2 | 117.5 | 317 | 10.8 | 17.8 | 24.6 |
+| walk_in | 4,425 | 11.3 | 19.8 | 31.8 | 264.5 | 315 | 10.2 | 15.1 | 21.3 |
+| call_next | 3,037 | 14.0 | 23.1 | 34.9 | 126.5 | 216 | 11.7 | 18.0 | 20.0 |
+| start | 3,037 | 8.9 | 18.1 | 28.3 | 185.0 | 216 | 8.1 | 14.1 | 19.8 |
+| complete | 3,037 | 8.9 | 18.1 | 29.7 | 204.6 | 216 | 8.3 | 13.3 | 15.3 |
+
+Against the NFR-01 targets (ordinary API p95 <= 500 ms at 100 req/s for 30 minutes; p95 <= 1 s at 200 req/s for 60 s): the measured p95 values above are far below those thresholds **on this machine with fake providers**. That is a local measurement; whether the hosted environment meets the NFR is not shown here.
+
+### Status distribution
+
+| | Phase a | Phase b |
+| --- | ---: | ---: |
+| 2xx | 180,070 (100%) | 12,031 (100%) |
+| Expected 4xx (409 conflicts) | 0 | 0 |
+| Other 4xx (unexpected) | 0 | 0 |
+| 5xx | 0 | 0 |
+| Transport errors / timeouts | 0 | 0 |
+
+In this run the doctor cycles never hit `DOCTOR_OCCUPIED` (the 1,063 expected 409s of the contaminated run did not recur); 3,037 cycles completed in phase a and 3 cycle ticks found no doctor with queued entries and were skipped. Success counts equal the database deltas: appointments created 8,890 = 201 responses to `book`; queue entries created 8,940 = successful check-ins + walk-ins; completed entries 3,037 = completed cycles; outbox events 26,941 = the 26,941 successful write requests (one outbox event per command).
+
+### Resources (10-second samples, phase a, 179 samples)
+
+| | Mean | Max | Trend |
+| --- | ---: | ---: | --- |
+| API RSS (MB) | 194.3 | 196.2 | 193.3 at start, 195.2 at the end; **least-squares slope +0.06 MB/min**; mean by thirds 193.6 / 194.5 / 194.9 |
+| Worker RSS (MB) | 76.8 | 77.3 | 76.1 to 77.3; **slope +0.03 MB/min** |
+| API CPU (percent of one core) | 25.0 | 27.3 | steady: 25.5 in the first 600 s, 24.7 afterwards |
+| Worker CPU | 0.5 | 0.8 | |
+| PostgreSQL backends of this DB, CPU (sum, percent of one core) | 30.0 | 34.3 | |
+| API connections open / active / idle in transaction (pool max 20) | 4.6 (max 19) / 0.2 (max 2) / 0.3 (max 3) | | backends waiting on a lock: 0 |
+| Load generator CPU | 10.0 | 11.8 | |
+
+Phase b (60 s, 6 samples): API CPU mean 42.5% (max 49.9%), PostgreSQL backends 48.8% (max 56.1%), worker 0.7%. API RSS 135.5 to 137.2 MB in phase b (the API's RSS fell from 195 MB to about 136 MB during the 15 s pause between the phases, so phase b starts from a different baseline; the 2.2 MB/min "slope" of 6 samples is not a growth figure). Idle after the run: API 137.2 MB, worker 77.3 MB. The API RSS here (about 194 MB) is higher than the 152 MB of the 5-minute run because the dataset is larger (about 15,000 appointments and 1,684 sessions by the end versus 1,525 and 514). The slope over 30 minutes is flat at this rate; this does not prove there is no leak at other rates or longer durations.
+
+### Invariants
+
+30 monitor checks during phase a (every 60 s, slowest 112.8 ms) and a final check over 1,684 sessions: **0 violations** (capacity counters vs allocations, one visit per appointment, one queue entry per visit, one active called/in-service entry per doctor, no visit without an entry). Phase b: 1 check plus final, 0 violations.
+
+### Process deaths and diagnosis
+
+None occurred during the measured phases. Instrumentation that would have captured a death (exit code, signal, last 25 log lines, `dmesg` tail and OOM/kill grep, `ps` top CPU, load average) was active and produced nothing, apart from the two harness-initiated shutdowns. `dmesg` is readable on this machine; its only match for "oom" after the run is the boot-time notice `oom_control is deprecated`, not a kill. API log: 104 lines, startup lines only, 0 lines containing error or warn; worker log: 12 lines, 0 error or warn.
+
+**What this does and does not say about the contaminated run (section 2.2).** That run's worker disappeared at about 1,100 s without a log line, and the API was gone later. This rerun, on the same machine and mix and for the same duration, went through that point (t = 1,080 to 1,140 s: both alive, 0 errors, load average 0.6 to 0.9) and ran to the end. The cause of the earlier disappearance is **not established**: the earlier run used the code before the F1/F2 fix (`496bcdf`) and had no exit instrumentation, and nothing in this rerun reproduces it. Possible explanations such as an external kill by another process on the shared machine, or the F1 crash path, are hypotheses that this evidence neither confirms nor excludes. If a process dies in a future run, the harness now records what happened.
+
+### Limits of this rerun
+
+* One run, one machine, shared with other work during the first 10 minutes (declared above). The run shows that the local build sustained the profile once; it is not a repeated trial and gives no confidence interval.
+* Fake OCR/LLM/identity/storage providers: no provider latency. The NFR-01 hosted-environment measurement (managed PostgreSQL, network, real providers) is still to be done and is **not claimed**.
+* Client-side latency includes the generator's own queueing on a shared machine; the generator used about 10% of one core.
+* Supply capacities exceed Table 7 (declared in section 2), and the same patients are reused across sessions.
+* Phase b is only 60 s and started with a warmed but different memory state than the end of phase a.
