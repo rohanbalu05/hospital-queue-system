@@ -324,14 +324,16 @@
     "requirement": "NFR-01",
     "acceptance": "100 req/s sustained with ordinary API p95 <= 500 ms; 200 req/s for 60 s with p95 <= 1 s (measured locally, environment declared).",
     "test": "tests/load/run-load.ts -> docs/evidence/T5-workload-failure.md",
-    "passes": false
+    "passes": false,
+    "note": "Measured locally (one 4 vCPU box, co-located): 100 req/s for 300 s p95 14.3 ms, 0 errors; 200 req/s for 60 s p95 16.5 ms, 0 errors. The 30-minute sustained target is NOT demonstrated (one 30-min attempt contaminated: worker vanished at ~1,100 s, cause unknown). Hosted environment not tested."
   },
   {
     "id": "NFR-02",
     "requirement": "NFR-02",
     "acceptance": "200 connected SSE clients; commit-to-client freshness p95 <= 5 s; unexpected server errors < 1%.",
-    "test": "tests/load/sse-freshness.ts -> docs/evidence/T3-snapshot-eta.md",
-    "passes": false
+    "test": "tests/load/sse.ts -> docs/evidence/T3-live-freshness.md",
+    "passes": true,
+    "verified": "200 SSE clients (170/22/8), 2,226 commits: notice freshness p95 393 ms, notice+snapshot p95 1.5 s (target 5 s), 0 missing/stale, 0 unexpected 5xx; local single box, per-IP caps lifted (declared)"
   },
   {
     "id": "NFR-03",
@@ -346,14 +348,16 @@
     "requirement": "NFR-04",
     "acceptance": "99.5% availability during operating hours (documented as a target; not measurable in this build).",
     "test": "docs/evidence/T5-workload-failure.md",
-    "passes": false
+    "passes": false,
+    "note": "Not measurable in this build; method only in docs/evidence/T5-workload-failure.md §6."
   },
   {
     "id": "NFR-05",
     "requirement": "NFR-05",
     "acceptance": "RPO <= 15 min / RTO <= 60 min: local backup-restore drill with measured timings.",
     "test": "tests/failure/restore-drill.sh -> docs/evidence/T5-workload-failure.md",
-    "passes": false
+    "passes": false,
+    "note": "Local drill measured: restore 479 ms, local RTO 2.6 s to smoke pass, data loss = backup window (16.9 s, 10 bookings). Hosted PITR RPO <=15 min / RTO <=60 min untested, so the target is not demonstrated."
   },
   {
     "id": "NFR-06",
@@ -367,8 +371,9 @@
     "id": "NFR-07",
     "requirement": "NFR-07",
     "acceptance": "Committed operations survive restarts; OCR/AI provider failure does not block booking or queue.",
-    "test": "tests/failure/failure-injection.test.ts",
-    "passes": false
+    "test": "tests/failure/run-failure.ts + tests/integration/t4-ocr-failure-isolation.test.ts + apps/worker/test/isolation.int.test.ts",
+    "passes": false,
+    "note": "api-kill, worker-kill, OCR failure all pass (0 lost commits, jobs exactly once, booking unaffected). BUG F1: API crashes when Postgres terminates a checked-out connection; fix in progress."
   },
   {
     "id": "NFR-08-a",
