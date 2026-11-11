@@ -25,15 +25,18 @@ import {
   type AppointmentRecord,
   type IdempotentResult,
   type Pool,
+  type SessionLockRow,
   type Tx,
 } from '@hqms/db';
 import { assertTransition } from '@hqms/domain';
 import { CLOCK, DB_POOL } from '../common/tokens.js';
 import type { Clock } from '../common/clock.js';
 import type { AppointmentListQueryDto, CancelAppointmentRequestDto } from '../common/types.js';
-import { conflict, notFound, validationFailed } from '../common/errors.js';
+import { conflict, forbidden, notFound, validationFailed } from '../common/errors.js';
 import type { RequestCtx } from '../common/request-context.js';
 import { AccessPolicy } from '../access/access-policy.service.js';
+import { PatientScope } from '../access/patient-scope.service.js';
+import { lockTask } from '../followup/followup.repo.js';
 import {
   assertBookable,
   assertNoActiveAppointment,
@@ -50,12 +53,18 @@ export class AppointmentsService {
     @Inject(DB_POOL) private readonly pool: Pool,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(AccessPolicy) private readonly access: AccessPolicy,
+    @Inject(PatientScope) private readonly scope: PatientScope,
   ) {}
 
   /** FR-03: reserve capacity and record the appointment in one transaction (lock order doctor, session, capacity). */
   async book(ctx: RequestCtx, body: BookAppointmentRequest, key: string): Promise<IdempotentResult<Appointment>> {
     const { user } = ctx;
-    if (body.followUpTaskId) throw validationFailed('Return bookings from a follow-up task are not available yet');
+    if (body.followUpTaskId) {
+      // FR-14: a return booking goes through exactly the same reservation path (see reserveAndInsert).
+      if (user.role !== 'followup' && user.role !== 'admin') throw forbidden('Only follow-up staff book from a follow-up task');
+      return this.bookReturn(ctx, body.followUpTaskId, body.sessionId, body.patientId, key, 'appointment.book');
+    }
+    if (user.role === 'followup') throw forbidden('Follow-up staff book only through a follow-up task');
     const patientId = this.access.resolveBookingPatient(user, body.patientId);
     const target = await getSession(this.pool, body.sessionId);
     if (!target) throw notFound('Session');
@@ -68,40 +77,7 @@ export class AppointmentsService {
         await lockDoctor(tx, target.doctorId);
         const session = await lockSession(tx, target.id);
         await lockCapacity(tx, target.id);
-        const now = this.clock.now();
-        assertBookable(session, now);
-        const policy = await this.policyOf(tx, session.policyId);
-        await assertNoActiveAppointment(tx, patientId, session.id);
-        const scheduledAt = await firstFreeSlot(tx, session, now, policy.lateGraceMin);
-        const allocationId = await reserveBooked(tx, session.id);
-        const appt = await insertAppointment(tx, {
-          patientId,
-          sessionId: session.id,
-          doctorId: session.doctorId,
-          scheduledAt,
-          allocationId,
-          bookedBy: user.userId,
-        });
-        await writeAudit(tx, {
-          actorId: user.userId,
-          actorRole: user.role,
-          operation: 'appointment.book',
-          entityType: 'appointment',
-          entityId: appt.id,
-          next: { status: appt.status, sessionId: session.id, scheduledAt },
-          policyVersion: policy.version,
-          correlationId: ctx.correlationId,
-        });
-        await writeOutbox(tx, {
-          eventType: 'AppointmentBooked',
-          entityType: 'appointment',
-          entityId: appt.id,
-          entityVersion: appt.version,
-          sessionId: session.id,
-          patientId,
-          payload: { scheduledAt },
-        });
-        await this.scheduleReservationRelease(tx, appt, policy.lateGraceMin);
+        const appt = await this.reserveAndInsert(tx, ctx, session, patientId, null);
         return { status: 201, body: toAppointment(appt) };
       },
       {
@@ -113,6 +89,138 @@ export class AppointmentsService {
         },
       },
     );
+  }
+
+  /**
+   * FR-14: book the return appointment of a follow-up task. Same path as a normal booking (doctor -> session ->
+   * capacity locks, first free slot, one active appointment per patient and session, CAPACITY_FULL as a plain
+   * 409: there is no bypass and no extra capacity), plus the two-way link: appointments.follow_up_task_id and
+   * follow_up_tasks.return_appointment_id, committed with the booking.
+   */
+  async bookReturn(
+    ctx: RequestCtx,
+    taskId: string,
+    sessionId: string,
+    requestedPatientId: string | undefined,
+    key: string,
+    operation: string,
+  ): Promise<IdempotentResult<Appointment>> {
+    const { user } = ctx;
+    const pre = await this.pool.query<{ patient_id: string }>(`SELECT patient_id FROM follow_up_tasks WHERE id = $1`, [taskId]);
+    const patientId = pre.rows[0]?.patient_id;
+    if (!patientId) throw notFound('Follow-up task');
+    await this.scope.assertAccess(user, patientId);
+    if (requestedPatientId !== undefined && requestedPatientId !== patientId) {
+      throw validationFailed('patientId does not match the follow-up task');
+    }
+    const target = await getSession(this.pool, sessionId);
+    if (!target) throw notFound('Session');
+    this.access.assertDoctorScope(user, target.doctorId);
+
+    return withTransaction(
+      this.pool,
+      async (tx) => {
+        await lockDoctor(tx, target.doctorId);
+        const session = await lockSession(tx, target.id);
+        await lockCapacity(tx, target.id);
+        // The task row is locked after the guards (it is not a guard): its state is re-read under the lock.
+        const task = await lockTask(tx, taskId, this.clock.now());
+        if (task.status !== 'open' && task.status !== 'acknowledged') {
+          throw conflict('CONFLICT', 'This follow-up task is closed', { status: task.status });
+        }
+        if (task.returnAppointmentId) {
+          const existing = await getAppointment(tx, task.returnAppointmentId);
+          if (existing && ['booked', 'checked_in', 'completed'].includes(existing.status)) {
+            throw conflict('CONFLICT', 'This follow-up task already has a return appointment', {
+              returnAppointmentId: existing.id,
+            });
+          }
+        }
+        const appt = await this.reserveAndInsert(tx, ctx, session, task.patientId, taskId);
+        await tx.query(
+          `UPDATE follow_up_tasks SET return_appointment_id = $2, version = version + 1, updated_at = now() WHERE id = $1`,
+          [taskId, appt.id],
+        );
+        await writeAudit(tx, {
+          actorId: user.userId,
+          actorRole: user.role,
+          operation: 'follow_up.return_booking',
+          entityType: 'follow_up_task',
+          entityId: taskId,
+          previous: { returnAppointmentId: task.returnAppointmentId },
+          next: { returnAppointmentId: appt.id, sessionId: session.id, scheduledAt: appt.scheduledAt },
+          correlationId: ctx.correlationId,
+        });
+        await writeOutbox(tx, {
+          eventType: 'ReturnAppointmentBooked',
+          entityType: 'appointment',
+          entityId: appt.id,
+          entityVersion: appt.version,
+          sessionId: session.id,
+          patientId: task.patientId,
+          payload: { followUpTaskId: taskId },
+        });
+        return { status: 201, body: toAppointment(appt) };
+      },
+      {
+        idempotency: {
+          actorId: user.userId,
+          operation,
+          key,
+          requestHash: hashRequest({ taskId, sessionId }),
+        },
+      },
+    );
+  }
+
+  /**
+   * The one reservation path for every booking (patient, reception, return). Caller holds the doctor, session and
+   * capacity locks. Reserves the place, inserts the appointment, writes audit + AppointmentBooked and the timer intent.
+   */
+  private async reserveAndInsert(
+    tx: Tx,
+    ctx: RequestCtx,
+    session: SessionLockRow,
+    patientId: string,
+    followUpTaskId: string | null,
+  ): Promise<AppointmentRecord> {
+    const { user } = ctx;
+    const now = this.clock.now();
+    assertBookable(session, now);
+    const policy = await this.policyOf(tx, session.policyId);
+    await assertNoActiveAppointment(tx, patientId, session.id);
+    const scheduledAt = await firstFreeSlot(tx, session, now, policy.lateGraceMin);
+    const allocationId = await reserveBooked(tx, session.id);
+    const appt = await insertAppointment(tx, {
+      patientId,
+      sessionId: session.id,
+      doctorId: session.doctorId,
+      scheduledAt,
+      allocationId,
+      bookedBy: user.userId,
+      followUpTaskId,
+    });
+    await writeAudit(tx, {
+      actorId: user.userId,
+      actorRole: user.role,
+      operation: 'appointment.book',
+      entityType: 'appointment',
+      entityId: appt.id,
+      next: { status: appt.status, sessionId: session.id, scheduledAt, followUpTaskId },
+      policyVersion: policy.version,
+      correlationId: ctx.correlationId,
+    });
+    await writeOutbox(tx, {
+      eventType: 'AppointmentBooked',
+      entityType: 'appointment',
+      entityId: appt.id,
+      entityVersion: appt.version,
+      sessionId: session.id,
+      patientId,
+      payload: { scheduledAt },
+    });
+    await this.scheduleReservationRelease(tx, appt, policy.lateGraceMin);
+    return appt;
   }
 
   /** FR-04: release the place of a booked appointment. Checked-in or completed ones never reopen capacity. */
