@@ -1,0 +1,69 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hqms_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/hqms
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/hqms_test
+      HOSPITAL_TZ: Asia/Kolkata
+      IDENTITY_PROVIDER: local
+      OBJECT_STORAGE: local-disk
+      OCR_PROVIDER: fake
+      LLM_PROVIDER: fake
+      SESSION_SECRET: ci-only-not-a-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install Semgrep
+        run: pip install semgrep
+      - name: Create databases
+        run: PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE hqms"
+      - run: pnpm install --frozen-lockfile
+      - name: Migrate and seed (once packages/db exists)
+        run: |
+          if [ -d packages/db ]; then pnpm db:migrate && pnpm db:seed; else echo "packages/db not present yet"; fi
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/hqms_test
+      - name: Verify (typecheck, lint, dependency-cruiser, tests, Semgrep)
+        run: pnpm verify
+      - name: Concurrency tests (real Postgres)
+        run: pnpm test:concurrency
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            **/coverage/**
+            !**/node_modules/**
+          if-no-files-found: ignore

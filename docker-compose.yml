@@ -1,0 +1,76 @@
+# Local demo stack: `docker compose up --build`, then open http://localhost:5173
+# Assumes each app exposes `build` and `start` scripts (see docs/construction/construction-plan.md).
+x-app-env: &app-env
+  DATABASE_URL: postgres://postgres:postgres@postgres:5432/hqms
+  HOSPITAL_TZ: Asia/Kolkata
+  IDENTITY_PROVIDER: local
+  OBJECT_STORAGE: local-disk
+  STORAGE_DIR: /var/hqms/storage
+  OCR_PROVIDER: fake
+  LLM_PROVIDER: fake
+  LLM_MODEL: gemini-3.5-flash-lite
+  # Demo-only value; never reuse outside the local stack.
+  SESSION_SECRET: demo-only-not-a-secret
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hqms
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d hqms']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    environment:
+      <<: *app-env
+      PORT: '3000'
+      # Applies db/migrations and seeds demo data on boot (idempotent) so the demo works from a blank volume.
+      RUN_MIGRATIONS_ON_START: 'true'
+      SEED_ON_START: 'true'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - '3000:3000'
+    volumes:
+      - storage:/var/hqms/storage
+
+  worker:
+    build:
+      context: .
+      dockerfile: infra/docker/worker.Dockerfile
+    environment:
+      <<: *app-env
+      WORKER_POLL_MS: '1000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+    volumes:
+      - storage:/var/hqms/storage
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+    depends_on:
+      - api
+    ports:
+      - '5173:80'
+
+volumes:
+  pgdata:
+  storage:
