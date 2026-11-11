@@ -1,6 +1,6 @@
 import type { Appointment, AppointmentStatus } from '@hqms/contracts';
 import { ConflictError, NotFoundError } from '../errors.js';
-import { maybeOne, many, type Queryable } from '../pool.js';
+import { firstRow, maybeOne, many, required, type Queryable, type QueryResultRow } from '../pool.js';
 import type { Tx } from '../tx.js';
 
 const SELECT_APPT = `
@@ -12,7 +12,7 @@ const SELECT_APPT = `
 /** Contract shape plus the allocation id (needed by check-in/cancel/reschedule, not exposed to clients). */
 export type AppointmentRecord = Appointment & { allocationId: string };
 
-const mapAppt = (r: any): AppointmentRecord => ({
+const mapAppt = (r: QueryResultRow): AppointmentRecord => ({
   id: r.id,
   patientId: r.patient_id,
   sessionId: r.session_id,
@@ -86,7 +86,7 @@ export async function insertAppointment(tx: Tx, a: InsertAppointmentInput): Prom
      RETURNING id`,
     [a.id ?? null, a.patientId, a.sessionId, a.doctorId, a.scheduledAt, a.allocationId, a.bookedBy, a.rescheduledFromId ?? null, a.followUpTaskId ?? null],
   );
-  return (await getAppointment(tx, res.rows[0]!.id))!;
+  return required(await getAppointment(tx, firstRow(res, 'appointment').id), 'appointment');
 }
 
 /**
@@ -114,5 +114,5 @@ export async function setAppointmentStatus(
       currentVersion: cur.version,
     });
   }
-  return (await getAppointment(tx, id))!;
+  return required(await getAppointment(tx, id), 'appointment');
 }

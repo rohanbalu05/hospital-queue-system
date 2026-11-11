@@ -1,5 +1,6 @@
 import pg from 'pg';
 import type { QueryResult, QueryResultRow } from 'pg';
+import { NotFoundError } from './errors.js';
 
 const { Pool, types } = pg;
 
@@ -8,7 +9,7 @@ export const DEFAULT_DATABASE_URL = 'postgres://postgres:postgres@localhost:5432
 
 /** Anything that can run a query: a Pool (autocommit reads) or a Tx. Read repositories take this. */
 export interface Queryable {
-  query<R extends QueryResultRow = any>(text: string, params?: unknown[]): Promise<QueryResult<R>>;
+  query<R extends QueryResultRow = QueryResultRow>(text: string, params?: unknown[]): Promise<QueryResult<R>>;
 }
 
 /**
@@ -89,10 +90,21 @@ export async function closePool(): Promise<void> {
   if (p) await p.end();
 }
 
-export type { Pool, PoolClient } from 'pg';
+export type { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
+
+/** The value, or NotFoundError(what) when it is null/undefined. Replaces `!` on lookups that must succeed. */
+export function required<T>(value: T | null | undefined, what: string): T {
+  if (value === null || value === undefined) throw new NotFoundError(what);
+  return value;
+}
+
+/** First row of a result that must have one (e.g. INSERT ... RETURNING), else NotFoundError(what). */
+export function firstRow<R extends QueryResultRow>(res: QueryResult<R>, what: string): R {
+  return required(res.rows[0], what);
+}
 
 /** Run `fn` with a single query and return the first row, or null. */
-export async function maybeOne<R extends QueryResultRow = any>(
+export async function maybeOne<R extends QueryResultRow = QueryResultRow>(
   db: Queryable,
   text: string,
   params?: unknown[],
@@ -101,7 +113,11 @@ export async function maybeOne<R extends QueryResultRow = any>(
   return res.rows[0] ?? null;
 }
 
-export async function many<R extends QueryResultRow = any>(db: Queryable, text: string, params?: unknown[]): Promise<R[]> {
+export async function many<R extends QueryResultRow = QueryResultRow>(
+  db: Queryable,
+  text: string,
+  params?: unknown[],
+): Promise<R[]> {
   return (await db.query<R>(text, params)).rows;
 }
 

@@ -44,6 +44,17 @@ export async function dropDatabase(name: string): Promise<void> {
   }
 }
 
+/** The value, or a thrown error naming what was missing (tests use this instead of `!`). */
+export function must<T>(value: T | null | undefined, what = 'value'): T {
+  if (value === null || value === undefined) throw new Error(`expected ${what} to be present`);
+  return value;
+}
+
+/** Element `i` of an array that must have it. */
+export function nth<T>(items: readonly T[], i: number): T {
+  return must(items[i], `item ${i}`);
+}
+
 export interface Fixture {
   hospitalId: string;
   doctorId: string;
@@ -59,12 +70,12 @@ export async function makeFixture(
 ): Promise<Fixture> {
   const tag = randomUUID().slice(0, 8);
   const hospital = await pool.query<{ id: string }>(`INSERT INTO hospitals (name) VALUES ($1) RETURNING id`, [`H ${tag}`]);
-  const hospitalId = hospital.rows[0]!.id;
+  const hospitalId = nth(hospital.rows, 0).id;
   const doctor = await pool.query<{ id: string }>(
     `INSERT INTO doctors (hospital_id, full_name, department, room) VALUES ($1, $2, 'General Medicine', 'OPD 1') RETURNING id`,
     [hospitalId, `Dr ${tag}`],
   );
-  const doctorId = doctor.rows[0]!.id;
+  const doctorId = nth(doctor.rows, 0).id;
   const user = await pool.query<{ id: string }>(
     `INSERT INTO users (hospital_id, email, display_name, role) VALUES ($1, $2, 'Reception', 'reception') RETURNING id`,
     [hospitalId, `rec-${tag}@test.local`],
@@ -75,10 +86,10 @@ export async function makeFixture(
       `INSERT INTO patients (hospital_id, mrn, full_name) VALUES ($1, $2, $3) RETURNING id`,
       [hospitalId, `T-${tag}-${i}`, `Patient ${i}`],
     );
-    patientIds.push(p.rows[0]!.id);
+    patientIds.push(nth(p.rows, 0).id);
   }
   const startsAt = opts.startsAt ?? new Date(Date.now() + 86_400_000 + Math.floor(Math.random() * 1e6) * 1000);
-  const sessionId = (await withTransaction(pool, (tx) =>
+  const sessionId = must(await withTransaction(pool, (tx) =>
     createSession(tx, {
       doctorId,
       sessionDate: startsAt.toISOString().slice(0, 10),
@@ -88,14 +99,14 @@ export async function makeFixture(
       bookedCapacity: opts.booked ?? 5,
       walkinCapacity: opts.walkin ?? 2,
     }),
-  ))!;
-  return { hospitalId, doctorId, userId: user.rows[0]!.id, patientIds, sessionId };
+  ), 'session id');
+  return { hospitalId, doctorId, userId: nth(user.rows, 0).id, patientIds, sessionId };
 }
 
 /** A second session for the same doctor (reschedule targets). */
 export async function addSession(pool: Pool, f: Fixture, opts: { booked?: number; walkin?: number } = {}): Promise<string> {
   const startsAt = new Date(Date.now() + 2 * 86_400_000 + Math.floor(Math.random() * 1e6) * 1000);
-  return (await withTransaction(pool, (tx) =>
+  return must(await withTransaction(pool, (tx) =>
     createSession(tx, {
       doctorId: f.doctorId,
       sessionDate: startsAt.toISOString().slice(0, 10),
@@ -105,7 +116,7 @@ export async function addSession(pool: Pool, f: Fixture, opts: { booked?: number
       bookedCapacity: opts.booked ?? 5,
       walkinCapacity: opts.walkin ?? 2,
     }),
-  ))!;
+  ), 'session id');
 }
 
 /** Book one appointment with the full lock sequence. */
