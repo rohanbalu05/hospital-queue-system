@@ -323,9 +323,9 @@
     "id": "NFR-01",
     "requirement": "NFR-01",
     "acceptance": "100 req/s sustained with ordinary API p95 <= 500 ms; 200 req/s for 60 s with p95 <= 1 s (measured locally, environment declared).",
-    "test": "tests/load/run-load.ts -> docs/evidence/T5-workload-failure.md",
-    "passes": false,
-    "note": "Measured locally (one 4 vCPU box, co-located): 100 req/s for 300 s p95 14.3 ms, 0 errors; 200 req/s for 60 s p95 16.5 ms, 0 errors. The 30-minute sustained target is NOT demonstrated (one 30-min attempt contaminated: worker vanished at ~1,100 s, cause unknown). Hosted environment not tested."
+    "test": "tests/load/run-load.ts -> docs/evidence/T5-workload-failure.md (30-minute rerun)",
+    "passes": true,
+    "verified": "Local, one shared 4 vCPU VM, co-located, fake providers, single run: 100 req/s x 1,800 s: 180,070 req, p95 13.8 ms, 0 errors; then 200 req/s x 60 s: p95 11.7 ms, 0 errors; API RSS slope +0.06 MB/min; 0 invariant violations. Hosted environment not tested."
   },
   {
     "id": "NFR-02",
