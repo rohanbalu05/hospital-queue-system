@@ -18,9 +18,11 @@ const mapEstimate = (r: QueryResultRow): ServiceEstimate => ({
 
 /** null when no consultation has completed yet: use the policy's initial estimate. */
 export async function getServiceEstimate(db: Queryable, doctorId: string): Promise<ServiceEstimate | null> {
-  const r = await maybeOne(db, `SELECT doctor_id, mean_minutes, samples, updated_at FROM service_estimates WHERE doctor_id = $1`, [
-    doctorId,
-  ]);
+  const r = await maybeOne(
+    db,
+    `SELECT doctor_id, mean_minutes, samples, updated_at FROM service_estimates WHERE doctor_id = $1`,
+    [doctorId],
+  );
   return r ? mapEstimate(r) : null;
 }
 

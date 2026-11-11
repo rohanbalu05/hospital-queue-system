@@ -40,6 +40,7 @@ export const ErrorCode = z.enum([
   'UNSUPPORTED_MEDIA_TYPE',
   'RATE_LIMITED',
   'INTERNAL',
+  'SERVICE_UNAVAILABLE', // database connection lost or unavailable; retry with the same Idempotency-Key
 ]);
 export type ErrorCode = z.infer<typeof ErrorCode>;
 

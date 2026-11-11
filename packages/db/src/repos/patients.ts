@@ -73,7 +73,15 @@ export async function createPatient(tx: Tx, p: CreatePatientInput): Promise<Pati
        COALESCE($3, 'BLR-' || lpad(nextval('patient_mrn_seq')::text, 6, '0')),
        $4, $5, $6, $7)
      RETURNING id`,
-    [p.id ?? null, p.hospitalId ?? null, p.mrn ?? null, p.fullName, p.phone ?? null, p.dateOfBirth ?? null, p.createdBy ?? null],
+    [
+      p.id ?? null,
+      p.hospitalId ?? null,
+      p.mrn ?? null,
+      p.fullName,
+      p.phone ?? null,
+      p.dateOfBirth ?? null,
+      p.createdBy ?? null,
+    ],
   );
   return required(await getPatient(tx, firstRow(res, 'patient').id), 'patient');
 }
