@@ -1,5 +1,5 @@
 /** Display name of the hospital shown in the shells. Demo data; configurable later from the admin area. */
-export const HOSPITAL_NAME = 'Lalbagh Road General Hospital';
+export const HOSPITAL_NAME = 'BMSIT Teaching Hospital, Yelahanka';
 export const HOSPITAL_PLACE = 'Bengaluru';
 
 /** The dev-only primitives gallery is excluded from production builds. */
