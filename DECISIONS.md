@@ -1,0 +1,30 @@
+# Decisions log
+
+Choices made during the build that the spec or CLAUDE.md did not settle. Newest last. HQ reviews on return.
+
+## D-001 Integration branch is the session branch, not `main`
+This cloud session may only push `claude/wonderful-galileo-2es87v`. That branch plays the role KICKOFF calls "main": builders' worktree branches merge into it, `pnpm verify` runs on it, tags `wave-N` point at it. HQ merges it into `main` (PR) after review.
+
+## D-002 Shared `@hqms/db` package (`packages/db`)
+Table 14 has no shared persistence package, but both `apps/api` and `apps/worker` need the same pool, `withTransaction`, lock-order helpers, idempotency, audit/outbox/job writers and repositories. Duplicating the lock-order contract in two apps would break "every writer follows the same contract". `packages/db` holds them; `db/migrations` stays the schema source. dependency-cruiser keeps it free of app imports.
+
+## D-003 Work pulled forward into Wave 0
+To use the 4-builder budget and unblock W1, Wave 0 runs devops-engineer, db-engineer (transaction helper, idempotency, runner, seed), domain-engineer (whole policy package; it depends on nothing) and ui-engineer (scaffold, tokens, shell, login). The orchestrator wrote a 3-file root scaffold (`package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`) so worktrees can install; devops owns those files from then on.
+
+## D-004 `packages/domain` has zero runtime or type dependencies
+Domain re-declares its literal types (groups, states, reasons) instead of importing `@hqms/contracts`. Keeps it trivially framework-free; a contract test in `apps/api` checks the literals match.
+
+## D-005 One active doctor allocation enforced on `queue_entries`
+Table 13's "partial unique index over active called/in-service allocations" is `UNIQUE (doctor_id) WHERE state IN ('called','in_service')` on `queue_entries` (doctor_id is denormalised onto the entry). The doctor guard is `SELECT … FOR UPDATE` on the `doctors` row; the session guard is the `sessions` row; the capacity guard is the `session_capacity` row.
+
+## D-006 Clinical sessions table is `sessions`; login sessions are `auth_sessions`
+Matches the Table 10 routes (`/sessions/{id}/…`).
+
+## D-007 Enumerations as `text` + `CHECK`
+Easier to evolve with plain SQL migrations than Postgres enum types.
+
+## D-008 Lockfile conflicts are regenerated
+Parallel builders each touch `pnpm-lock.yaml`. On merge conflict the orchestrator takes either side and reruns `pnpm install` to regenerate, then runs `pnpm verify`.
+
+## D-009 Estimator context is per doctor
+EWMA state (`service_estimates`) is keyed by doctor, carried across that doctor's sessions, starting at 12 min. Report says "relevant doctor/session context"; per-doctor gives the estimator more samples at 10–15 visits per session.
