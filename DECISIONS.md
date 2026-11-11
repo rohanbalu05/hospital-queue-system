@@ -45,3 +45,15 @@ The API serves Table 10 paths unprefixed on :3000 (`POST /appointments`). The we
 - Password hashing: `@node-rs/argon2` (argon2id, prebuilt binaries, no node-gyp) in both seed and API.
 - Playwright: `@playwright/test@1.63.0` to match the pre-installed Chromium in cloud sessions.
 - Domain property tests: `fast-check`. Tests: Vitest 2.
+
+## D-015 Queue-policy interpretations (domain-engineer, W0)
+- Rotation pointer = 0-based index of the next position to inspect; `pointerAfter = (servedSlot + 1) % n`; overrides and NO_ALLOCATION keep it. Table 8 pointer trace is 1, 1, 2, 0, 0.
+- NO_ALLOCATION check order: doctor occupied → session not callable → nothing eligible.
+- Final tie-breaker after the report's keys is `seq`, then `id`, so output is independent of input order.
+- Queue-entry machine: `called → in_service | skipped`; `skipped | absent → waiting (re-entry) | cancelled`; `waiting → called | absent | cancelled`. Manual `/skip` is `called → skipped`.
+- Re-entry: the domain gives fresh eligibility; the API applies late rules by calling `classifyArrival` with the re-entry time (after grace → staff review + walk-in ordering).
+- ETA: `scheduled`/`unavailable`/`closed` sessions and paused-with-unknown-end are `withheld` ("Estimate paused"); an overrun pause (`pauseUntil <= now`) is also withheld. Called-not-started residual = remaining call-timeout + m. Overrun consultation (elapsed > m): point residual 0 but upper bound widened by m, noted. Range ±50% when < 5 samples, else ±30%; note always says "model estimate, not a measured confidence interval".
+- `ewmaUpdate` throws on invalid alpha or negative duration; API sanitises durations.
+
+## D-016 Web stack versions
+React 19, Tailwind 4, react-router 7, Vite 5.4 (Vitest 2 bundles Vite 5), shadcn new-york style restyled to the hospital-ui tokens. Hospital display name "BMSIT Teaching Hospital, Yelahanka" (matches seed).
