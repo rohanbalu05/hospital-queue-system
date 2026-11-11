@@ -1,5 +1,6 @@
 import type { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { errorSummary } from '../src/log.js';
 import { JobRunner } from '../src/runner.js';
 import { PermanentJobError, type HandlerRegistry, type JobHandler } from '../src/types.js';
 import { fixedClock, getJob, insertJob, makePool, sleep, testLog } from './helpers.js';
@@ -162,6 +163,35 @@ describe('crash recovery and leases (NFR-07)', () => {
     expect(row.finished_at).not.toBeNull();
   });
 
+  it('claim() never re-claims a running job at max attempts, even with an expired lease; it is buried instead', async () => {
+    const id = await insertJob(admin, {
+      type: 'work',
+      state: 'running',
+      attempts: 3,
+      maxAttempts: 3,
+      leaseOwner: 'crashed-worker',
+      leaseExpiresAt: new Date(Date.now() - 1000),
+    });
+    const r = runner(poolA, 'worker-b', { work: async () => {} });
+    expect(await r.claim(10)).toHaveLength(0);
+    const untouched = await getJob(admin, id);
+    expect(untouched.state).toBe('running');
+    expect(untouched.attempts).toBe(3);
+    expect(untouched.lease_owner).toBe('crashed-worker');
+    // and with attempts left the same expired lease is claimable
+    const open = await insertJob(admin, {
+      type: 'work',
+      state: 'running',
+      attempts: 2,
+      maxAttempts: 3,
+      leaseOwner: 'crashed-worker',
+      leaseExpiresAt: new Date(Date.now() - 1000),
+    });
+    expect((await r.claim(10)).map((j) => j.id)).toEqual([open]);
+    expect(await r.buryExhausted()).toBe(1);
+    expect((await getJob(admin, id)).state).toBe('dead');
+  });
+
   it('renews the lease of a long handler so another runner does not take the job', async () => {
     await insertJob(admin, { type: 'slow' });
     let runs = 0;
@@ -194,6 +224,46 @@ describe('crash recovery and leases (NFR-07)', () => {
     const row = await getJob(admin, id);
     expect(row.state).toBe('running');
     expect(row.lease_owner).toBe('thief');
+  });
+});
+
+describe('error summaries never carry raw database messages', () => {
+  it('stores class, sqlstate and constraint for a pg error, not its message (which can echo data)', async () => {
+    const bad: JobHandler = async (_job, ctx) => {
+      await ctx.pool.query(`SELECT $1::uuid`, ['Ramesh-Kumar-BLR-000001']); // 22P02 echoes the value
+    };
+    const dup: JobHandler = async (_job, ctx) => {
+      // unique violation on a named constraint
+      await ctx.pool.query(`INSERT INTO hospitals (id, name) SELECT id, name FROM hospitals LIMIT 1`);
+    };
+    const id1 = await insertJob(admin, { type: 'bad', maxAttempts: 1 });
+    const id2 = await insertJob(admin, { type: 'dup', maxAttempts: 1 });
+    await admin.query(`INSERT INTO hospitals (name) VALUES ('Err Hospital')`);
+    await runner(poolA, 'worker-a', { bad, dup }).drain();
+    const r1 = await getJob(admin, id1);
+    expect(r1.state).toBe('dead');
+    expect(r1.last_error).toBe('DatabaseError sqlstate=22P02 constraint=-');
+    expect(r1.last_error).not.toContain('Ramesh');
+    const r2 = await getJob(admin, id2);
+    expect(r2.last_error).toBe('DatabaseError sqlstate=23505 constraint=hospitals_pkey');
+  });
+
+  it('errorSummary: pg errors are reduced, our typed errors and plain errors keep their message', () => {
+    const pgLike = Object.assign(new Error('invalid input syntax for type uuid: "Sunita Devi"'), {
+      code: '22P02',
+      severity: 'ERROR',
+    });
+    expect(errorSummary(pgLike)).toBe('DatabaseError sqlstate=22P02 constraint=-');
+    expect(errorSummary(Object.assign(pgLike, { constraint: 'x_uq' }))).toBe('DatabaseError sqlstate=22P02 constraint=x_uq');
+    expect(errorSummary(new PermanentJobError('payload.x must be a uuid'))).toBe(
+      'PermanentJobError: payload.x must be a uuid',
+    );
+    expect(errorSummary(new Error('provider exploded'))).toBe('Error: provider exploded');
+    // a non-pg error that merely has a `code` is not treated as a pg error
+    expect(errorSummary(Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }))).toBe(
+      'Error: connect ECONNREFUSED',
+    );
+    expect(errorSummary('x'.repeat(600))).toHaveLength(500);
   });
 });
 

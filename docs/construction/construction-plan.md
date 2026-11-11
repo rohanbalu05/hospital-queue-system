@@ -72,8 +72,13 @@ Other commands: `pnpm verify:fast` (typecheck and tests for packages changed aga
 `origin/claude/wonderful-galileo-2es87v`), `pnpm test:concurrency` (T1/T2 races on real parallel connections),
 `pnpm e2e` (Playwright), `pnpm db:migrate|seed|reset`, `pnpm dev`.
 
-CI (`.github/workflows/ci.yml`) runs `pnpm verify` and `pnpm test:concurrency` on every push and pull request against
-a `postgres:16` service container, and uploads coverage artifacts when present.
+Evidence tooling (generated, never hand-edited): `pnpm coverage` (Vitest v8 `test:coverage` in every package that
+defines it, aggregated to `docs/evidence/coverage-summary.json`), `pnpm evidence:static` (writes
+`docs/evidence/static-analysis.md`) and `pnpm evidence:tests` (writes `docs/evidence/unit-tests.md`). Any package with
+a Vitest suite should define `test:coverage` so it appears in the coverage table.
+
+CI (`.github/workflows/ci.yml`) runs `pnpm verify`, `pnpm coverage` and `pnpm test:concurrency` on every push and pull
+request against a `postgres:16` service container, and uploads the coverage reports as an artifact.
 
 Construction rules that carry marks (from `CLAUDE.md`): every state-changing command is one short transaction with lock
 order doctor, session, capacity guard; idempotency records keyed by (actor, operation, key) with request hash; Table 13

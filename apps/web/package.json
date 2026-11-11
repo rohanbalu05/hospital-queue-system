@@ -9,7 +9,8 @@
     "preview": "vite preview --port 4173 --strictPort",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "screenshots": "playwright test --trace off"
+    "screenshots": "playwright test --trace off",
+    "test:coverage": "vitest run --coverage --coverage.include=src/** --coverage.exclude=src/components/ui/** --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reporter=lcov --coverage.reportsDirectory=coverage"
   },
   "dependencies": {
     "@fontsource/atkinson-hyperlegible": "^5.3.0",
@@ -40,6 +41,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^4.7.0",
+    "@vitest/coverage-v8": "^2.1.9",
     "jsdom": "^31.0.0",
     "shadcn": "^4.23.0",
     "tailwindcss": "^4.3.5",

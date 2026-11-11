@@ -8,7 +8,8 @@
     "build": "node build.mjs",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.include=src/** --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reporter=lcov --coverage.reportsDirectory=coverage"
   },
   "dependencies": {
     "@hqms/contracts": "workspace:*",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/pg": "^8.11.10",
+    "@vitest/coverage-v8": "^2.1.9",
     "esbuild": "^0.21.5",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",

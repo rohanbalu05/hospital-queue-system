@@ -7,6 +7,11 @@ Re-running it on a later day extends the 7-day window without touching existing 
 `pnpm --filter @hqms/db reset` drops and recreates the `public` schema, migrates and seeds. It refuses unless
 the database name has a `test` segment (`hqms_test`, `hqms_test_db_engineer`), `NODE_ENV=development`, or `--force`.
 
+**Production guard.** The seed creates 22 staff accounts with a public password, so it refuses to run
+(`SeedRefusedError`, exit code 1) when `NODE_ENV=production` unless `ALLOW_DEMO_SEED=true` is also set. Use the
+override only for a throwaway demo deployment (the `docker compose` demo stack must set it on the `api` service,
+whose image runs with `NODE_ENV=production`); never on real data.
+
 **Password for every demo account: `demo1234`** (argon2id).
 
 ## Data
