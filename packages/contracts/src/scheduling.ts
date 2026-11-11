@@ -127,3 +127,8 @@ export const SlotAvailability = z.object({
   capacity: Capacity,
 });
 export type SlotAvailability = z.infer<typeof SlotAvailability>;
+
+export type SessionListQuery = z.infer<typeof SessionListQuery>;
+export type CreateSessionRequest = z.infer<typeof CreateSessionRequest>;
+export type CancelAppointmentRequest = z.infer<typeof CancelAppointmentRequest>;
+export type AppointmentListQuery = z.infer<typeof AppointmentListQuery>;
