@@ -4,7 +4,7 @@
  * Everything talks to the real API over HTTP and to the real PostgreSQL; nothing is mocked.
  */
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { createWriteStream, existsSync, mkdirSync, readFileSync, type WriteStream } from 'node:fs';
 import { createServer } from 'node:net';
 import { cpus, totalmem, loadavg } from 'node:os';
 import { dirname, resolve } from 'node:path';
@@ -138,20 +138,38 @@ export interface Proc {
   logs: string[];
   /** Resolves with the exit code or signal. */
   exited: Promise<string>;
+  /** Filled when the process exits: exact code, signal and time (null until then). */
+  exitInfo(): { code: number | null; signal: string | null; at: string } | null;
+  /** Path of the file that receives its stdout and stderr (when LOAD_LOG_DIR is set). */
+  logFile?: string;
   alive(): boolean;
   kill9(): Promise<void>;
   stop(): Promise<void>;
 }
 
-function wrap(child: ChildProcess, logs: string[]): Proc {
+function wrap(child: ChildProcess, logs: string[], logName?: string): Proc {
+  let file: WriteStream | undefined;
+  let logFile: string | undefined;
+  const dir = process.env['LOAD_LOG_DIR'];
+  if (dir && logName) {
+    mkdirSync(dir, { recursive: true });
+    logFile = resolve(dir, `${logName}.log`);
+    file = createWriteStream(logFile, { flags: 'a' });
+    file.write(`[t5-harness] ${logName} pid ${child.pid} started ${new Date().toISOString()}\n`);
+  }
+  const info: { exitInfo: ReturnType<Proc['exitInfo']> } = { exitInfo: null };
   const exited = new Promise<string>((ok) =>
     child.once('exit', (code, sig) => {
       const what = `${String(code ?? sig)}`;
-      logs.push(`[t5-harness] process ${child.pid} exited (${what}) at ${new Date().toISOString()}`);
+      info.exitInfo = { code, signal: sig, at: new Date().toISOString() };
+      const line = `[t5-harness] process ${child.pid} exited (code=${String(code)} signal=${String(sig)}) at ${info.exitInfo.at}`;
+      logs.push(line);
+      file?.write(`${line}\n`);
       ok(what);
     }),
   );
   const keep = (b: Buffer): void => {
+    file?.write(b);
     for (const line of b.toString().split('\n')) if (line) logs.push(line);
     if (logs.length > 5000) logs.splice(0, logs.length - 5000);
   };
@@ -163,6 +181,8 @@ function wrap(child: ChildProcess, logs: string[]): Proc {
     pid: child.pid ?? -1,
     logs,
     exited,
+    exitInfo: () => info.exitInfo,
+    ...(logFile ? { logFile } : {}),
     alive,
     async kill9() {
       if (alive()) child.kill('SIGKILL');
@@ -204,7 +224,7 @@ export async function startApi(opts: { dbName: string; port?: number; env?: Reco
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  const proc = wrap(child, logs);
+  const proc = wrap(child, logs, 'api');
   const url = `http://127.0.0.1:${port}`;
   const deadline = Date.now() + 40_000;
   for (;;) {
@@ -237,7 +257,7 @@ export function startWorker(opts: { dbName: string; id?: string; env?: Record<st
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  return wrap(child, logs);
+  return wrap(child, logs, 'worker');
 }
 
 // ---------------------------------------------------------------------------------------------------
