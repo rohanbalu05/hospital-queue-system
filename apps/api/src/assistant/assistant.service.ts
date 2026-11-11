@@ -64,15 +64,16 @@ export class AssistantService {
       const now = this.clock.now();
       const conversationId = body.conversationId ?? (await this.newConversation(tx, patientId));
       const asked = await tx.query<{ id: string }>(
-        `INSERT INTO messages (conversation_id, patient_id, role, body) VALUES ($1, $2, 'patient', $3) RETURNING id`,
+        `INSERT INTO messages (conversation_id, patient_id, role, body, created_at)
+         VALUES ($1, $2, 'patient', $3, clock_timestamp()) RETURNING id`,
         [conversationId, patientId, body.question.trim()],
       );
       const askedId = asked.rows[0]?.id as string;
 
       if (supported) {
         const reply = await tx.query<{ id: string; created_at: string }>(
-          `INSERT INTO messages (conversation_id, patient_id, role, body, outcome, source_version_ids, provider)
-           VALUES ($1, $2, 'assistant', $3, 'answered', $4::uuid[], $5) RETURNING id, created_at`,
+          `INSERT INTO messages (conversation_id, patient_id, role, body, outcome, source_version_ids, provider, created_at)
+           VALUES ($1, $2, 'assistant', $3, 'answered', $4::uuid[], $5, clock_timestamp()) RETURNING id, created_at`,
           [conversationId, patientId, supported.text, supported.cited.map((c) => c.instructionVersionId), this.llm.name],
         );
         const r = reply.rows[0] as { id: string; created_at: string };
@@ -112,8 +113,8 @@ export class AssistantService {
       const taskId = task.rows[0]?.id as string;
       const text = ESCALATION_TEXT(dueAt);
       const reply = await tx.query<{ id: string; created_at: string }>(
-        `INSERT INTO messages (conversation_id, patient_id, role, body, outcome, escalation_task_id, provider)
-         VALUES ($1, $2, 'assistant', $3, 'escalated', $4, $5) RETURNING id, created_at`,
+        `INSERT INTO messages (conversation_id, patient_id, role, body, outcome, escalation_task_id, provider, created_at)
+         VALUES ($1, $2, 'assistant', $3, 'escalated', $4, $5, clock_timestamp()) RETURNING id, created_at`,
         [conversationId, patientId, text, taskId, this.llm.name],
       );
       const r = reply.rows[0] as { id: string; created_at: string };
