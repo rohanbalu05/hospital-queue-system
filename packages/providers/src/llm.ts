@@ -69,6 +69,15 @@ const DENIED_INTENTS: ReadonlyArray<{ intent: string; patterns: RegExp[] }> = [
     ],
   },
   {
+    intent: 'booking or cancelling an appointment',
+    patterns: [
+      /\b(book|rebook|reschedul(e|ing)|cancel(l?ing)?|postpone|prepone|re-?arrange)\b[^.?!]{0,40}\b(appointment|appointments|visit|slot|consultation|booking|session|token|me)\b/,
+      /\b(make|schedule|arrange|get|fix|set up|need|want) (me )?(an? |another |my )?(new )?(appointment|booking|slot)\b/,
+      /\b(book|cancel)\b[^.?!]{0,20}\b(me|my)\b/,
+      /\bmove (my|the) (appointment|visit|slot|booking)\b/,
+    ],
+  },
+  {
     intent: 'queue priority or urgency',
     patterns: [
       /\b(priority|prioriti[sz]e|urgent|urgency|emergency|triage|jump the queue|skip the queue|cut the queue|move me up|move up the queue|front of the queue)\b/,
@@ -79,7 +88,7 @@ const DENIED_INTENTS: ReadonlyArray<{ intent: string; patterns: RegExp[] }> = [
 ];
 
 const STOPWORDS = new Set(
-  `a an and are as at be been but by can could did do does for from had has have how i if in into is it its may me my of on or our should so than that the their them then there these they this to us was we were what when where which who why will with would you your about after before also not any some very just get got take takes taking took use using often long many much need tell know please want time times day days`.split(
+  `a an and are as at be been but by can could did do does for from had has have how i if in into is it its may me my of on or our should so than that the their them then there these they this to us was we were what when where which who why will with would you your about after before also not any some very just get got take takes taking took use using often long many much need tell know please want time times day days one ones two three give gives gave giving new make makes made let lets go goes going come comes say said see look like other another same more less only own still well yes no ok okay thing things way back out up down off over again here now today tomorrow next first last each every either both few other another`.split(
     /\s+/,
   ),
 );
@@ -111,7 +120,13 @@ function sentences(body: string): string[] {
     .filter((s) => s.length > 0);
 }
 
-function deniedIntent(question: string): string | null {
+/**
+ * The provider-independent deny-list (FR-14): the intent the question asks for that the assistant must never
+ * handle (diagnosis, dose change, stopping or starting a medicine, priority or urgency, booking or cancelling),
+ * or null. Pure; the API runs it BEFORE any provider call so a different or compromised provider cannot widen
+ * what the assistant answers.
+ */
+export function deniedIntent(question: string): string | null {
   const q = question.toLowerCase().replace(/[‘’]/g, "'");
   for (const d of DENIED_INTENTS) if (d.patterns.some((p) => p.test(q))) return d.intent;
   return null;

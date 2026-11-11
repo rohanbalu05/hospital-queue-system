@@ -8,6 +8,7 @@ import {
   ReturnBookingRequest,
   type Appointment,
   type FollowUpTask,
+  type PatientFollowUp,
 } from '@hqms/contracts';
 import { optionalIdempotencyKey, requireIdempotencyKey, sendResult } from '../common/http.js';
 import type { RequestCtx } from '../common/request-context.js';
@@ -19,7 +20,6 @@ import {
   type AcknowledgeTaskRequestDto,
   type CancelTaskRequestDto,
   type FollowUpListQueryDto,
-  type PatientFollowUp,
 } from './dto.js';
 import { FollowUpService } from './followup.service.js';
 

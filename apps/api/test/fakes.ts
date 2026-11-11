@@ -63,11 +63,16 @@ export class SpyLlm implements LlmProvider {
   }
 }
 
-/** Transactions the API pool holds open right now (must be 0 while a provider call is in flight). */
+/**
+ * Transactions the API pool holds open right now in THIS test database (must be 0 while a provider or storage call
+ * is in flight). Scoped by database and by the API pool's application_name, so sessions of other databases or other
+ * programs on the same Postgres cluster (parallel builders, load tests) never count.
+ */
 export async function openApiTransactions(pool: Pool): Promise<number> {
   const r = await pool.query<{ n: number }>(
     `SELECT count(*)::int AS n FROM pg_stat_activity
-      WHERE application_name = 'hqms-api' AND state = 'idle in transaction' AND pid <> pg_backend_pid()`,
+      WHERE datname = current_database() AND application_name = 'hqms-api'
+        AND state LIKE 'idle in transaction%' AND pid <> pg_backend_pid()`,
   );
   return r.rows[0]?.n ?? 0;
 }

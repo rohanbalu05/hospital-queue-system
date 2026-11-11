@@ -1,5 +1,6 @@
 import type { DocumentMeta, InstructionVersion, OcrDraft } from '@hqms/contracts';
 import type { Queryable, Tx } from '@hqms/db';
+import { linkedToDoctorsSql } from '../access/patient-scope.service.js';
 import { notFound } from '../common/errors.js';
 
 /** SQL for documents, OCR drafts and instruction versions (FR-12, FR-13). */
@@ -61,17 +62,16 @@ export async function listDocumentsOfPatient(db: Queryable, patientId: string): 
 export async function reviewInbox(
   db: Queryable,
   doctorIds: string[] | null,
+  now: Date,
 ): Promise<Array<DocumentRow & { patientName: string }>> {
   const res = await db.query(
     `SELECT ${DOC_COLS}, p.full_name AS patient_name
        FROM documents d JOIN patients p ON p.id = d.patient_id
       WHERE d.status IN ('ocr_ready','ocr_failed')
-        AND ($1::uuid[] IS NULL
-             OR EXISTS (SELECT 1 FROM appointments a WHERE a.patient_id = d.patient_id AND a.doctor_id = ANY($1::uuid[]))
-             OR EXISTS (SELECT 1 FROM visits v WHERE v.patient_id = d.patient_id AND v.doctor_id = ANY($1::uuid[])))
+        AND ($1::uuid[] IS NULL OR ${linkedToDoctorsSql('d.patient_id', '$1', '$2')})
       ORDER BY d.created_at, d.id
       LIMIT 200`,
-    [doctorIds],
+    [doctorIds, now],
   );
   return res.rows.map((r) => ({ ...mapDoc(r), patientName: r.patient_name as string }));
 }
@@ -135,13 +135,13 @@ export async function listVersions(db: Queryable, patientId: string, currentOnly
 export async function currentContextOf(
   db: Queryable,
   patientId: string,
-): Promise<Array<{ instructionVersionId: string; title: string; version: number; body: string }>> {
+): Promise<Array<{ instructionVersionId: string; title: string; version: number; body: string; verifiedAt: string }>> {
   const res = await db.query(
-    `SELECT iv.id, COALESCE(iv.title, i.title) AS title, iv.version, iv.body
+    `SELECT iv.id, COALESCE(iv.title, i.title) AS title, iv.version, iv.body, iv.verified_at
        FROM instruction_versions iv JOIN instructions i ON i.id = iv.instruction_id
       WHERE iv.patient_id = $1 AND i.patient_id = $1 AND iv.status = 'current'
       ORDER BY iv.verified_at, iv.id`,
     [patientId],
   );
-  return res.rows.map((r) => ({ instructionVersionId: r.id, title: r.title, version: r.version, body: r.body }));
+  return res.rows.map((r) => ({ instructionVersionId: r.id, title: r.title, version: r.version, body: r.body, verifiedAt: new Date(r.verified_at).toISOString() }));
 }

@@ -113,6 +113,12 @@ export const QueueCommandResult = z.object({
 });
 /** POST /queue-entries/{id}/skip (manual, before timeout), /re-enter, /absent */
 export const QueueEntryActionRequest = ExpectedVersion.extend({ reason: z.string().max(300).optional() });
+/**
+ * POST /queue-entries/{id}/re-enter: the action request plus `admitLate`, which reception sets to confirm a
+ * returning group-A patient who is now past the grace period (FR-05-b / FR-08-b).
+ */
+export const ReEnterRequest = QueueEntryActionRequest.extend({ admitLate: z.boolean().optional() });
+export type ReEnterRequest = z.infer<typeof ReEnterRequest>;
 
 /** POST /queue-entries/{id}/priority (doctor only; clinical actor). class null clears. */
 export const SetPriorityRequest = ExpectedVersion.extend({
@@ -154,6 +160,16 @@ export type Eta = z.infer<typeof Eta>;
 // Snapshots (FR-09): GET /sessions/{id}/queue (role-scoped)
 // ---------------------------------------------------------------------------
 
+/**
+ * Workload pressure of a session (report 6.6 "demand exceeds capacity: expose workload pressure"; 6.4 records
+ * priority starvation). Computed from the same projection as the ETA. `reasons` are plain-language sentences.
+ */
+export const QueuePressure = z.object({
+  level: z.enum(['normal', 'high', 'overloaded']),
+  reasons: z.array(z.string()),
+});
+export type QueuePressure = z.infer<typeof QueuePressure>;
+
 export const StaffQueueSnapshot = z.object({
   view: z.literal('staff'),
   sessionId: Id,
@@ -179,6 +195,7 @@ export const StaffQueueSnapshot = z.object({
     bookedReserved: z.number().int(),
     walkinUsed: z.number().int(),
   }),
+  pressure: QueuePressure,
 });
 export type StaffQueueSnapshot = z.infer<typeof StaffQueueSnapshot>;
 

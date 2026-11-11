@@ -9,6 +9,7 @@ import {
   capacityOf,
   count,
   createTestApp,
+  doctorId,
   loginAs,
   makeSession,
   newPatient,
@@ -266,6 +267,52 @@ describe('FR-05 check-in', () => {
     expect(alloc.rows[0]!.state).toBe('consumed');
     expect((await capacityOf(t.pool, other.id)).booked_reserved).toBe(0);
   });
+  it('FR-04-c: after the visit is COMPLETED the appointment cannot be cancelled or rescheduled and the allocation stays consumed', async () => {
+    const doctor = await loginAs(t.server, 'doctor9@hqms.test');
+    await t.pool.query(
+      `UPDATE queue_entries SET state = 'skipped', skipped_at = now() WHERE doctor_id = $1 AND state IN ('called','in_service')`,
+      [doctorId(9)],
+    );
+    const s = await makeSession(admin, { doctor: 9 });
+    const other = await makeSession(admin, { doctor: 9 });
+    const patientClient = await loginAs(t.server, 'patient3@hqms.test');
+    t.clock.reset();
+    const appt = (await patientClient.post('/appointments', { sessionId: s.id })).body as Appointment;
+    t.clock.set(at(s, 0));
+    expect((await reception.post(`/appointments/${appt.id}/check-in`, {})).status).toBe(201);
+    const called = await doctor.post(`/sessions/${s.id}/call-next`, {});
+    expect(called.status).toBe(200);
+    const visitId = called.body.entry.visitId as string;
+    t.clock.set(at(s, 1));
+    expect((await doctor.post(`/visits/${visitId}/start`, {})).status).toBe(200);
+    t.clock.set(at(s, 9));
+    expect((await doctor.post(`/visits/${visitId}/complete`, {})).status).toBe(200);
+    expect((await t.pool.query(`SELECT status FROM appointments WHERE id = $1`, [appt.id])).rows[0]!.status).toBe('completed');
+    const before = await capacityOf(t.pool, s.id);
+    const otherBefore = await capacityOf(t.pool, other.id);
+
+    for (const caller of [patientClient, reception, admin]) {
+      const cancel = await caller.post(`/appointments/${appt.id}/cancel`, {});
+      expect(cancel.status).toBe(409);
+      expect(cancel.body.error.code).toBe('INVALID_TRANSITION');
+    }
+    const move = await patientClient.post(`/appointments/${appt.id}/reschedule`, { targetSessionId: other.id });
+    expect(move.status).toBe(409);
+    expect(move.body.error.code).toBe('INVALID_TRANSITION');
+
+    // Nothing moved: the place stays consumed, the counters are unchanged, the target session got nothing.
+    expect(await capacityOf(t.pool, s.id)).toEqual(before);
+    expect(await capacityOf(t.pool, other.id)).toEqual(otherBefore);
+    const alloc = await t.pool.query(
+      `SELECT state FROM capacity_allocations WHERE id = (SELECT allocation_id FROM appointments WHERE id = $1)`,
+      [appt.id],
+    );
+    expect(alloc.rows[0]!.state).toBe('consumed');
+    expect((await t.pool.query(`SELECT status FROM appointments WHERE id = $1`, [appt.id])).rows[0]!.status).toBe('completed');
+    // The release timer was cancelled at check-in: no pending reservation_release can free the place.
+    expect(await count(t.pool, `SELECT 1 FROM jobs WHERE dedupe_key = $1 AND state IN ('pending','running')`, [`reservation_release:${appt.id}`])).toBe(0);
+  });
+
 });
 
 describe('FR-05 walk-ins', () => {
