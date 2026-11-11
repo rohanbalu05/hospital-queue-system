@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion -- tests index rows they have just created */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ArrivalResult, StaffQueueSnapshot } from '@hqms/contracts';
 import { type Client, type MadeSession, type TestApp, at, createTestApp, doctorId, loginAs, makeSession, patientId } from './helpers.js';

@@ -60,6 +60,17 @@ describe('FakeLlmProvider answers', () => {
     expect(r).toMatchObject({ kind: 'unsupported', code: 'no_match' });
   });
 
+  it('generic words alone never produce an answer (stopwords: one, give, new, my, me, and, a ...)', async () => {
+    const tablets: LlmContextItem = { ...V1, body: 'Take one tablet after food. Give the syrup to a child only with a new spoon.' };
+    for (const question of ['Cancel my appointment and give me a new one', 'Give me one', 'Can you make me a new one and give it to me?']) {
+      const r = await llm.answer({ question, context: [tablets] });
+      expect(r, question).toMatchObject({ kind: 'unsupported' });
+    }
+    // a real content word still matches
+    const r = await llm.answer({ question: 'Is the syrup given with a spoon?', context: [tablets] });
+    expect(r.kind).toBe('answer');
+  });
+
   it('ignores empty context bodies', async () => {
     const r = await llm.answer({ question: 'paracetamol dose timing', context: [{ ...V1, body: '   ' }] });
     expect(r).toMatchObject({ kind: 'unsupported', code: 'no_context' });

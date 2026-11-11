@@ -20,7 +20,7 @@ export function formatDue(at: Date, timeZone: string): string {
   const time = new Intl.DateTimeFormat('en-IN', { timeZone, hour: 'numeric', minute: '2-digit', hour12: true })
     .format(at)
     .toLowerCase()
-    .replace(/ /g, ' ');
+    .replace(/[\u202f\u00a0]/g, ' ');
   const day = new Intl.DateTimeFormat('en-GB', { timeZone, day: 'numeric', month: 'short' }).format(at);
   return `${time}, ${day}`;
 }
