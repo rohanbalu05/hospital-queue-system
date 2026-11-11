@@ -84,7 +84,17 @@ export async function insertAppointment(tx: Tx, a: InsertAppointmentInput): Prom
                                rescheduled_from_id, follow_up_task_id)
      VALUES (COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING id`,
-    [a.id ?? null, a.patientId, a.sessionId, a.doctorId, a.scheduledAt, a.allocationId, a.bookedBy, a.rescheduledFromId ?? null, a.followUpTaskId ?? null],
+    [
+      a.id ?? null,
+      a.patientId,
+      a.sessionId,
+      a.doctorId,
+      a.scheduledAt,
+      a.allocationId,
+      a.bookedBy,
+      a.rescheduledFromId ?? null,
+      a.followUpTaskId ?? null,
+    ],
   );
   return required(await getAppointment(tx, firstRow(res, 'appointment').id), 'appointment');
 }

@@ -55,7 +55,12 @@ export async function admitWalkin(tx: Tx, sessionId: string): Promise<string> {
   return insertAllocation(tx, sessionId, 'walkin', 'consumed');
 }
 
-async function insertAllocation(tx: Tx, sessionId: string, kind: AllocationKind, state: AllocationState): Promise<string> {
+async function insertAllocation(
+  tx: Tx,
+  sessionId: string,
+  kind: AllocationKind,
+  state: AllocationState,
+): Promise<string> {
   const res = await tx.query<{ id: string }>(
     `INSERT INTO capacity_allocations (session_id, kind, state) VALUES ($1, $2, $3) RETURNING id`,
     [sessionId, kind, state],
@@ -70,12 +75,16 @@ async function throwFull(tx: Tx, sessionId: string, kind: AllocationKind): Promi
   );
   const row = res.rows[0];
   if (!row) throw new NotFoundError('session_capacity', sessionId);
-  throw new ConflictError('CAPACITY_FULL', `No ${kind === 'booked' ? 'booked' : 'walk-in'} places left in this session`, {
-    kind,
-    sessionId,
-    capacity: kind === 'booked' ? row.booked_capacity : row.walkin_capacity,
-    used: kind === 'booked' ? row.booked_reserved : row.walkin_used,
-  });
+  throw new ConflictError(
+    'CAPACITY_FULL',
+    `No ${kind === 'booked' ? 'booked' : 'walk-in'} places left in this session`,
+    {
+      kind,
+      sessionId,
+      capacity: kind === 'booked' ? row.booked_capacity : row.walkin_capacity,
+      used: kind === 'booked' ? row.booked_reserved : row.walkin_used,
+    },
+  );
 }
 
 async function readAllocation(tx: Tx, allocationId: string): Promise<AllocationRow> {
@@ -99,10 +108,14 @@ export async function consumeAllocation(tx: Tx, allocationId: string): Promise<v
   );
   if (upd.rowCount === 0) {
     const cur = await readAllocation(tx, allocationId);
-    throw new ConflictError('INVALID_TRANSITION', `Allocation is ${cur.state}, only a reserved allocation can be consumed`, {
-      allocationId,
-      state: cur.state,
-    });
+    throw new ConflictError(
+      'INVALID_TRANSITION',
+      `Allocation is ${cur.state}, only a reserved allocation can be consumed`,
+      {
+        allocationId,
+        state: cur.state,
+      },
+    );
   }
 }
 
@@ -152,7 +165,12 @@ export async function updateCapacity(
 ): Promise<Capacity & { version: number }> {
   tx.assertHolds('session', sessionId, 'updateCapacity');
   tx.assertHolds('capacity', sessionId, 'updateCapacity');
-  if (!Number.isInteger(bookedCapacity) || !Number.isInteger(walkinCapacity) || bookedCapacity < 0 || walkinCapacity < 0) {
+  if (
+    !Number.isInteger(bookedCapacity) ||
+    !Number.isInteger(walkinCapacity) ||
+    bookedCapacity < 0 ||
+    walkinCapacity < 0
+  ) {
     throw new TypeError('capacity must be non-negative integers (validate request bodies with the contract first)');
   }
   if (opts.expectedVersion !== undefined) {
@@ -164,10 +182,9 @@ export async function updateCapacity(
       });
     }
   }
-  const cur = await tx.query(
-    `SELECT booked_reserved, walkin_used FROM session_capacity WHERE session_id = $1`,
-    [sessionId],
-  );
+  const cur = await tx.query(`SELECT booked_reserved, walkin_used FROM session_capacity WHERE session_id = $1`, [
+    sessionId,
+  ]);
   const row = cur.rows[0];
   if (!row) throw new NotFoundError('session_capacity', sessionId);
   if (bookedCapacity < row.booked_reserved || walkinCapacity < row.walkin_used) {
@@ -194,7 +211,11 @@ export async function updateCapacity(
 export async function capacityInvariant(
   tx: { query: Tx['query'] },
   sessionId: string,
-): Promise<{ ok: boolean; counters: { bookedReserved: number; walkinUsed: number }; counted: { booked: number; walkin: number } }> {
+): Promise<{
+  ok: boolean;
+  counters: { bookedReserved: number; walkinUsed: number };
+  counted: { booked: number; walkin: number };
+}> {
   const res = await tx.query(
     `SELECT sc.booked_reserved, sc.walkin_used,
             count(*) FILTER (WHERE a.kind = 'booked' AND a.state IN ('reserved','consumed'))::int AS booked,

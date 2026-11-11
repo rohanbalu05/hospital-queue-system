@@ -61,10 +61,10 @@ export async function getAssignedDoctorIds(db: Queryable, userId: string): Promi
 export async function setAssignedDoctorIds(tx: Tx, userId: string, doctorIds: string[]): Promise<void> {
   await tx.query(`DELETE FROM staff_assignments WHERE user_id = $1`, [userId]);
   if (doctorIds.length > 0) {
-    await tx.query(
-      `INSERT INTO staff_assignments (user_id, doctor_id) SELECT $1, d FROM unnest($2::uuid[]) AS d`,
-      [userId, doctorIds],
-    );
+    await tx.query(`INSERT INTO staff_assignments (user_id, doctor_id) SELECT $1, d FROM unnest($2::uuid[]) AS d`, [
+      userId,
+      doctorIds,
+    ]);
   }
 }
 
@@ -107,7 +107,9 @@ export async function createAuthSession(
 export async function findUserByAuthToken(db: Queryable, tokenHash: string): Promise<UserRecord | null> {
   const r = await maybeOne(
     db,
-    `SELECT ${USER_COLS.split(',').map((c) => 'u.' + c.trim()).join(', ')}
+    `SELECT ${USER_COLS.split(',')
+      .map((c) => 'u.' + c.trim())
+      .join(', ')}
        FROM auth_sessions s JOIN users u ON u.id = s.user_id
       WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now() AND u.active`,
     [tokenHash],
@@ -116,5 +118,7 @@ export async function findUserByAuthToken(db: Queryable, tokenHash: string): Pro
 }
 
 export async function revokeAuthSession(db: Queryable, tokenHash: string): Promise<void> {
-  await db.query(`UPDATE auth_sessions SET revoked_at = now() WHERE token_hash = $1 AND revoked_at IS NULL`, [tokenHash]);
+  await db.query(`UPDATE auth_sessions SET revoked_at = now() WHERE token_hash = $1 AND revoked_at IS NULL`, [
+    tokenHash,
+  ]);
 }

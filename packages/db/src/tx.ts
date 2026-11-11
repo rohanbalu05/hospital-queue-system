@@ -1,5 +1,13 @@
 import type { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
-import { ConflictError, IdempotencyConflictError, LockOrderError, isRetryable, sqlState } from './errors.js';
+import {
+  ConflictError,
+  DatabaseUnavailableError,
+  IdempotencyConflictError,
+  LockOrderError,
+  isConnectionError,
+  isRetryable,
+  sqlState,
+} from './errors.js';
 import {
   findIdempotencyRecord,
   lockIdempotencyIdentity,
@@ -8,7 +16,7 @@ import {
   type IdempotentResponse,
   type IdempotentResult,
 } from './idempotency.js';
-import type { Queryable } from './pool.js';
+import { guardClient, isBrokenClient, type Queryable } from './pool.js';
 
 /**
  * Lock order contract (report §6.5, DECISIONS D-005). Rank 0 is the idempotency advisory lock taken by
@@ -50,7 +58,9 @@ export class Tx implements Queryable {
   /** Throws LockOrderError unless the lock is held; capacity primitives call this. */
   assertHolds(kind: LockKind, id: string, why: string): void {
     if (!this.holds(kind, id)) {
-      throw new LockOrderError(`${why} requires the ${kind} lock for ${id} (lock order: doctor -> session -> capacity)`);
+      throw new LockOrderError(
+        `${why} requires the ${kind} lock for ${id} (lock order: doctor -> session -> capacity)`,
+      );
     }
   }
 
@@ -120,6 +130,9 @@ export function withTransaction<T>(
  *  - Retries the whole function (fresh transaction, same idempotency identity) on 40001 / 40P01,
  *    at most `maxAttempts` (default 3) times; afterwards throws ConflictError(CONFLICT).
  *  - 55P03 (lock_timeout) -> ConflictError(CONFLICT), never retried forever.
+ *  - Connection-level failures (terminated backend, shutdown, reset, refused, pool connect timeout) ->
+ *    DatabaseUnavailableError, never retried (a loss during COMMIT is ambiguous; the idempotency key makes a
+ *    client retry safe). The broken client is destroyed, not returned to the pool.
  *  - With `idempotency`: takes the rank-0 advisory lock, replays a stored response when the same
  *    request hash was seen, throws IdempotencyConflictError on a different hash, otherwise runs `fn`
  *    (which must return `{status, body}`) and stores that response in the same transaction.
@@ -150,7 +163,12 @@ export async function withTransaction<T>(
         );
       }
       if (sqlState(err) === '55P03') {
-        throw new ConflictError('CONFLICT', 'The resource is busy; please retry', { sqlstate: '55P03' }, { cause: err });
+        throw new ConflictError(
+          'CONFLICT',
+          'The resource is busy; please retry',
+          { sqlstate: '55P03' },
+          { cause: err },
+        );
       }
       throw err;
     }
@@ -159,9 +177,22 @@ export async function withTransaction<T>(
   throw lastError;
 }
 
+const asError = (err: unknown): Error => (err instanceof Error ? err : new Error(String(err)));
+
 async function runOnce<T>(pool: Pool, fn: (tx: Tx) => Promise<T>, opts: TxOptions, attempt: number): Promise<unknown> {
-  const client = await pool.connect();
-  let rollbackFailed = false;
+  let client: PoolClient;
+  try {
+    client = await pool.connect();
+  } catch (err) {
+    if (isConnectionError(err)) {
+      throw new DatabaseUnavailableError('The database is unavailable', false, { cause: err });
+    }
+    throw err;
+  }
+  guardClient(client); // covers pools that were not built by createPool
+  /** Set when the connection is unusable: the client is then destroyed (release(err)), never reused. */
+  let discard: Error | undefined;
+  let committing = false;
   try {
     await client.query(`BEGIN ISOLATION LEVEL ${(opts.isolation ?? 'read committed').toUpperCase()}`);
     try {
@@ -189,17 +220,32 @@ async function runOnce<T>(pool: Pool, fn: (tx: Tx) => Promise<T>, opts: TxOption
       } else {
         result = await fn(tx);
       }
+      committing = true;
       await client.query('COMMIT');
       return result;
     } catch (err) {
-      try {
-        await client.query('ROLLBACK');
-      } catch {
-        rollbackFailed = true;
+      if (isConnectionError(err) || isBrokenClient(client)) {
+        discard = asError(err); // the connection is gone: nothing to roll back
+      } else {
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackErr) {
+          discard = asError(rollbackErr);
+        }
       }
       throw err;
     }
+  } catch (err) {
+    if (isConnectionError(err)) {
+      discard ??= asError(err);
+      throw new DatabaseUnavailableError(
+        committing ? 'The database connection was lost while committing' : 'The database connection was lost',
+        committing,
+        { cause: err },
+      );
+    }
+    throw err;
   } finally {
-    client.release(rollbackFailed ? new Error('rollback failed') : undefined);
+    client.release(discard ?? (isBrokenClient(client) ? new Error('database client discarded') : undefined));
   }
 }
