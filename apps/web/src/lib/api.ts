@@ -70,7 +70,9 @@ export interface RequestOptions<T> {
 
 export async function apiFetch<T = unknown>(path: string, opts: RequestOptions<T> = {}): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' };
-  if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
+  const isForm = typeof FormData !== 'undefined' && opts.body instanceof FormData;
+  // Multipart bodies set their own Content-Type (with the boundary).
+  if (opts.body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
   if (opts.idempotencyKey) headers[IDEMPOTENCY_HEADER] = opts.idempotencyKey;
 
   let res: Response;
@@ -80,7 +82,7 @@ export async function apiFetch<T = unknown>(path: string, opts: RequestOptions<T
       credentials: 'include',
       headers,
     };
-    if (opts.body !== undefined) init.body = JSON.stringify(opts.body);
+    if (opts.body !== undefined) init.body = isForm ? (opts.body as FormData) : JSON.stringify(opts.body);
     if (opts.signal) init.signal = opts.signal;
     res = await fetch(`${API_BASE}${path}`, init);
   } catch (cause) {

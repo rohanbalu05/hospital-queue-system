@@ -1,10 +1,23 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { mockApi, type DemoRole } from './mocks';
+import { installFakeEventSource, mockQueue } from './mocks-queue';
+import { mockScheduling } from './scheduling-mocks';
+import { mockWave3, routeLiveBoardToQueueMock } from './w3-mocks';
+
+/** Every role home with the mocks its screen reads, so no screenshot shows a "not mocked" error. */
+async function mockRoleHome(page: Page, role: DemoRole) {
+  await installFakeEventSource(page);
+  await mockApi(page, role);
+  await mockQueue(page);
+  const sched = await mockScheduling(page);
+  await mockWave3(page, sched, role === 'followup' ? 'followup' : role);
+  await routeLiveBoardToQueueMock(page);
+}
 
 /** docs/evidence/screenshots at the repo root. */
 const SHOTS = path.resolve(import.meta.dirname, '../../../docs/evidence/screenshots');
-const shot = (page: Page, name: string) => page.screenshot({ path: path.join(SHOTS, `w0-${name}.png`), fullPage: true });
+const shot = (page: Page, name: string) => page.screenshot({ path: path.join(SHOTS, `w0-${name}.png`), fullPage: true, animations: 'disabled' });
 
 const ROLE_HOMES: Array<{ role: DemoRole; url: string; heading: string; slug: string }> = [
   { role: 'patient', url: '/patient', heading: 'My visit', slug: 'patient-home' },
@@ -68,10 +81,8 @@ test.describe('keyboard and guards', () => {
     await page.keyboard.press('Tab');
     const submit = page.getByRole('button', { name: 'Sign in' });
     await expect(submit).toBeFocused();
-    // 2px ink focus ring is rendered (ring box-shadow) on the focused control.
-    await expect
-      .poll(() => submit.evaluate((el) => getComputedStyle(el).boxShadow))
-      .toContain('rgb(22, 35, 43)');
+    // One 2px ink focus outline is rendered on the focused control.
+    await expect.poll(() => submit.evaluate((el) => `${getComputedStyle(el).outlineStyle} ${getComputedStyle(el).outlineWidth} ${getComputedStyle(el).outlineColor}`)).toBe('solid 2px rgb(22, 35, 43)');
 
     // Back to the password field and submit with Enter.
     await page.keyboard.press('Shift+Tab');
@@ -124,10 +135,12 @@ test.describe('role homes at 1440', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
   for (const h of ROLE_HOMES) {
     test(`${h.role} home`, async ({ page }) => {
-      await mockApi(page, h.role);
+      await mockRoleHome(page, h.role);
       await page.goto(h.url);
       await expect(page.getByRole('heading', { name: h.heading, level: 1 })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+      await page.waitForLoadState('networkidle');
+      await expect(page.getByLabel('Loading')).toHaveCount(0);
       await shot(page, `${h.slug}-1440`);
     });
   }
@@ -136,7 +149,7 @@ test.describe('role homes at 1440', () => {
 test.describe('patient home at 390', () => {
   test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
   test('screenshot', async ({ page }) => {
-    await mockApi(page, 'patient');
+    await mockRoleHome(page, 'patient');
     await page.goto('/patient');
     await expect(page.getByRole('heading', { name: 'My visit', level: 1 })).toBeVisible();
     await shot(page, 'patient-home-390');
@@ -148,9 +161,13 @@ test.describe('patient home at 390', () => {
 test.describe('display at 1920', () => {
   test.use({ viewport: { width: 1920, height: 1080 } });
   test('screenshot', async ({ page }) => {
+    await installFakeEventSource(page);
     await mockApi(page);
+    await mockQueue(page);
     await page.goto('/display');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByText('A-013').or(page.getByText('Now calling')).first()).toBeVisible();
+    await expect(page.getByText(/Last updated/)).toBeVisible();
     await shot(page, 'display-1920');
   });
 });
