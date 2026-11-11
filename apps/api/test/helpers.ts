@@ -166,3 +166,23 @@ export async function linkPatient(
   if (res.status !== 201) throw new Error(`could not link patient: ${res.status} ${JSON.stringify(res.body)}`);
   return { session, appointmentId: res.body.id as string };
 }
+
+/**
+ * A brand-new patient WITH a login, linked to nothing. Test files share one database, so the seeded logins
+ * (patient@ ... patient10@) may already be linked to other doctors by earlier files; isolation tests need a
+ * patient whose links are exactly what the test creates.
+ */
+export async function newLoginPatient(
+  t: TestApp,
+  reception: Client,
+  name = 'Isolated Patient',
+): Promise<{ id: string; client: Client }> {
+  const id = await newPatient(reception, name);
+  const tag = randomUUID().slice(0, 8);
+  await t.pool.query(
+    `INSERT INTO users (hospital_id, email, display_name, role, password_hash, patient_id)
+     SELECT hospital_id, $1, $2, 'patient', password_hash, $3 FROM users WHERE email = 'patient@hqms.test'`,
+    [`w3-${tag}@hqms.test`, name, id],
+  );
+  return { id, client: await loginAs(t.server, `w3-${tag}@hqms.test`) };
+}

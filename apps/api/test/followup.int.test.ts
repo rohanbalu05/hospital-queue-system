@@ -12,6 +12,8 @@ import {
   linkPatient,
   loginAs,
   makeSession,
+  newPatient,
+  newLoginPatient,
   patientId,
   type TestApp,
 } from './helpers.js';
@@ -26,6 +28,7 @@ let followup2: Client; // doctors 1-4
 let followup3: Client; // doctors 5-8
 let patient1: Client;
 let patient2: Client;
+let P1: string; // isolated patients with logins (the seeded ones are shared across test files)
 
 beforeAll(async () => {
   t = await createTestApp();
@@ -36,8 +39,11 @@ beforeAll(async () => {
   followup = await loginAs(t.server, 'followup@hqms.test');
   followup2 = await loginAs(t.server, 'followup2@hqms.test');
   followup3 = await loginAs(t.server, 'followup3@hqms.test');
-  patient1 = await loginAs(t.server, 'patient@hqms.test');
-  patient2 = await loginAs(t.server, 'patient2@hqms.test');
+  const a = await newLoginPatient(t, reception, 'Follow Up One');
+  const b = await newLoginPatient(t, reception, 'Follow Up Two');
+  patient1 = a.client;
+  P1 = a.id;
+  patient2 = b.client;
 });
 afterAll(async () => {
   await t.close();
@@ -66,7 +72,7 @@ async function taskFor(
 
 describe('FR-11 follow-up tasks: create, scope, ownership', () => {
   it('a doctor creates a task for their patient: audit, FollowUpOpened without clinical text, owner validated', async () => {
-    const p = patientId(12);
+    const p = await newPatient(reception, 'Follow Up Patient');
     await linkPatient(admin, reception, p, 1);
     const task = await taskFor(p, { ownerId: undefined });
     expect(task).toMatchObject({ status: 'open', ownerId: null, kind: 'post_visit', overdue: false, version: 1 });
@@ -80,7 +86,7 @@ describe('FR-11 follow-up tasks: create, scope, ownership', () => {
   });
 
   it('refuses an owner who is not assigned to the patient doctor, an escalation kind, and out-of-scope patients', async () => {
-    const p = patientId(13);
+    const p = await newPatient(reception, 'Follow Up Patient');
     await linkPatient(admin, reception, p, 1);
     const f3 = (await followup3.get('/me')).body.userId as string; // doctors 5-8 only
     const badOwner = await doctor1.post('/follow-up-tasks', { patientId: p, title: 'Call patient', dueAt: inHours(5), ownerId: f3 });
@@ -98,7 +104,7 @@ describe('FR-11 follow-up tasks: create, scope, ownership', () => {
   });
 
   it('Idempotency-Key on create: a replay returns the same task, a changed body is IDEMPOTENCY_KEY_REUSED', async () => {
-    const p = patientId(14);
+    const p = await newPatient(reception, 'Follow Up Patient');
     await linkPatient(admin, reception, p, 1);
     const key = randomUUID();
     const body = { patientId: p, title: 'Call about results', dueAt: inHours(48) };
@@ -113,7 +119,7 @@ describe('FR-11 follow-up tasks: create, scope, ownership', () => {
   });
 
   it('lists are scoped: followup sees their doctors patients, others do not; patients use /me/follow-ups without staff notes', async () => {
-    const p = patientId(1);
+    const p = P1;
     await linkPatient(admin, reception, p, 1);
     const task = await taskFor(p, { title: 'INTERNAL: check adherence', detail: 'staff-only detail' });
     const mine = await followup.get('/follow-up-tasks?owner=all');
@@ -140,7 +146,7 @@ describe('FR-11 follow-up tasks: create, scope, ownership', () => {
 
 describe('FR-11 overdue and lifecycle', () => {
   it('FR-11-a: an overdue task stays open and listed until resolved or cancelled', async () => {
-    const p = patientId(15);
+    const p = await newPatient(reception, 'Follow Up Patient');
     await linkPatient(admin, reception, p, 1);
     t.clock.set('2041-03-01T06:00:00Z');
     const task = await taskFor(p, { dueAt: '2041-03-01T08:00:00Z' });
@@ -173,7 +179,7 @@ describe('FR-11 overdue and lifecycle', () => {
   });
 
   it('FR-11-b: acknowledging takes ownership of an unowned task; a second acknowledge or a stale version is a 409', async () => {
-    const p = patientId(16);
+    const p = await newPatient(reception, 'Follow Up Patient');
     await linkPatient(admin, reception, p, 1);
     const task = await taskFor(p);
     const unassigned = await followup.get(`/follow-up-tasks?owner=unassigned&patientId=${p}`);
@@ -201,7 +207,7 @@ describe('FR-11 overdue and lifecycle', () => {
   });
 
   it('a task owned by someone else cannot be acknowledged by another staff member while open', async () => {
-    const p = patientId(17);
+    const p = await newPatient(reception, 'Follow Up Patient');
     await linkPatient(admin, reception, p, 1);
     const f1 = (await followup.get('/me')).body.userId as string;
     const task = await taskFor(p, { ownerId: f1 });
@@ -210,7 +216,7 @@ describe('FR-11 overdue and lifecycle', () => {
   });
 
   it('resolve needs a disposition and note; closed tasks cannot be resolved or cancelled again', async () => {
-    const p = patientId(18);
+    const p = await newPatient(reception, 'Follow Up Patient');
     await linkPatient(admin, reception, p, 1);
     const task = await taskFor(p);
     expect((await followup.post(`/follow-up-tasks/${task.id}/resolve`, { outcomeNote: 'done and dusted' })).status).toBe(400);
@@ -243,7 +249,7 @@ describe('FR-14-c return booking through normal capacity', () => {
   }
 
   it('books via the normal path, links both ways, consumes ordinary capacity and resolves as return_booked', async () => {
-    const p = patientId(19);
+    const p = await newPatient(reception, 'Follow Up Patient');
     const task = await openTask(p);
     const target = await makeSession(admin, { doctor: 1, booked: 3, walkin: 1 });
     const before = await capacityOf(t.pool, target.id);
@@ -281,7 +287,7 @@ describe('FR-14-c return booking through normal capacity', () => {
   });
 
   it('a full session answers CAPACITY_FULL: no bypass, no extra place, no link', async () => {
-    const p = patientId(20);
+    const p = await newPatient(reception, 'Follow Up Patient');
     const task = await openTask(p);
     const full = await makeSession(admin, { doctor: 1, booked: 1, walkin: 1 });
     expect((await reception.post('/appointments', { sessionId: full.id, patientId: patientId(21) })).status).toBe(201);
@@ -300,7 +306,7 @@ describe('FR-14-c return booking through normal capacity', () => {
   });
 
   it('requires an Idempotency-Key, replays safely, and respects scope and roles', async () => {
-    const p = patientId(22);
+    const p = await newPatient(reception, 'Follow Up Patient');
     const task = await openTask(p);
     const s = await makeSession(admin, { doctor: 1 });
     expect((await followup.post(`/follow-up-tasks/${task.id}/return-booking`, { sessionId: s.id }, null)).status).toBe(400);
@@ -311,7 +317,7 @@ describe('FR-14-c return booking through normal capacity', () => {
     expect(b.body.id).toBe(a.body.id);
     expect(await count(t.pool, `SELECT 1 FROM appointments WHERE follow_up_task_id = $1`, [task.id])).toBe(1);
 
-    const p2 = patientId(23);
+    const p2 = await newPatient(reception, 'Follow Up Patient');
     const task2 = await openTask(p2);
     const s2 = await makeSession(admin, { doctor: 1 });
     expect((await reception.post(`/follow-up-tasks/${task2.id}/return-booking`, { sessionId: s2.id })).status).toBe(403);
@@ -324,7 +330,7 @@ describe('FR-14-c return booking through normal capacity', () => {
   });
 
   it('POST /appointments with followUpTaskId: followup books with the same semantics; reception cannot; followup needs the task', async () => {
-    const p = patientId(24);
+    const p = await newPatient(reception, 'Follow Up Patient');
     const task = await openTask(p);
     const s = await makeSession(admin, { doctor: 1 });
     const viaAppointments = await followup.post('/appointments', { sessionId: s.id, followUpTaskId: task.id });
@@ -332,7 +338,7 @@ describe('FR-14-c return booking through normal capacity', () => {
     expect(viaAppointments.body).toMatchObject({ patientId: p, followUpTaskId: task.id });
     expect((await followup.get(`/follow-up-tasks/${task.id}`)).body.returnAppointmentId).toBe(viaAppointments.body.id);
 
-    const task2 = await openTask(patientId(25));
+    const task2 = await openTask(await newPatient(reception, 'Follow Up Patient'));
     expect((await reception.post('/appointments', { sessionId: s.id, patientId: patientId(25), followUpTaskId: task2.id })).status).toBe(403);
     expect((await followup.post('/appointments', { sessionId: s.id, patientId: patientId(25) })).status).toBe(403);
     // patientId that disagrees with the task

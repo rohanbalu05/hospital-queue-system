@@ -9,6 +9,7 @@ import {
   linkPatient,
   loginAs,
   makeSession,
+  newLoginPatient,
   patientId,
   type TestApp,
 } from './helpers.js';
@@ -24,6 +25,7 @@ let doctor2: Client;
 let followup: Client;
 let patient1: Client;
 let patient2: Client;
+let P1: string;
 
 beforeAll(async () => {
   storage = new MemoryStorage();
@@ -34,10 +36,13 @@ beforeAll(async () => {
   doctor1 = await loginAs(t.server, 'doctor@hqms.test');
   doctor2 = await loginAs(t.server, 'doctor2@hqms.test');
   followup = await loginAs(t.server, 'followup@hqms.test');
-  patient1 = await loginAs(t.server, 'patient@hqms.test');
-  patient2 = await loginAs(t.server, 'patient2@hqms.test');
+  const a = await newLoginPatient(t, reception, 'Doc Patient One');
+  const b = await newLoginPatient(t, reception, 'Doc Patient Two');
+  patient1 = a.client;
+  P1 = a.id;
+  patient2 = b.client;
   // patient 1 is cared for by doctor 1 only
-  await linkPatient(admin, reception, patientId(1), 1);
+  await linkPatient(admin, reception, P1, 1);
 });
 afterAll(async () => {
   await t.close();
@@ -49,7 +54,6 @@ beforeEach(() => {
 });
 
 const code = (body: unknown): string => ApiError.parse(body).error.code;
-const P1 = patientId(1);
 
 async function upload(by: Client, file: Buffer, patient = P1, name = 'scan.png', type = 'image/png') {
   return by.upload('/documents', file, { patientId: patient }, name, type);
