@@ -3,8 +3,9 @@
     "id": "FR-01-a",
     "requirement": "FR-01",
     "acceptance": "A patient cannot retrieve another patient's appointment or document.",
-    "test": "tests/integration/authz.test.ts",
-    "passes": false
+    "test": "apps/api/test/authz.int.test.ts",
+    "passes": false,
+    "note": "Appointment half green (apps/api/test/authz.int.test.ts); document half pending W3 — spec review P0"
   },
   {
     "id": "FR-01-b",
@@ -18,77 +19,88 @@
     "requirement": "FR-02",
     "acceptance": "Planning configuration supports 10 booked and 5 walk-in places per session.",
     "test": "apps/api/test/scheduling.int.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
   },
   {
     "id": "FR-02-b",
     "requirement": "FR-02",
     "acceptance": "Invalid capacity reductions (below current usage) are rejected.",
     "test": "apps/api/test/scheduling.int.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
   },
   {
     "id": "FR-02-c",
     "requirement": "FR-02",
     "acceptance": "Each session references a versioned queue policy with Table 7 values.",
-    "test": "packages/domain/test/policy.test.ts",
-    "passes": false
+    "test": "apps/api/test/scheduling.int.test.ts + packages/domain/test/select.unit.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
   },
   {
     "id": "FR-03-a",
     "requirement": "FR-03",
     "acceptance": "Simultaneous requests for the last place produce at most one successful reservation.",
-    "test": "tests/concurrency/t1-last-slot.test.ts",
-    "passes": false
+    "test": "apps/api/test/scheduling.int.test.ts (12-way HTTP race) + packages/db/test/capacity.test.ts (20-way)",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
   },
   {
     "id": "FR-03-b",
     "requirement": "FR-03",
     "acceptance": "A retry with the same idempotency key returns the original outcome; same key with different input returns 409.",
-    "test": "tests/concurrency/t1-idempotency.test.ts",
-    "passes": false
+    "test": "apps/api/test/scheduling.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
   },
   {
     "id": "FR-04-a",
     "requirement": "FR-04",
     "acceptance": "A failed reschedule target leaves the original appointment intact.",
-    "test": "tests/concurrency/t1-reschedule.test.ts",
-    "passes": false
+    "test": "apps/api/test/scheduling.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
   },
   {
     "id": "FR-04-b",
     "requirement": "FR-04",
     "acceptance": "Cancellation releases an eligible reservation.",
     "test": "apps/api/test/scheduling.int.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
   },
   {
     "id": "FR-04-c",
     "requirement": "FR-04",
     "acceptance": "Completed visits never reopen consumed capacity.",
-    "test": "apps/api/test/scheduling.int.test.ts",
-    "passes": false
+    "test": "apps/api/test/arrivals.int.test.ts",
+    "passes": false,
+    "note": "Checked-in case green; completed-visit case pending W2 complete route — spec review P0"
   },
   {
     "id": "FR-05-a",
     "requirement": "FR-05",
     "acceptance": "Repeated check-in produces no duplicate visit or queue entry.",
     "test": "apps/api/test/arrivals.int.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
   },
   {
     "id": "FR-05-b",
     "requirement": "FR-05",
     "acceptance": "Arrival after 15-min grace requires walk-in capacity and follows walk-in ordering.",
     "test": "apps/api/test/arrivals.int.test.ts",
-    "passes": false
+    "passes": false,
+    "note": "Passes only without the worker; missed→late admission path pending W2 — spec review P0"
   },
   {
     "id": "FR-05-c",
     "requirement": "FR-05",
     "acceptance": "Walk-in admission is capacity-checked (5 per session).",
     "test": "apps/api/test/arrivals.int.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
   },
   {
     "id": "FR-06-a",
