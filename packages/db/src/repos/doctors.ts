@@ -1,7 +1,7 @@
 import type { Doctor } from '@hqms/contracts';
-import { maybeOne, many, type Queryable } from '../pool.js';
+import { maybeOne, many, type Queryable, type QueryResultRow } from '../pool.js';
 
-const mapDoctor = (r: any): Doctor => ({
+const mapDoctor = (r: QueryResultRow): Doctor => ({
   id: r.id,
   fullName: r.full_name,
   department: r.department,

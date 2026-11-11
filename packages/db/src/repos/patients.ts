@@ -1,5 +1,5 @@
 import type { Patient } from '@hqms/contracts';
-import { maybeOne, many, type Queryable } from '../pool.js';
+import { firstRow, maybeOne, many, required, type Queryable, type QueryResultRow } from '../pool.js';
 import type { Tx } from '../tx.js';
 
 const SELECT_PATIENT = `
@@ -7,7 +7,7 @@ const SELECT_PATIENT = `
          EXISTS (SELECT 1 FROM users u WHERE u.patient_id = p.id) AS has_login
     FROM patients p`;
 
-const mapPatient = (r: any): Patient => ({
+const mapPatient = (r: QueryResultRow): Patient => ({
   id: r.id,
   mrn: r.mrn,
   fullName: r.full_name,
@@ -75,5 +75,5 @@ export async function createPatient(tx: Tx, p: CreatePatientInput): Promise<Pati
      RETURNING id`,
     [p.id ?? null, p.hospitalId ?? null, p.mrn ?? null, p.fullName, p.phone ?? null, p.dateOfBirth ?? null, p.createdBy ?? null],
   );
-  return (await getPatient(tx, res.rows[0]!.id))!;
+  return required(await getPatient(tx, firstRow(res, 'patient').id), 'patient');
 }

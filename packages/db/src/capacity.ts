@@ -1,6 +1,7 @@
 import type { Capacity } from '@hqms/contracts';
 import { ConflictError, NotFoundError } from './errors.js';
 import { toCapacity, type CapacityLockRow } from './locks.js';
+import { firstRow } from './pool.js';
 import type { Tx } from './tx.js';
 
 /*
@@ -59,7 +60,7 @@ async function insertAllocation(tx: Tx, sessionId: string, kind: AllocationKind,
     `INSERT INTO capacity_allocations (session_id, kind, state) VALUES ($1, $2, $3) RETURNING id`,
     [sessionId, kind, state],
   );
-  return res.rows[0]!.id;
+  return firstRow(res, 'capacity_allocation').id;
 }
 
 async function throwFull(tx: Tx, sessionId: string, kind: AllocationKind): Promise<never> {
@@ -185,7 +186,7 @@ export async function updateCapacity(
     [sessionId, bookedCapacity, walkinCapacity],
   );
   await tx.query(`UPDATE sessions SET version = version + 1, updated_at = now() WHERE id = $1`, [sessionId]);
-  const c: CapacityLockRow = toCapacity(upd.rows[0]);
+  const c: CapacityLockRow = toCapacity(firstRow(upd, 'session_capacity'));
   return c;
 }
 

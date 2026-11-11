@@ -14,7 +14,7 @@ import {
   writeAudit,
   withTransaction,
 } from '../src/index.js';
-import { makeFixture, TEST_DB, testUrl, type Fixture } from './helpers.js';
+import { makeFixture, nth, TEST_DB, testUrl, type Fixture } from './helpers.js';
 
 let pool: Pool;
 beforeAll(() => {
@@ -97,7 +97,7 @@ describe('idempotency records', () => {
       `INSERT INTO users (hospital_id, email, display_name, role) VALUES ($1, $2, 'Other', 'reception') RETURNING id`,
       [f.hospitalId, `o-${randomUUID()}@test.local`],
     );
-    const results = await Promise.all([run(f.userId, 'op.a'), run(f.userId, 'op.b'), run(other.rows[0]!.id, 'op.a')]);
+    const results = await Promise.all([run(f.userId, 'op.a'), run(f.userId, 'op.b'), run(nth(other.rows, 0).id, 'op.a')]);
     expect(results.every((r) => !r.replayed)).toBe(true);
   });
 
