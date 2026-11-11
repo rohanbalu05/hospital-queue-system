@@ -18,6 +18,16 @@ export interface WorkerConfig {
   /** Max time to wait for in-flight jobs on SIGTERM before exiting (leases then expire and re-claim). */
   shutdownTimeoutMs: number;
   logLevel: LogLevel;
+  /** OBJECT_STORAGE: local-disk (default) | gcs. */
+  objectStorage: string;
+  /** STORAGE_DIR for local-disk. */
+  storageDir: string;
+  /** OCR_PROVIDER: fake (default) | google-vision. */
+  ocrProvider: string;
+  /** The OCR provider call is abandoned after this long (below the handler timeout). */
+  ocrTimeoutSec: number;
+  /** How often a running worker makes sure this hour's reconcile_uploads job exists (safety net). */
+  reconcileSeedSec: number;
 }
 
 function int(env: NodeJS.ProcessEnv, name: string, fallback: number, min = 1): number {
@@ -50,5 +60,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
     outboxBatch: int(env, 'WORKER_OUTBOX_BATCH', 50),
     shutdownTimeoutMs: int(env, 'WORKER_SHUTDOWN_TIMEOUT_MS', 25_000, 0),
     logLevel: level,
+    objectStorage: env['OBJECT_STORAGE'] || 'local-disk',
+    storageDir: env['STORAGE_DIR'] || './var/storage',
+    ocrProvider: env['OCR_PROVIDER'] || 'fake',
+    ocrTimeoutSec: int(env, 'OCR_TIMEOUT_SEC', 90),
+    reconcileSeedSec: int(env, 'WORKER_RECONCILE_SEED_SEC', 600),
   };
 }

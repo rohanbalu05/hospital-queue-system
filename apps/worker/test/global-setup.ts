@@ -3,7 +3,7 @@ import { createPool, migrate } from '@hqms/db';
 import { seed } from '../../../db/seed/seed.js';
 import { TEST_DB, adminUrl, testUrl } from './helpers.js';
 
-/** Own scratch database (hqms_test_worker), so parallel builders never collide. Migrated and seeded. */
+/** Own scratch database (hqms_test_worker_w3), so parallel builders never collide. Migrated and seeded. */
 export default async function setup(): Promise<void> {
   const admin = new pg.Client({ connectionString: adminUrl() });
   await admin.connect();

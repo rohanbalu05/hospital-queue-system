@@ -52,7 +52,8 @@ export type CreateFollowUpTaskRequest = z.infer<typeof CreateFollowUpTaskRequest
 export const FollowUpListQuery = z.object({
   owner: z.enum(['me', 'unassigned', 'all']).default('me'),
   status: FollowUpStatus.optional(),
-  overdue: z.coerce.boolean().optional(),
+  /** Query-string boolean: only 'true'/'false' (z.coerce.boolean would turn 'false' into true). */
+  overdue: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
   patientId: Id.optional(),
 });
 

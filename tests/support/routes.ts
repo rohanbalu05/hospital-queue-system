@@ -46,11 +46,19 @@ export function listRoutes(): RouteInfo[] {
   const routes: RouteInfo[] = [];
   for (const file of controllerFiles(SRC)) {
     const text = readFileSync(file, 'utf8');
-    const prefix = /@Controller\(\s*(?:'([^']*)')?\s*\)/.exec(text)?.[1] ?? '';
+    // A file may declare several controllers; the prefix applies until the next @Controller.
+    let prefix = '';
     let isPublic = false;
     let roles: RoleName[] | undefined;
     for (const line of text.split('\n')) {
       const t = line.trim();
+      const c = /^@Controller\(\s*(?:'([^']*)')?\s*\)/.exec(t);
+      if (c) {
+        prefix = c[1] ?? '';
+        isPublic = false;
+        roles = undefined;
+        continue;
+      }
       if (t.startsWith('@Public(')) isPublic = true;
       const r = /^@Roles\((.*)\)\s*$/.exec(t);
       if (r) roles = parseRoles(r[1] ?? '');

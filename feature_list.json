@@ -3,16 +3,17 @@
     "id": "FR-01-a",
     "requirement": "FR-01",
     "acceptance": "A patient cannot retrieve another patient's appointment or document.",
-    "test": "apps/api/test/authz.int.test.ts",
-    "passes": false,
-    "note": "Appointment half green (apps/api/test/authz.int.test.ts); document half pending W3 — spec review P0"
+    "test": "apps/api/test/authz.int.test.ts (appointments) + apps/api/test/documents.int.test.ts (documents: metadata, file, drafts → 404)",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-01-b",
     "requirement": "FR-01",
     "acceptance": "A reception account cannot verify clinical instructions.",
-    "test": "tests/integration/authz.test.ts",
-    "passes": false
+    "test": "apps/api/test/documents.int.test.ts (reception/followup/admin verify → 403)",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-02-a",
@@ -106,9 +107,9 @@
     "id": "FR-06-a",
     "requirement": "FR-06",
     "acceptance": "Identical state, policy and decision time select the same candidate and reason.",
-    "test": "packages/domain/test/select.property.test.ts",
+    "test": "packages/domain/test/select.property.test.ts + tests/concurrency/t2-golden-http.test.ts (identical sequences on two sessions)",
     "passes": true,
-    "verified": "2026-11-11 session 1, pnpm verify green"
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-06-b",
@@ -130,9 +131,9 @@
     "id": "FR-07-a",
     "requirement": "FR-07",
     "acceptance": "Concurrent call-next, including across overlapping sessions, never allocates two patients to one doctor.",
-    "test": "apps/api/test/queue.int.test.ts (20 concurrent across overlapping sessions); T2 system-level pending",
+    "test": "tests/concurrency/t2-doctor-guard.test.ts (3 runs × 600 requests, overlapping sessions, 0 double allocation) + apps/api/test/queue.int.test.ts",
     "passes": true,
-    "verified": "2026-11-11 pnpm verify green after W2 api merge"
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-08-a",
@@ -219,77 +220,88 @@
     "requirement": "FR-11",
     "acceptance": "Overdue tasks remain visible and open until documented disposition or cancellation.",
     "test": "apps/api/test/followup.int.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-11-b",
     "requirement": "FR-11",
     "acceptance": "A staff member can acknowledge task ownership.",
     "test": "apps/api/test/followup.int.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-12-a",
     "requirement": "FR-12",
     "acceptance": "10 MB / 10-page upload limits are enforced.",
     "test": "apps/api/test/documents.int.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-12-b",
     "requirement": "FR-12",
     "acceptance": "OCR failure permits review or controlled retry and does not interrupt booking.",
-    "test": "tests/integration/t4-followup.test.ts",
-    "passes": false
+    "test": "apps/api/test/documents.int.test.ts + apps/worker/test/documents.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-12-c",
     "requirement": "FR-12",
     "acceptance": "Documents are stored privately and readable only by the owner or authorized staff.",
-    "test": "tests/integration/t4-followup.test.ts",
-    "passes": false
+    "test": "apps/api/test/documents.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-13-a",
     "requirement": "FR-13",
     "acceptance": "Unverified or superseded text cannot be supplied as the assistant's approved source.",
-    "test": "tests/integration/t4-followup.test.ts",
-    "passes": false
+    "test": "apps/api/test/assistant.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-13-b",
     "requirement": "FR-13",
     "acceptance": "Verification records verifier, time and an immutable version; revisions supersede with history.",
-    "test": "apps/api/test/documents.int.test.ts",
-    "passes": false
+    "test": "apps/api/test/assistant.int.test.ts + apps/api/test/documents.int.test.ts (immutability trigger)",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-14-a",
     "requirement": "FR-14",
     "acceptance": "Unsupported assistant requests create an owned staff task.",
-    "test": "tests/integration/t4-followup.test.ts",
-    "passes": false
+    "test": "apps/api/test/assistant.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-14-b",
     "requirement": "FR-14",
     "acceptance": "The assistant cannot change treatment, assign priority or bypass return capacity.",
-    "test": "tests/integration/t4-followup.test.ts",
-    "passes": false
+    "test": "apps/api/test/assistant.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-14-c",
     "requirement": "FR-14",
     "acceptance": "A return booking consumes normal capacity and links to the originating task.",
     "test": "apps/api/test/followup.int.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-14-d",
     "requirement": "FR-14",
     "acceptance": "Assistant answers cite the verified instruction version.",
-    "test": "tests/integration/t4-followup.test.ts",
-    "passes": false
+    "test": "apps/api/test/assistant.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "FR-15-a",
@@ -304,7 +316,8 @@
     "requirement": "FR-15",
     "acceptance": "Reports separate proposed targets from observed metrics.",
     "test": "apps/api/test/reports.int.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "NFR-01",
@@ -324,8 +337,9 @@
     "id": "NFR-03",
     "requirement": "NFR-03",
     "acceptance": "Zero capacity oversubscriptions, duplicate active entries or concurrent doctor allocations in T1/T2.",
-    "test": "tests/concurrency/*",
-    "passes": false
+    "test": "tests/concurrency/t1-*.test.ts + t2-*.test.ts (global invariant checks after every file: 0 violations)",
+    "passes": true,
+    "verified": "T1+T2 3 runs each, 0 violations"
   },
   {
     "id": "NFR-04",
@@ -345,8 +359,9 @@
     "id": "NFR-06",
     "requirement": "NFR-06",
     "acceptance": "Zero unauthorized cross-patient reads or writes in the authorization tests.",
-    "test": "tests/integration/authz.test.ts",
-    "passes": false
+    "test": "tests/integration/authz.test.ts (route table derived from controllers) + apps/api/test/{authz,w3-authz,documents}.int.test.ts",
+    "passes": true,
+    "verified": "0 unauthorized successes, 0 side effects on refusal"
   },
   {
     "id": "NFR-07",
@@ -367,8 +382,9 @@
     "id": "NFR-08-b",
     "requirement": "NFR-08",
     "acceptance": "Booking and call-next complete by keyboard alone.",
-    "test": "tests/e2e/keyboard.spec.ts",
-    "passes": false
+    "test": "tests/e2e/full-visit.spec.ts (real stack, keyboard booking + check-in + call-next) + apps/web/e2e/*.spec.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
   },
   {
     "id": "NFR-08-c",

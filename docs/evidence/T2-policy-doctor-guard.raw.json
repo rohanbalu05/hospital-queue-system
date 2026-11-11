@@ -1,0 +1,1521 @@
+{
+  "t2GoldenHttp": {
+    "table8": {
+      "golden": [
+        {
+          "n": 1,
+          "token": "A-001",
+          "reason": "ROTATION",
+          "slot": 0,
+          "before": 0,
+          "after": 1,
+          "eligible": ["A-001", "A-002", "W-001"],
+          "explanation": "Called by rotation: 1st appointment of A, A, W"
+        },
+        {
+          "n": 2,
+          "token": "W-002",
+          "reason": "CLINICAL_PRIORITY",
+          "slot": null,
+          "before": 1,
+          "after": 1,
+          "eligible": ["A-002", "W-001", "W-002"],
+          "explanation": "Clinical priority (class 1)"
+        },
+        {
+          "n": 3,
+          "token": "A-002",
+          "reason": "ROTATION",
+          "slot": 1,
+          "before": 1,
+          "after": 2,
+          "eligible": ["A-002", "W-001"],
+          "explanation": "Called by rotation: 2nd appointment of A, A, W"
+        },
+        {
+          "n": 4,
+          "token": "W-001",
+          "reason": "ROTATION",
+          "slot": 2,
+          "before": 2,
+          "after": 0,
+          "eligible": ["W-001"],
+          "explanation": "Called by rotation: walk-in turn of A, A, W"
+        },
+        {
+          "n": 5,
+          "token": "W-003",
+          "reason": "ROTATION",
+          "slot": 2,
+          "before": 0,
+          "after": 0,
+          "eligible": ["W-003"],
+          "explanation": "Called by rotation: walk-in turn of A, A, W; appointment turn skipped (no appointments waiting)"
+        }
+      ],
+      "runs": [
+        {
+          "run": "A (doctor 3)",
+          "sessionId": "1cbe8cac-d239-4c7b-b43f-5bfa32345920",
+          "decisionsOverHttp": [
+            {
+              "token": "A-001",
+              "reason": "ROTATION",
+              "rotationSlot": 0,
+              "pointerBefore": 0,
+              "pointerAfter": 1,
+              "policyVersion": 1,
+              "queueVersion": 4,
+              "explanation": "Called by rotation: 1st appointment of A, A, W",
+              "eligibleTokens": ["A-001", "A-002", "W-001"]
+            },
+            {
+              "token": "W-002",
+              "reason": "CLINICAL_PRIORITY",
+              "rotationSlot": null,
+              "pointerBefore": 1,
+              "pointerAfter": 1,
+              "policyVersion": 1,
+              "queueVersion": 9,
+              "explanation": "Clinical priority (class 1)",
+              "eligibleTokens": ["A-002", "W-001", "W-002"]
+            },
+            {
+              "token": "A-002",
+              "reason": "ROTATION",
+              "rotationSlot": 1,
+              "pointerBefore": 1,
+              "pointerAfter": 2,
+              "policyVersion": 1,
+              "queueVersion": 12,
+              "explanation": "Called by rotation: 2nd appointment of A, A, W",
+              "eligibleTokens": ["A-002", "W-001"]
+            },
+            {
+              "token": "W-001",
+              "reason": "ROTATION",
+              "rotationSlot": 2,
+              "pointerBefore": 2,
+              "pointerAfter": 0,
+              "policyVersion": 1,
+              "queueVersion": 15,
+              "explanation": "Called by rotation: walk-in turn of A, A, W",
+              "eligibleTokens": ["W-001"]
+            },
+            {
+              "token": "W-003",
+              "reason": "ROTATION",
+              "rotationSlot": 2,
+              "pointerBefore": 0,
+              "pointerAfter": 0,
+              "policyVersion": 1,
+              "queueVersion": 19,
+              "explanation": "Called by rotation: walk-in turn of A, A, W; appointment turn skipped (no appointments waiting)",
+              "eligibleTokens": ["W-003"]
+            }
+          ],
+          "decisionsFromTable": [
+            {
+              "token": "A-001",
+              "reason": "ROTATION",
+              "rotationSlot": 0,
+              "pointerBefore": 0,
+              "pointerAfter": 1,
+              "policyVersion": 1,
+              "queueVersion": 4,
+              "explanation": "Called by rotation: 1st appointment of A, A, W",
+              "eligibleTokens": ["A-001", "A-002", "W-001"]
+            },
+            {
+              "token": "W-002",
+              "reason": "CLINICAL_PRIORITY",
+              "rotationSlot": null,
+              "pointerBefore": 1,
+              "pointerAfter": 1,
+              "policyVersion": 1,
+              "queueVersion": 9,
+              "explanation": "Clinical priority (class 1)",
+              "eligibleTokens": ["A-002", "W-001", "W-002"]
+            },
+            {
+              "token": "A-002",
+              "reason": "ROTATION",
+              "rotationSlot": 1,
+              "pointerBefore": 1,
+              "pointerAfter": 2,
+              "policyVersion": 1,
+              "queueVersion": 12,
+              "explanation": "Called by rotation: 2nd appointment of A, A, W",
+              "eligibleTokens": ["A-002", "W-001"]
+            },
+            {
+              "token": "W-001",
+              "reason": "ROTATION",
+              "rotationSlot": 2,
+              "pointerBefore": 2,
+              "pointerAfter": 0,
+              "policyVersion": 1,
+              "queueVersion": 15,
+              "explanation": "Called by rotation: walk-in turn of A, A, W",
+              "eligibleTokens": ["W-001"]
+            },
+            {
+              "token": "W-003",
+              "reason": "ROTATION",
+              "rotationSlot": 2,
+              "pointerBefore": 0,
+              "pointerAfter": 0,
+              "policyVersion": 1,
+              "queueVersion": 19,
+              "explanation": "Called by rotation: walk-in turn of A, A, W; appointment turn skipped (no appointments waiting)",
+              "eligibleTokens": ["W-003"]
+            }
+          ],
+          "finalRotationPointer": 0,
+          "doctorOccupiedRefusals": 10
+        },
+        {
+          "run": "B (doctor 4)",
+          "sessionId": "62426c5c-e192-43ec-9f4b-efdebc9c0667",
+          "decisionsOverHttp": [
+            {
+              "token": "A-001",
+              "reason": "ROTATION",
+              "rotationSlot": 0,
+              "pointerBefore": 0,
+              "pointerAfter": 1,
+              "policyVersion": 1,
+              "queueVersion": 4,
+              "explanation": "Called by rotation: 1st appointment of A, A, W",
+              "eligibleTokens": ["A-001", "A-002", "W-001"]
+            },
+            {
+              "token": "W-002",
+              "reason": "CLINICAL_PRIORITY",
+              "rotationSlot": null,
+              "pointerBefore": 1,
+              "pointerAfter": 1,
+              "policyVersion": 1,
+              "queueVersion": 9,
+              "explanation": "Clinical priority (class 1)",
+              "eligibleTokens": ["A-002", "W-001", "W-002"]
+            },
+            {
+              "token": "A-002",
+              "reason": "ROTATION",
+              "rotationSlot": 1,
+              "pointerBefore": 1,
+              "pointerAfter": 2,
+              "policyVersion": 1,
+              "queueVersion": 12,
+              "explanation": "Called by rotation: 2nd appointment of A, A, W",
+              "eligibleTokens": ["A-002", "W-001"]
+            },
+            {
+              "token": "W-001",
+              "reason": "ROTATION",
+              "rotationSlot": 2,
+              "pointerBefore": 2,
+              "pointerAfter": 0,
+              "policyVersion": 1,
+              "queueVersion": 15,
+              "explanation": "Called by rotation: walk-in turn of A, A, W",
+              "eligibleTokens": ["W-001"]
+            },
+            {
+              "token": "W-003",
+              "reason": "ROTATION",
+              "rotationSlot": 2,
+              "pointerBefore": 0,
+              "pointerAfter": 0,
+              "policyVersion": 1,
+              "queueVersion": 19,
+              "explanation": "Called by rotation: walk-in turn of A, A, W; appointment turn skipped (no appointments waiting)",
+              "eligibleTokens": ["W-003"]
+            }
+          ],
+          "decisionsFromTable": [
+            {
+              "token": "A-001",
+              "reason": "ROTATION",
+              "rotationSlot": 0,
+              "pointerBefore": 0,
+              "pointerAfter": 1,
+              "policyVersion": 1,
+              "queueVersion": 4,
+              "explanation": "Called by rotation: 1st appointment of A, A, W",
+              "eligibleTokens": ["A-001", "A-002", "W-001"]
+            },
+            {
+              "token": "W-002",
+              "reason": "CLINICAL_PRIORITY",
+              "rotationSlot": null,
+              "pointerBefore": 1,
+              "pointerAfter": 1,
+              "policyVersion": 1,
+              "queueVersion": 9,
+              "explanation": "Clinical priority (class 1)",
+              "eligibleTokens": ["A-002", "W-001", "W-002"]
+            },
+            {
+              "token": "A-002",
+              "reason": "ROTATION",
+              "rotationSlot": 1,
+              "pointerBefore": 1,
+              "pointerAfter": 2,
+              "policyVersion": 1,
+              "queueVersion": 12,
+              "explanation": "Called by rotation: 2nd appointment of A, A, W",
+              "eligibleTokens": ["A-002", "W-001"]
+            },
+            {
+              "token": "W-001",
+              "reason": "ROTATION",
+              "rotationSlot": 2,
+              "pointerBefore": 2,
+              "pointerAfter": 0,
+              "policyVersion": 1,
+              "queueVersion": 15,
+              "explanation": "Called by rotation: walk-in turn of A, A, W",
+              "eligibleTokens": ["W-001"]
+            },
+            {
+              "token": "W-003",
+              "reason": "ROTATION",
+              "rotationSlot": 2,
+              "pointerBefore": 0,
+              "pointerAfter": 0,
+              "policyVersion": 1,
+              "queueVersion": 19,
+              "explanation": "Called by rotation: walk-in turn of A, A, W; appointment turn skipped (no appointments waiting)",
+              "eligibleTokens": ["W-003"]
+            }
+          ],
+          "finalRotationPointer": 0,
+          "doctorOccupiedRefusals": 10
+        }
+      ],
+      "identicalSequences": {
+        "http": true,
+        "table": true
+      }
+    },
+    "globalInvariantViolations": []
+  },
+  "t2DoctorGuard": {
+    "overlappingSessions": {
+      "doctor": 5,
+      "sessions": 2,
+      "rounds": 20,
+      "racersPerRound": 30,
+      "requests": 600,
+      "ok200": 20,
+      "conflict409DoctorOccupied": 580,
+      "serverErrors": 0,
+      "byStatus": {
+        "200": 20,
+        "409": 580
+      },
+      "invariantViolations": 0,
+      "poller": {
+        "totalPolls": 1606,
+        "maxActiveAllocationsEverSeen": 1
+      },
+      "winnersFromSessionA": 15,
+      "winnersFromSessionB": 5,
+      "latencyMs": {
+        "allRequests": {
+          "n": 600,
+          "p50": 137.8,
+          "p95": 293.6,
+          "max": 389.4
+        },
+        "winningRequests": {
+          "n": 20,
+          "p50": 77.4,
+          "p95": 160.1
+        }
+      },
+      "perRound": [
+        {
+          "round": 1,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "B",
+          "winnerToken": "W-001",
+          "pollsDuringRace": 123,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 289.6,
+            "p95": 355.9
+          }
+        },
+        {
+          "round": 2,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-001",
+          "pollsDuringRace": 106,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 241.5,
+            "p95": 302.6
+          }
+        },
+        {
+          "round": 3,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-002",
+          "pollsDuringRace": 109,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 193.8,
+            "p95": 280.7
+          }
+        },
+        {
+          "round": 4,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-003",
+          "pollsDuringRace": 145,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 245,
+            "p95": 389.1
+          }
+        },
+        {
+          "round": 5,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-004",
+          "pollsDuringRace": 96,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 196.4,
+            "p95": 259.1
+          }
+        },
+        {
+          "round": 6,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-005",
+          "pollsDuringRace": 87,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 171.4,
+            "p95": 224.4
+          }
+        },
+        {
+          "round": 7,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-006",
+          "pollsDuringRace": 77,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 173.7,
+            "p95": 223.3
+          }
+        },
+        {
+          "round": 8,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "B",
+          "winnerToken": "W-002",
+          "pollsDuringRace": 59,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 112.4,
+            "p95": 155.6
+          }
+        },
+        {
+          "round": 9,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-007",
+          "pollsDuringRace": 84,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 127.6,
+            "p95": 171.5
+          }
+        },
+        {
+          "round": 10,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-008",
+          "pollsDuringRace": 50,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 119.7,
+            "p95": 156.9
+          }
+        },
+        {
+          "round": 11,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-009",
+          "pollsDuringRace": 59,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 110.6,
+            "p95": 159
+          }
+        },
+        {
+          "round": 12,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-010",
+          "pollsDuringRace": 75,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 104.1,
+            "p95": 168.8
+          }
+        },
+        {
+          "round": 13,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "B",
+          "winnerToken": "W-003",
+          "pollsDuringRace": 64,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 85.6,
+            "p95": 150
+          }
+        },
+        {
+          "round": 14,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-011",
+          "pollsDuringRace": 54,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 121.1,
+            "p95": 158.3
+          }
+        },
+        {
+          "round": 15,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-012",
+          "pollsDuringRace": 81,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 111.4,
+            "p95": 169.1
+          }
+        },
+        {
+          "round": 16,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-013",
+          "pollsDuringRace": 66,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 108.3,
+            "p95": 151.3
+          }
+        },
+        {
+          "round": 17,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "B",
+          "winnerToken": "W-004",
+          "pollsDuringRace": 68,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 145.5,
+            "p95": 193.5
+          }
+        },
+        {
+          "round": 18,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-014",
+          "pollsDuringRace": 70,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 112.2,
+            "p95": 180
+          }
+        },
+        {
+          "round": 19,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-015",
+          "pollsDuringRace": 78,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 126.7,
+            "p95": 175.9
+          }
+        },
+        {
+          "round": 20,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "B",
+          "winnerToken": "W-005",
+          "pollsDuringRace": 55,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 79.4,
+            "p95": 115.4
+          }
+        }
+      ]
+    },
+    "transitionRace": {
+      "doctor": 6,
+      "rounds": 40,
+      "requestsPerRound": 9,
+      "requests": 360,
+      "byStatus": {
+        "200": 99,
+        "409": 261
+      },
+      "byCode": {
+        "DOCTOR_OCCUPIED": 84,
+        "INVALID_TRANSITION": 177
+      },
+      "serverErrors": 0,
+      "sequenceViolations": 0,
+      "finalStateDistribution": {
+        "skipped+next-called": 15,
+        "completed+next-called": 21,
+        "completed": 2,
+        "in_service": 2
+      },
+      "perRound": [
+        {
+          "round": 1,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 2,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 3,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 4,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 5,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 6,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 7,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 8,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 9,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 10,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 11,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 12,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 13,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 0,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 14,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 15,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 16,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 17,
+          "finalState": "in_service",
+          "versionBump": 1,
+          "callNextSucceeded": 0,
+          "statuses": {
+            "200": 1,
+            "409": 8
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 18,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 19,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 20,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 21,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 22,
+          "finalState": "in_service",
+          "versionBump": 1,
+          "callNextSucceeded": 0,
+          "statuses": {
+            "200": 1,
+            "409": 8
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 23,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 24,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 25,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 26,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 27,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 28,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 0,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 29,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 30,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 31,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 32,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 33,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 34,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 35,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 36,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 37,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 38,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 39,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 40,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        }
+      ]
+    },
+    "pauseRace": {
+      "doctor": 7,
+      "rounds": 20,
+      "requestsPerRound": 12,
+      "roundsWhereACallWonBeforeThePause": 16,
+      "roundsWhereThePauseWonFirst": 4,
+      "successfulCallsSerialisedAfterThePause": 0,
+      "callsAfterCommittedPause": 120,
+      "allRefusedSessionNotCallable": true,
+      "perRound": [
+        {
+          "round": 1,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 2,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 3,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 4,
+          "callsThatWonBeforePause": 0,
+          "pauseVersion": 6,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "SESSION_NOT_CALLABLE": 10,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 5,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 6,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 7,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 8,
+          "callsThatWonBeforePause": 0,
+          "pauseVersion": 6,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "SESSION_NOT_CALLABLE": 10,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 9,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 10,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 11,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 12,
+          "callsThatWonBeforePause": 0,
+          "pauseVersion": 6,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "INVALID_TRANSITION": 1,
+            "SESSION_NOT_CALLABLE": 10
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 13,
+          "callsThatWonBeforePause": 0,
+          "pauseVersion": 6,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "INVALID_TRANSITION": 1,
+            "SESSION_NOT_CALLABLE": 10
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 14,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 15,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 16,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 17,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 18,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 19,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 20,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": 7,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 9,
+            "INVALID_TRANSITION": 1
+          },
+          "callsAfterCommittedPause": 6
+        }
+      ]
+    },
+    "sameKeyCallNext": {
+      "doctor": 8,
+      "trials": 5,
+      "perTrial": [
+        {
+          "trial": 1,
+          "requests": 10,
+          "ok200": 10,
+          "distinctEntries": 1,
+          "decisionRows": 1
+        },
+        {
+          "trial": 2,
+          "requests": 10,
+          "ok200": 10,
+          "distinctEntries": 1,
+          "decisionRows": 1
+        },
+        {
+          "trial": 3,
+          "requests": 10,
+          "ok200": 10,
+          "distinctEntries": 1,
+          "decisionRows": 1
+        },
+        {
+          "trial": 4,
+          "requests": 10,
+          "ok200": 10,
+          "distinctEntries": 1,
+          "decisionRows": 1
+        },
+        {
+          "trial": 5,
+          "requests": 10,
+          "ok200": 10,
+          "distinctEntries": 1,
+          "decisionRows": 1
+        }
+      ]
+    },
+    "globalInvariantViolations": []
+  }
+}

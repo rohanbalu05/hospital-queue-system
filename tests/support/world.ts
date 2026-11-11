@@ -328,3 +328,114 @@ export function tally(results: ApiResponse[]): Tally {
   }
   return { total: results.length, byStatus, byCode, serverErrors };
 }
+
+// ---------------------------------------------------------------------------------------------------
+// Queue-phase helpers (T2, T3, e2e): sessions that are running NOW, doctors' own logins, arrivals
+// ---------------------------------------------------------------------------------------------------
+
+export const doctorEmail = (n: number): string => (n === 1 ? 'doctor@hqms.test' : `doctor${n}@hqms.test`);
+
+export interface RunningSessionSpec {
+  doctor: number;
+  /** Minutes relative to now at which the session starts (negative = already started). */
+  startOffsetMin: number;
+  durationMin?: number;
+  label?: 'morning' | 'afternoon' | 'evening';
+  booked?: number;
+  walkin?: number;
+}
+
+/**
+ * A session dated TODAY (hospital-local) that starts `startOffsetMin` minutes from now, rounded down to the minute.
+ * A unique-start clash (409) shifts the start by one more minute and retries.
+ */
+export async function makeRunningSession(admin: ApiClient, spec: RunningSessionSpec): Promise<MadeSession> {
+  const durationMs = (spec.durationMin ?? 240) * 60_000;
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const startMs = Math.floor((Date.now() + (spec.startOffsetMin - attempt) * 60_000) / 60_000) * 60_000;
+    const startsAt = new Date(startMs).toISOString();
+    const endsAt = new Date(startMs + durationMs).toISOString();
+    const date = istDate(new Date(startMs));
+    const res = await admin.post(
+      '/sessions',
+      {
+        doctorId: doctorId(spec.doctor),
+        sessionDate: date,
+        label: spec.label ?? 'afternoon',
+        startsAt,
+        endsAt,
+        bookedCapacity: spec.booked ?? 10,
+        walkinCapacity: spec.walkin ?? 5,
+      },
+      null,
+    );
+    if (res.status === 201) return { id: res.body.id, doctor: spec.doctor, date, startsAt, endsAt };
+    if (res.status !== 409)
+      throw new Error(`could not create running session: ${res.status} ${JSON.stringify(res.body)}`);
+  }
+  throw new Error('could not find a free (doctor, start) pair for a running session');
+}
+
+/** Admit walk-ins one after another (so token order equals array order). Returns the ArrivalResult bodies. */
+export async function admitWalkIns(reception: ApiClient, sessionId: string, patientIds: string[]): Promise<any[]> {
+  const out: any[] = [];
+  for (const patientId of patientIds) {
+    const res = await reception.post(`/sessions/${sessionId}/walk-ins`, { patientId });
+    if (res.status !== 201) throw new Error(`walk-in admission failed: ${res.status} ${JSON.stringify(res.body)}`);
+    out.push(res.body);
+  }
+  return out;
+}
+
+/** Open a scheduled session (reception, doctor or admin). */
+export async function openSession(client: ApiClient, sessionId: string): Promise<void> {
+  const res = await client.post(`/sessions/${sessionId}/open`, {});
+  if (res.status !== 200) throw new Error(`could not open session: ${res.status} ${JSON.stringify(res.body)}`);
+}
+
+/** start + complete the entry that call-next returned (doctor client). */
+export async function serveEntry(doctor: ApiClient, entry: { visitId: string; version: number }): Promise<void> {
+  const started = await doctor.post(`/visits/${entry.visitId}/start`, {});
+  if (started.status !== 200) throw new Error(`start failed: ${started.status} ${JSON.stringify(started.body)}`);
+  const done = await doctor.post(`/visits/${entry.visitId}/complete`, {});
+  if (done.status !== 200) throw new Error(`complete failed: ${done.status} ${JSON.stringify(done.body)}`);
+}
+
+/**
+ * Poll the number of called or in-service queue entries of one doctor over its OWN connection while a race
+ * runs. `stop()` returns how often it looked and the highest count it ever saw (the invariant is <= 1).
+ */
+export function pollActiveAllocations(
+  connectionString: string,
+  doctor: string,
+): { stop(): Promise<{ polls: number; max: number }> } {
+  let running = true;
+  let polls = 0;
+  let max = 0;
+  const done = (async () => {
+    const client = new pg.Client({ connectionString });
+    await client.connect();
+    try {
+      while (running) {
+        const r = await client.query<{ n: number }>(
+          `SELECT count(*)::int AS n FROM queue_entries WHERE doctor_id = $1 AND state IN ('called','in_service')`,
+          [doctor],
+        );
+        polls += 1;
+        max = Math.max(max, r.rows[0]?.n ?? 0);
+        await new Promise((r2) => setTimeout(r2, 1));
+      }
+    } finally {
+      await client.end();
+    }
+  })();
+  return {
+    async stop() {
+      running = false;
+      await done;
+      return { polls, max };
+    },
+  };
+}
+
+export const round1 = (n: number): number => Math.round(n * 10) / 10;

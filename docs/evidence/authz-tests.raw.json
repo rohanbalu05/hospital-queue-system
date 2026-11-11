@@ -20,7 +20,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "GET /appointments/4798317d-7ada-418b-968d-f7159077c2bc",
+      "request": "GET /appointments/b7baeb75-421b-4599-86b2-ba80d6d4672d",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -30,7 +30,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "GET /appointments/4798317D-7ADA-418B-968D-F7159077C2BC",
+      "request": "GET /appointments/B7BAEB75-421B-4599-86B2-BA80D6D4672D",
       "expected": "403|404 (upper-case id)",
       "expectDenied": true,
       "status": 404,
@@ -50,7 +50,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "GET /appointments?patientId=10039ba3-f268-5775-b674-7d8adfb8f79b&sessionId=21c1117f-ef95-44ab-b120-0a4c36f9ffa5",
+      "request": "GET /appointments?patientId=10039ba3-f268-5775-b674-7d8adfb8f79b&sessionId=a71072a9-8c87-4ef0-9384-4211a2a16141",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -70,7 +70,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "POST /appointments/4798317d-7ada-418b-968d-f7159077c2bc/cancel",
+      "request": "POST /appointments/b7baeb75-421b-4599-86b2-ba80d6d4672d/cancel",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -80,7 +80,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "POST /appointments/4798317d-7ada-418b-968d-f7159077c2bc/reschedule",
+      "request": "POST /appointments/b7baeb75-421b-4599-86b2-ba80d6d4672d/reschedule",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -90,7 +90,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "POST /appointments/4798317d-7ada-418b-968d-f7159077c2bc/check-in",
+      "request": "POST /appointments/b7baeb75-421b-4599-86b2-ba80d6d4672d/check-in",
       "expected": "403|404 (staff route)",
       "expectDenied": true,
       "status": 403,
@@ -110,7 +110,7 @@
     {
       "category": "cross-patient",
       "actor": "patient2@ -> patient",
-      "request": "GET /appointments/880506bc-c28b-42c5-bbbd-742a0f8bd9f0",
+      "request": "GET /appointments/e4858146-2bf9-47a7-863c-47aafa275519",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -120,7 +120,7 @@
     {
       "category": "cross-patient",
       "actor": "patient2@ -> patient",
-      "request": "GET /appointments/880506BC-C28B-42C5-BBBD-742A0F8BD9F0",
+      "request": "GET /appointments/E4858146-2BF9-47A7-863C-47AAFA275519",
       "expected": "403|404 (upper-case id)",
       "expectDenied": true,
       "status": 404,
@@ -140,7 +140,7 @@
     {
       "category": "cross-patient",
       "actor": "patient2@ -> patient",
-      "request": "GET /appointments?patientId=f6f9e8b9-0675-53e0-9b3b-3c1c8ac5e194&sessionId=159793b2-128f-446b-99ce-17e1df8d88f2",
+      "request": "GET /appointments?patientId=f6f9e8b9-0675-53e0-9b3b-3c1c8ac5e194&sessionId=f22f8339-bd8b-4681-ac3f-a6ea280aac6b",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -160,7 +160,7 @@
     {
       "category": "cross-patient",
       "actor": "patient2@ -> patient",
-      "request": "POST /appointments/880506bc-c28b-42c5-bbbd-742a0f8bd9f0/cancel",
+      "request": "POST /appointments/e4858146-2bf9-47a7-863c-47aafa275519/cancel",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -170,7 +170,7 @@
     {
       "category": "cross-patient",
       "actor": "patient2@ -> patient",
-      "request": "POST /appointments/880506bc-c28b-42c5-bbbd-742a0f8bd9f0/reschedule",
+      "request": "POST /appointments/e4858146-2bf9-47a7-863c-47aafa275519/reschedule",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -180,7 +180,7 @@
     {
       "category": "cross-patient",
       "actor": "patient2@ -> patient",
-      "request": "POST /appointments/880506bc-c28b-42c5-bbbd-742a0f8bd9f0/check-in",
+      "request": "POST /appointments/e4858146-2bf9-47a7-863c-47aafa275519/check-in",
       "expected": "403|404 (staff route)",
       "expectDenied": true,
       "status": 403,
@@ -200,7 +200,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "POST /appointments/4798317d-7ada-418b-968d-f7159077c2bc/reschedule",
+      "request": "POST /appointments/b7baeb75-421b-4599-86b2-ba80d6d4672d/reschedule",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -270,7 +270,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "GET /sessions/04852123-403c-4ba1-9b63-14860766221b/queue",
+      "request": "GET /sessions/b2cf290e-ebc0-47bc-96b7-6b32ebc7959d/queue",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -280,7 +280,7 @@
     {
       "category": "positive-control",
       "actor": "patient@",
-      "request": "GET /appointments/880506bc-c28b-42c5-bbbd-742a0f8bd9f0",
+      "request": "GET /appointments/e4858146-2bf9-47a7-863c-47aafa275519",
       "expected": "200 (own appointment)",
       "expectDenied": false,
       "status": 200,
@@ -310,7 +310,7 @@
     {
       "category": "positive-control",
       "actor": "patient2@",
-      "request": "GET /appointments/4798317d-7ada-418b-968d-f7159077c2bc",
+      "request": "GET /appointments/b7baeb75-421b-4599-86b2-ba80d6d4672d",
       "expected": "200 (own appointment)",
       "expectDenied": false,
       "status": 200,
@@ -2380,7 +2380,7 @@
     {
       "category": "role-matrix",
       "actor": "patient@",
-      "request": "POST /sessions/21c1117f-ef95-44ab-b120-0a4c36f9ffa5/walk-ins",
+      "request": "POST /sessions/a71072a9-8c87-4ef0-9384-4211a2a16141/walk-ins",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2390,7 +2390,7 @@
     {
       "category": "role-matrix",
       "actor": "patient@",
-      "request": "POST /appointments/880506bc-c28b-42c5-bbbd-742a0f8bd9f0/check-in",
+      "request": "POST /appointments/e4858146-2bf9-47a7-863c-47aafa275519/check-in",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2400,7 +2400,7 @@
     {
       "category": "role-matrix",
       "actor": "patient@",
-      "request": "PATCH /sessions/21c1117f-ef95-44ab-b120-0a4c36f9ffa5/capacity",
+      "request": "PATCH /sessions/a71072a9-8c87-4ef0-9384-4211a2a16141/capacity",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2440,7 +2440,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "GET /appointments/880506bc-c28b-42c5-bbbd-742a0f8bd9f0",
+      "request": "GET /appointments/e4858146-2bf9-47a7-863c-47aafa275519",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2450,7 +2450,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "POST /appointments/880506bc-c28b-42c5-bbbd-742a0f8bd9f0/cancel",
+      "request": "POST /appointments/e4858146-2bf9-47a7-863c-47aafa275519/cancel",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2460,7 +2460,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "POST /appointments/880506bc-c28b-42c5-bbbd-742a0f8bd9f0/reschedule",
+      "request": "POST /appointments/e4858146-2bf9-47a7-863c-47aafa275519/reschedule",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2470,7 +2470,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "POST /appointments/880506bc-c28b-42c5-bbbd-742a0f8bd9f0/check-in",
+      "request": "POST /appointments/e4858146-2bf9-47a7-863c-47aafa275519/check-in",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2480,7 +2480,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "POST /sessions/21c1117f-ef95-44ab-b120-0a4c36f9ffa5/walk-ins",
+      "request": "POST /sessions/a71072a9-8c87-4ef0-9384-4211a2a16141/walk-ins",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2500,7 +2500,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "GET /sessions/21c1117f-ef95-44ab-b120-0a4c36f9ffa5",
+      "request": "GET /sessions/a71072a9-8c87-4ef0-9384-4211a2a16141",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2510,7 +2510,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "GET /sessions/21c1117f-ef95-44ab-b120-0a4c36f9ffa5/slots",
+      "request": "GET /sessions/a71072a9-8c87-4ef0-9384-4211a2a16141/slots",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2520,7 +2520,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "GET /appointments?sessionId=21c1117f-ef95-44ab-b120-0a4c36f9ffa5",
+      "request": "GET /appointments?sessionId=a71072a9-8c87-4ef0-9384-4211a2a16141",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2530,7 +2530,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "POST /appointments/4798317d-7ada-418b-968d-f7159077c2bc/reschedule",
+      "request": "POST /appointments/b7baeb75-421b-4599-86b2-ba80d6d4672d/reschedule",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2560,7 +2560,7 @@
     {
       "category": "assignment",
       "actor": "doctor@ (doctor 1)",
-      "request": "GET /appointments/4798317d-7ada-418b-968d-f7159077c2bc",
+      "request": "GET /appointments/b7baeb75-421b-4599-86b2-ba80d6d4672d",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2570,7 +2570,7 @@
     {
       "category": "assignment",
       "actor": "doctor@ (doctor 1)",
-      "request": "GET /sessions/159793b2-128f-446b-99ce-17e1df8d88f2",
+      "request": "GET /sessions/f22f8339-bd8b-4681-ac3f-a6ea280aac6b",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2580,7 +2580,7 @@
     {
       "category": "assignment",
       "actor": "doctor@ (doctor 1)",
-      "request": "GET /appointments?sessionId=159793b2-128f-446b-99ce-17e1df8d88f2",
+      "request": "GET /appointments?sessionId=f22f8339-bd8b-4681-ac3f-a6ea280aac6b",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -2590,7 +2590,7 @@
     {
       "category": "positive-control",
       "actor": "reception3@",
-      "request": "GET /appointments/4798317d-7ada-418b-968d-f7159077c2bc",
+      "request": "GET /appointments/b7baeb75-421b-4599-86b2-ba80d6d4672d",
       "expected": "200 (own doctor)",
       "expectDenied": false,
       "status": 200,
@@ -2600,7 +2600,7 @@
     {
       "category": "positive-control",
       "actor": "doctor@ (doctor 1)",
-      "request": "GET /appointments/880506bc-c28b-42c5-bbbd-742a0f8bd9f0",
+      "request": "GET /appointments/e4858146-2bf9-47a7-863c-47aafa275519",
       "expected": "200 (own doctor)",
       "expectDenied": false,
       "status": 200,
@@ -2610,7 +2610,7 @@
     {
       "category": "positive-control",
       "actor": "admin@",
-      "request": "GET /appointments/4798317d-7ada-418b-968d-f7159077c2bc",
+      "request": "GET /appointments/b7baeb75-421b-4599-86b2-ba80d6d4672d",
       "expected": "200 (all doctors)",
       "expectDenied": false,
       "status": 200,
