@@ -21,6 +21,14 @@ pnpm dev    # api :3000, worker, web :5173
 Open http://localhost:5173. No API keys are needed: login, storage, OCR and the assistant use local or fake adapters by
 default (see `.env.example`). Check a running api with `pnpm smoke`.
 
+### Windows one-click demo
+
+Install once (PowerShell): `winget install -e --id OpenJS.NodeJS.LTS`, `winget install -e --id PostgreSQL.PostgreSQL.16`
+(superuser password `postgres`, port 5432), then `npm install -g pnpm@10.28.0`. Clone to a short path such as `C:\dev\`
+and double-click **`start-demo.bat`**: it installs packages, resets the demo data to today, starts api + worker + web
+and opens http://localhost:5173. Outside 09:00-17:30 IST it also opens a session for `doctor@hqms.test` that is running
+now (`scripts/demo-session-now.mjs`), so the full flow works at any hour.
+
 ### GitHub Codespaces
 
 Create a codespace on this branch (Code → Codespaces). `.devcontainer/` builds a Node 22 + pnpm + psql image and runs
