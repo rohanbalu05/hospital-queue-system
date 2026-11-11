@@ -8,6 +8,7 @@
  * GET /reports/operations must separate Phase 1 targets from measured rows (FR-15-b).
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import pg from 'pg';
 import { type ApiClient } from '../support/client.js';
 import { futureIso } from '../support/followup.js';
 import { recordResult, T6_RESULTS_FILE } from '../support/results.js';
@@ -16,6 +17,7 @@ import {
   book,
   checkGlobalInvariants,
   closePool,
+  databaseUrl,
   doctorId,
   loginAs,
   makeFutureSession,
@@ -120,6 +122,27 @@ describe('T6.1 drive one full visit through the API', () => {
     });
     expect(task.status, JSON.stringify(task.body)).toBe(201);
     ids['task'] = task.body.id;
+    // D-028: a doctor-created task without ownerId gets a DEFAULT owner (a follow-up user assigned to this doctor,
+    // fewest open tasks first). Resolve, cancel and the return booking are then done by THAT owner.
+    expect(task.body.ownerId, 'default owner assigned').toBeTruthy();
+    const owner = (
+      await sqlRows(
+        `SELECT u.id, u.email, u.role,
+                EXISTS (SELECT 1 FROM staff_assignments sa WHERE sa.user_id = u.id AND sa.doctor_id = $2) AS assigned
+           FROM users u WHERE u.id = $1`,
+        [task.body.ownerId, doctorId(DOCTOR)],
+      )
+    )[0];
+    expect(owner?.['role']).toBe('followup');
+    expect(owner?.['assigned'], 'the default owner is assigned to the visit doctor').toBe(true);
+    followup = await loginAs(owner?.['email'] as string);
+    followupUserId = owner?.['id'] as string;
+    record['defaultOwner'] = { role: 'followup', assignedToDoctor: true };
+    // a different follow-up user (not the owner, unowned-takeover does not apply) is refused
+    const other = await loginAs(
+      owner?.['email'] === 'followup@hqms.test' ? 'followup3@hqms.test' : 'followup@hqms.test',
+    );
+    expect((await other.post(`/follow-up-tasks/${ids['task']}/acknowledge`, {})).status).toBe(403);
     expect((await followup.post(`/follow-up-tasks/${ids['task']}/acknowledge`, {})).status).toBe(200);
     const ret = await followup.post(`/follow-up-tasks/${ids['task']}/return-booking`, { sessionId: returnSession.id });
     expect(ret.status, JSON.stringify(ret.body)).toBe(201);
@@ -222,6 +245,7 @@ describe('T6.2 the audit trail alone reconstructs the visit (FR-15-a)', () => {
     const created = one('follow_up.create', ids['task']);
     expect(created.actorRole).toBe('doctor');
     expect(created.actorId).toBe(doctorUserId);
+    expect(created.next.ownerId, 'the audit row records the default owner (D-028)').toBe(followupUserId);
     const ack = one('follow_up.acknowledge', ids['task']);
     expect(ack.actorRole).toBe('followup');
     expect(ack.actorId).toBe(followupUserId);
@@ -309,11 +333,42 @@ describe('T6.2 the audit trail alone reconstructs the visit (FR-15-a)', () => {
       'follow_up.return_booking',
       'follow_up.resolve',
     ]);
-    // Observation, not an assertion about the app: can the application database role rewrite history? (rolled back)
+    // Migration 0006: the audit trail is append-only at database level. UPDATE and DELETE of a row of this visit fail.
     const probe = await sqlRows(
       `SELECT count(*)::int AS triggers FROM pg_trigger WHERE tgrelid = 'audit_events'::regclass AND NOT tgisinternal`,
     );
     record['auditTableTriggers'] = probe[0]?.['triggers'];
+    expect(probe[0]?.['triggers']).toBeGreaterThanOrEqual(1);
+    const target = trail[0];
+    const beforeRow = (
+      await sqlRows(`SELECT operation, reason, actor_id::text AS actor_id FROM audit_events WHERE id = $1`, [target.id])
+    )[0];
+    const client = new pg.Client({ connectionString: databaseUrl() });
+    await client.connect();
+    const outcomes: Record<string, string> = {};
+    try {
+      for (const [label, text] of [
+        ['update reason', `UPDATE audit_events SET reason = 'tampered' WHERE id = $1`],
+        ['update actor', `UPDATE audit_events SET actor_id = NULL WHERE id = $1`],
+        ['delete row', `DELETE FROM audit_events WHERE id = $1`],
+      ] as Array<[string, string]>) {
+        let message = '';
+        try {
+          await client.query(text, [target.id]);
+        } catch (e) {
+          message = e instanceof Error ? e.message : String(e);
+        }
+        outcomes[label] = message || 'SUCCEEDED';
+        expect(message, label).toMatch(/append-only/);
+      }
+    } finally {
+      await client.end();
+    }
+    const afterRow = (
+      await sqlRows(`SELECT operation, reason, actor_id::text AS actor_id FROM audit_events WHERE id = $1`, [target.id])
+    )[0];
+    expect(afterRow).toEqual(beforeRow);
+    record['auditAppendOnly'] = outcomes;
   });
 });
 

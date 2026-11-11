@@ -12,7 +12,10 @@
  *  4. supersede: v2 replaces v1 as the only citeable source, v1 is marked superseded, a direct SQL UPDATE or DELETE
  *     of a version fails (trigger);
  *  5. unsupported questions (dose change, priority, injection, scheduling) escalate to an OWNED task with a due time
- *     and change nothing in queue / appointment / capacity tables;
+ *     and change nothing in queue / appointment / capacity tables. D-028: at most 3 OPEN assistant_escalation tasks per
+ *     patient (ASSISTANT_MAX_OPEN_ESCALATIONS, default 3); further questions are still escalated and recorded but join
+ *     the most recent open task (same task id, question appended to its detail); a provider-independent deny-list
+ *     escalates dose changes, priority, booking and the like BEFORE any provider call, even with verified context;
  *  6. a second patient cannot read the first patient's document, file, instructions, conversation or tasks.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -68,7 +71,17 @@ let v1: any;
 let v2: any;
 let conversationId: string;
 const assistantAnswers: string[] = [];
+/** Distinct escalation task ids of patient 1, in order of first appearance. */
 const escalationTaskIds: string[] = [];
+/** How many escalated answers patient 1 received (each is one assistant.escalate audit row). */
+let p1Escalations = 0;
+/** ASSISTANT_MAX_OPEN_ESCALATIONS default (the harness does not override it). */
+const ESCALATION_CAP = 3;
+
+function noteEscalation(taskId: string): void {
+  p1Escalations += 1;
+  if (!escalationTaskIds.includes(taskId)) escalationTaskIds.push(taskId);
+}
 
 const sql = (text: string): Promise<Array<{ h: string | null }>> =>
   sqlRows(text) as Promise<Array<{ h: string | null }>>;
@@ -196,13 +209,15 @@ describe('T4.2 unverified text never reaches the assistant', () => {
       expect(a.outcome, q).toBe('escalated');
       expect(a.citations).toEqual([]);
       expect(a.escalation?.taskId).toBeTruthy();
-      escalationTaskIds.push(a.escalation.taskId);
+      noteEscalation(a.escalation.taskId);
       for (const phrase of DRAFT_ONLY) expect(a.answer).not.toContain(phrase);
     }
     const after = (await sqlRows(`SELECT count(*)::int AS n FROM follow_up_tasks WHERE patient_id = $1`, [P1]))[0]?.[
       'n'
     ];
-    expect(after - before).toBe(questions.length);
+    // tasks created = min(questions, cap): three questions, cap 3 -> three distinct owned tasks (D-028)
+    expect(after - before).toBe(Math.min(questions.length, ESCALATION_CAP));
+    expect(new Set(escalationTaskIds).size).toBe(Math.min(questions.length, ESCALATION_CAP));
     // the stored assistant messages (history) carry no draft text either
     const msgs = await patient1.get(`/assistant/conversations/${conversationId}/messages`);
     expect(msgs.status).toBe(200);
@@ -249,7 +264,11 @@ describe('T4.2 unverified text never reaches the assistant', () => {
 
     const a1 = await ask(patient1, 'How many times a day do I take paracetamol?', conversationId);
     expect(a1.outcome).toBe('answered');
-    expect(a1.citations).toEqual([expect.objectContaining({ instructionVersionId: v1.id, title: 'Fever care plan', version: 1 })]);
+    expect(a1.citations).toEqual([
+      expect.objectContaining({ instructionVersionId: v1.id, title: 'Fever care plan', version: 1 }),
+    ]);
+    // D-028: the citation carries when the version was verified
+    expect(new Date(a1.citations[0].verifiedAt).getTime()).toBe(new Date(v1.verifiedAt).getTime());
     expect(a1.answer).toContain('version 1');
     expect(a1.answer).toContain('three times a day');
 
@@ -257,7 +276,10 @@ describe('T4.2 unverified text never reaches the assistant', () => {
     const a2 = await ask(patient1, 'What about pantoprazole before breakfast?', conversationId);
     expect(a2.outcome).toBe('escalated');
     expect(a2.citations).toEqual([]);
-    escalationTaskIds.push(a2.escalation.taskId);
+    // P1 is already at the cap of 3 open escalations: this question is escalated and recorded, but JOINS the latest one
+    expect(a2.escalation.taskId).toBe(escalationTaskIds.at(-1));
+    noteEscalation(a2.escalation.taskId);
+    expect(escalationTaskIds).toHaveLength(ESCALATION_CAP);
 
     for (const text of assistantAnswers) for (const phrase of DRAFT_ONLY) expect(text).not.toContain(phrase);
 
@@ -368,67 +390,131 @@ describe('T4.4 unsupported requests reach staff as owned tasks and change nothin
     'Cancel my appointment',
   ];
 
-  it.each(unsupported)('"%s" escalates to an owned task with a due time, zero side effects', async (question) => {
-    const beforeCore = await coreFingerprint(sql);
-    const beforeAppts = await sqlRows(`SELECT count(*)::int AS n FROM appointments WHERE patient_id = $1`, [P1]);
-    const t0 = Date.now();
-    const a = await ask(patient1, question, conversationId);
-    expect(a.outcome).toBe('escalated');
-    expect(a.citations).toEqual([]);
-    expect(a.escalation.taskId).toBeTruthy();
-    expect(a.answer).toMatch(/care team/);
-    // due in about 24 h from now
-    const dueMs = new Date(a.escalation.dueAt).getTime() - t0;
-    expect(dueMs).toBeGreaterThan(23 * 3_600_000);
-    expect(dueMs).toBeLessThan(25 * 3_600_000);
+  // Patient 1 is already at the cap of 3 open escalations (T4.2), so every question below is escalated, recorded and
+  // owned, and joins the latest open task rather than opening a fourth (D-028).
+  it.each(unsupported)(
+    '"%s" escalates to an owned task with a due time (joining the latest open task at the cap), zero side effects',
+    async (question) => {
+      const beforeCore = await coreFingerprint(sql);
+      const beforeAppts = await sqlRows(`SELECT count(*)::int AS n FROM appointments WHERE patient_id = $1`, [P1]);
+      const beforeTasks = (
+        await sqlRows(`SELECT count(*)::int AS n FROM follow_up_tasks WHERE patient_id = $1`, [P1])
+      )[0]?.['n'];
+      const t0 = Date.now();
+      const a = await ask(patient1, question, conversationId);
+      expect(a.outcome).toBe('escalated');
+      expect(a.citations).toEqual([]);
+      expect(a.escalation.taskId).toBeTruthy();
+      expect(a.escalation.taskId, 'joins the most recent open task').toBe(escalationTaskIds.at(-1));
+      expect(a.answer).toMatch(/care team/);
+      // due about 24 h after the task was OPENED (a joined question keeps the task's due time): never in the past
+      const dueMs = new Date(a.escalation.dueAt).getTime() - t0;
+      expect(dueMs).toBeGreaterThan(20 * 3_600_000);
+      expect(dueMs).toBeLessThan(25 * 3_600_000);
 
-    const task = await followup.get(`/follow-up-tasks/${a.escalation.taskId}`);
-    expect(task.status).toBe(200);
-    expect(task.body.kind).toBe('assistant_escalation');
-    expect(task.body.status).toBe('open');
-    expect(
-      task.body.ownerId,
-      'a follow-up user is assigned to the patient doctor, so the task has an owner',
-    ).toBeTruthy();
-    expect(task.body.detail).toBe(question);
-    expect(task.body.patientId).toBe(P1);
-    escalationTaskIds.push(a.escalation.taskId);
+      const task = await followup.get(`/follow-up-tasks/${a.escalation.taskId}`);
+      expect(task.status).toBe(200);
+      expect(task.body.kind).toBe('assistant_escalation');
+      expect(task.body.status).toBe('open');
+      expect(
+        task.body.ownerId,
+        'a follow-up user is assigned to the patient doctor, so the task has an owner',
+      ).toBeTruthy();
+      expect(task.body.detail, 'the task detail lists this question').toContain(question);
+      expect(task.body.patientId).toBe(P1);
+      noteEscalation(a.escalation.taskId);
 
-    // The queue, appointments, visits and capacity are byte-for-byte unchanged.
-    expect(await coreFingerprint(sql)).toBe(beforeCore);
-    const afterAppts = await sqlRows(`SELECT count(*)::int AS n FROM appointments WHERE patient_id = $1`, [P1]);
-    expect(afterAppts[0]?.['n']).toBe(beforeAppts[0]?.['n']);
+      // no new task was created, and the queue, appointments, visits and capacity are byte-for-byte unchanged
+      expect(
+        (await sqlRows(`SELECT count(*)::int AS n FROM follow_up_tasks WHERE patient_id = $1`, [P1]))[0]?.['n'],
+      ).toBe(beforeTasks);
+      expect(await coreFingerprint(sql)).toBe(beforeCore);
+      const afterAppts = await sqlRows(`SELECT count(*)::int AS n FROM appointments WHERE patient_id = $1`, [P1]);
+      expect(afterAppts[0]?.['n']).toBe(beforeAppts[0]?.['n']);
+    },
+  );
+
+  it('the shared task lists every unsupported question the patient asked while at the cap', async () => {
+    const taskId = escalationTaskIds.at(-1) as string;
+    const detail = (await followup.get(`/follow-up-tasks/${taskId}`)).body.detail as string;
+    for (const q of unsupported) expect(detail).toContain(q);
+    record['sharedTaskDetailListsQuestions'] = unsupported.length;
   });
 
-  it('a question that only shares a weak word with the verified text is still bounded: current version cited, no side effects', async () => {
-    // Observation (reported in the evidence): the fake provider matches on any shared content word, so
-    // "... give me a new one" overlaps "one tablet" and is answered by quoting v2. The safety property is what we assert.
+  it('a verified-context question that asks for a dose change is escalated by the deny-list, never answered', async () => {
+    // v2 (paracetamol, twice a day) is the current verified instruction. Without the deny-list the fake provider would
+    // quote it for these questions (they share content words with it); the deny-list runs first, before any provider.
+    const beforeCore = await coreFingerprint(sql);
+    const beforeMsgs = (await sqlRows(`SELECT count(*)::int AS n FROM messages WHERE patient_id = $1`, [P1]))[0]?.['n'];
+    const denied: string[] = [];
+    for (const q of [
+      'Can I increase my dose?',
+      'Can I increase my paracetamol dose to three times a day?',
+      'Should I stop taking paracetamol after food?',
+    ]) {
+      const a = await ask(patient1, q, conversationId);
+      expect(a.outcome, q).toBe('escalated');
+      expect(a.citations, q).toEqual([]);
+      expect(a.answer).not.toContain(V1_TOKEN);
+      expect(a.answer).not.toContain(V2_TOKEN);
+      expect(a.answer).not.toMatch(/twice a day|three times a day/);
+      expect(a.escalation.taskId).toBe(escalationTaskIds.at(-1));
+      noteEscalation(a.escalation.taskId);
+      denied.push(a.messageId);
+    }
+    const rows = await sqlRows(
+      `SELECT reason FROM audit_events WHERE operation = 'assistant.escalate' AND next->>'messageId' = ANY($1::text[])`,
+      [denied],
+    );
+    expect(rows.map((r) => r['reason'])).toEqual(['denied_intent', 'denied_intent', 'denied_intent']);
+    expect(await coreFingerprint(sql)).toBe(beforeCore);
+    // each denied question produced a patient message and an escalated assistant message, nothing else
+    expect((await sqlRows(`SELECT count(*)::int AS n FROM messages WHERE patient_id = $1`, [P1]))[0]?.['n']).toBe(
+      (beforeMsgs as number) + 6,
+    );
+    record['denyListWithVerifiedContext'] = { questions: denied.length, auditReason: 'denied_intent' };
+  });
+
+  it('a question that only shares a weak word with the verified text is bounded: current version cited or escalated, no side effects', async () => {
+    // The booking/cancelling deny-list now catches "Cancel my appointment ..." before the provider; if a future
+    // provider answered anyway, the answer must still cite only the current version. The safety property is what we assert.
     const beforeCore = await coreFingerprint(sql);
     const a = await ask(patient1, 'Cancel my appointment and give me a new one', conversationId);
     if (a.outcome === 'answered') {
       expect(a.citations.map((c: any) => c.instructionVersionId)).toEqual([v2.id]);
       expect(a.answer).not.toContain(V1_TOKEN);
     } else {
-      escalationTaskIds.push(a.escalation.taskId);
+      noteEscalation(a.escalation.taskId);
     }
     expect(await coreFingerprint(sql)).toBe(beforeCore);
     record['weakOverlapOutcome'] = a.outcome;
   });
 
-  it('the owner is a real follow-up user, the audit row records why, and the patient sees fixed wording only', async () => {
+  it('the owner is a real follow-up user; audit rows carry reason codes and ids but never the question text; the patient sees fixed wording only', async () => {
     const taskId = escalationTaskIds.at(-1) as string;
     const rows = await sqlRows(
       `SELECT t.owner_id, u.role, u.active FROM follow_up_tasks t LEFT JOIN users u ON u.id = t.owner_id WHERE t.id = $1`,
       [taskId],
     );
     expect(rows[0]?.['role']).toBe('followup');
+    expect(rows[0]?.['active']).toBe(true);
     const audit = await sqlRows(
-      `SELECT actor_role, reason FROM audit_events WHERE operation = 'assistant.escalate' AND entity_id = $1`,
+      `SELECT actor_role, reason, previous::text AS previous, next::text AS next
+         FROM audit_events WHERE operation = 'assistant.escalate' AND entity_id = $1`,
       [taskId],
     );
-    expect(audit).toHaveLength(1);
-    expect(audit[0]?.['actor_role']).toBe('patient');
-    expect(String(audit[0]?.['reason'])).not.toBe('');
+    // one row per escalated question that landed on this task (the latest task absorbed several)
+    expect(audit.length).toBeGreaterThanOrEqual(unsupported.length);
+    for (const r of audit) {
+      expect(r['actor_role']).toBe('patient');
+      expect(String(r['reason'])).toMatch(/^[a-z_]+$/);
+      const blob = `${r['previous'] ?? ''} ${r['next'] ?? ''} ${r['reason']}`;
+      for (const q of [...unsupported, 'Can I increase my dose?', 'paracetamol']) expect(blob).not.toContain(q);
+      expect(JSON.parse(r['next'] as string)).toEqual(
+        expect.objectContaining({ messageId: expect.any(String), questionLength: expect.any(Number) }),
+      );
+    }
+    expect(audit.some((r) => JSON.parse(r['next'] as string).joinedExisting === true)).toBe(true);
 
     const mine = await patient1.get('/me/follow-ups');
     expect(mine.status).toBe(200);
@@ -437,20 +523,118 @@ describe('T4.4 unsupported requests reach staff as owned tasks and change nothin
     for (const staffField of ['title', 'detail', 'ownerId', 'ownerName', 'outcomeNote']) {
       expect(Object.keys(row)).not.toContain(staffField);
     }
-    record['escalationTasks'] = { total: escalationTaskIds.length, ownedByFollowupUser: true };
+    record['escalationTasks'] = { distinct: escalationTaskIds.length, ownedByFollowupUser: true };
   });
 
-  it('every escalation created exactly one open task (no duplicates, none lost)', async () => {
+  it('tasks created = min(escalations, cap): no more than 3 open tasks, none lost, every escalation recorded', async () => {
     const rows = await sqlRows(
       `SELECT count(*)::int AS n, count(*) FILTER (WHERE owner_id IS NOT NULL)::int AS owned,
-              count(*) FILTER (WHERE due_at IS NOT NULL)::int AS dued
+              count(*) FILTER (WHERE due_at IS NOT NULL)::int AS dued,
+              count(*) FILTER (WHERE status IN ('open','acknowledged'))::int AS open
          FROM follow_up_tasks WHERE patient_id = $1 AND kind = 'assistant_escalation'`,
       [P1],
     );
+    expect(p1Escalations).toBeGreaterThan(ESCALATION_CAP);
+    expect(rows[0]?.['n']).toBe(Math.min(p1Escalations, ESCALATION_CAP));
     expect(rows[0]?.['n']).toBe(escalationTaskIds.length);
+    expect(rows[0]?.['open']).toBeLessThanOrEqual(ESCALATION_CAP);
     expect(rows[0]?.['owned']).toBe(escalationTaskIds.length);
     expect(rows[0]?.['dued']).toBe(escalationTaskIds.length);
     expect(new Set(escalationTaskIds).size).toBe(escalationTaskIds.length);
+    // every escalated answer is recorded as an audit row, including those that joined an existing task
+    const audit = await sqlRows(
+      `SELECT count(*)::int AS n FROM audit_events WHERE operation = 'assistant.escalate' AND entity_id = ANY($1::uuid[])`,
+      [escalationTaskIds],
+    );
+    expect(audit[0]?.['n']).toBe(p1Escalations);
+    const escalatedMsgs = await sqlRows(
+      `SELECT count(*)::int AS n FROM messages WHERE patient_id = $1 AND role = 'assistant' AND outcome = 'escalated'`,
+      [P1],
+    );
+    expect(escalatedMsgs[0]?.['n']).toBe(p1Escalations);
+    // one FollowUpOpened outbox event per CREATED task, none for a joined question
+    const outbox = await sqlRows(
+      `SELECT count(*)::int AS n FROM outbox_events WHERE event_type = 'FollowUpOpened' AND entity_id = ANY($1::uuid[])`,
+      [escalationTaskIds],
+    );
+    expect(outbox[0]?.['n']).toBe(escalationTaskIds.length);
+    record['escalationCap'] = {
+      cap: ESCALATION_CAP,
+      escalationsAskedByP1: p1Escalations,
+      openTasksCreated: rows[0]?.['n'],
+      auditRows: audit[0]?.['n'],
+    };
+  });
+});
+
+describe('T4.4b the open-escalation cap, one patient from a clean start (D-028)', () => {
+  const questions = [
+    'Should I double my dose?',
+    'Can you make me priority?',
+    'Please move me to the front of the queue',
+    'Cancel my appointment',
+    'Is this cancer?',
+  ];
+
+  it('five unsupported questions -> three distinct owned tasks; the 4th and 5th share the 3rd; all five are recorded', async () => {
+    const before = (
+      await sqlRows(
+        `SELECT count(*)::int AS n FROM follow_up_tasks WHERE patient_id = $1 AND kind = 'assistant_escalation'`,
+        [P2],
+      )
+    )[0]?.['n'];
+    expect(before).toBe(0);
+    const beforeCore = await coreFingerprint(sql);
+    const taskIds: string[] = [];
+    const messageIds: string[] = [];
+    for (const q of questions) {
+      const a = await ask(patient2, q);
+      expect(a.outcome, q).toBe('escalated');
+      expect(a.citations).toEqual([]);
+      expect(a.escalation.taskId, q).toBeTruthy();
+      taskIds.push(a.escalation.taskId);
+      messageIds.push(a.messageId);
+    }
+    expect(new Set(taskIds).size).toBe(Math.min(questions.length, ESCALATION_CAP));
+    expect(new Set(taskIds.slice(0, 3)).size, 'first three are distinct').toBe(3);
+    expect(taskIds[3]).toBe(taskIds[2]);
+    expect(taskIds[4]).toBe(taskIds[2]);
+
+    for (const id of new Set(taskIds)) {
+      const t = (await followup.get(`/follow-up-tasks/${id}`)).body;
+      expect(t.ownerId, 'owned').toBeTruthy();
+      expect(t.dueAt).toBeTruthy();
+      expect(t.status).toBe('open');
+      expect(t.patientId).toBe(P2);
+    }
+    // each task's detail lists its own question(s) and no other task's
+    const detailOf = async (id: string): Promise<string> => (await followup.get(`/follow-up-tasks/${id}`)).body.detail;
+    expect(await detailOf(taskIds[0] as string)).toContain(questions[0]);
+    expect(await detailOf(taskIds[0] as string)).not.toContain(questions[1] as string);
+    expect(await detailOf(taskIds[1] as string)).toContain(questions[1]);
+    const shared = await detailOf(taskIds[2] as string);
+    for (const q of questions.slice(2)) expect(shared).toContain(q);
+    expect(shared).not.toContain(questions[0] as string);
+
+    const open = await sqlRows(
+      `SELECT count(*)::int AS n FROM follow_up_tasks WHERE patient_id = $1 AND kind = 'assistant_escalation' AND status IN ('open','acknowledged')`,
+      [P2],
+    );
+    expect(open[0]?.['n']).toBe(ESCALATION_CAP);
+    const audit = await sqlRows(
+      `SELECT next->>'joinedExisting' AS joined, next::text AS next, reason FROM audit_events
+        WHERE operation = 'assistant.escalate' AND next->>'messageId' = ANY($1::text[])`,
+      [messageIds],
+    );
+    expect(audit).toHaveLength(questions.length);
+    expect(audit.filter((r) => r['joined'] === 'true')).toHaveLength(questions.length - ESCALATION_CAP);
+    for (const r of audit) for (const q of questions) expect(String(r['next'])).not.toContain(q);
+    expect(await coreFingerprint(sql)).toBe(beforeCore);
+    record['escalationCapCleanPatient'] = {
+      questions: questions.length,
+      distinctTasks: new Set(taskIds).size,
+      joinedQuestions: audit.filter((r) => r['joined'] === 'true').length,
+    };
   });
 });
 
