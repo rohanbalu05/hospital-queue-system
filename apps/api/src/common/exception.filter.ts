@@ -107,6 +107,9 @@ export class ApiExceptionFilter implements ExceptionFilter {
       return { status: 500, code: 'INTERNAL', message: 'Internal error' };
     }
     if (sqlState(err) === '23505') {
+      if ((err as { constraint?: string }).constraint === 'visits_one_open_per_patient_session_uq') {
+        return { status: 409, code: 'CONFLICT', message: 'This patient already has an active place in this session' };
+      }
       // A unique constraint caught a race the guards did not (e.g. a duplicate visit): a controlled conflict.
       return { status: 409, code: 'CONFLICT', message: 'The request conflicts with the current state' };
     }
