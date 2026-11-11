@@ -11,6 +11,10 @@ export const RESULTS_FILE =
 /** Evidence file for the authorization suite. */
 export const AUTHZ_RESULTS_FILE = resolve(here, '..', '..', 'docs', 'evidence', 'authz-tests.raw.json');
 
+/** Raw numbers of the T2 (policy + doctor guard) and T3 (live freshness) suites. */
+export const T2_RESULTS_FILE = resolve(here, '..', '..', 'docs', 'evidence', 'T2-policy-doctor-guard.raw.json');
+export const T3_RESULTS_FILE = resolve(here, '..', '..', 'docs', 'evidence', 'T3-live-freshness.raw.json');
+
 /** Merge `data` under `key` into the results file (test files run one after another, never concurrently). */
 export function recordResult(key: string, data: unknown, file: string = RESULTS_FILE): void {
   let current: Record<string, unknown> = {};
