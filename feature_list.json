@@ -390,7 +390,8 @@
     "id": "NFR-08-c",
     "requirement": "NFR-08",
     "acceptance": "Explicit error, empty and stale states in the UI.",
-    "test": "tests/e2e/states.spec.ts",
-    "passes": false
+    "test": "apps/web/e2e/{booking,reception,screenshots,w2-queue,w3-*}.spec.ts (loading/empty/error/reconnecting states per screen) + ui-reviewer pass",
+    "passes": true,
+    "verified": "2026-11-11: W3 web merge, 105 Playwright specs green (mocked API), states reviewed in screenshots"
   }
 ]
