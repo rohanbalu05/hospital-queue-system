@@ -52,9 +52,12 @@ old one. Changing a Table 7 default in code requires a `DECISIONS.md` entry.
 
 - All configuration is environment variables. `.env.example` lists every key with a local default that uses fake
   adapters; `.env` is git-ignored. No secrets are committed anywhere.
-- `SESSION_SECRET` in `.env.example` and `docker-compose.yml` is a marked dev-only placeholder. Any shared or hosted
-  environment supplies its own value through protected runtime configuration (Google Secret Manager for the hosted
-  reference).
+- Login sessions are opaque random tokens stored hashed in the database, so the local identity provider needs no signing
+  secret. `SESSION_SECRET` in `.env.example` is a marked dev-only placeholder reserved for the hosted identity adapter;
+  nothing in the current code reads it. Any shared or hosted environment supplies real secrets (GEMINI_API_KEY, storage
+  and identity credentials) through protected runtime configuration (Google Secret Manager for the hosted reference).
+- Demo-only switches: `RUN_MIGRATIONS_ON_START`, `SEED_ON_START` and `ALLOW_DEMO_SEED` exist for the compose demo. The seed
+  refuses `NODE_ENV=production` unless `ALLOW_DEMO_SEED=true`, so a hosted environment must never set it.
 - Provider adapters are selected by configuration and the fake adapter is always the default:
 
 | Port | Default | Later option | Key |

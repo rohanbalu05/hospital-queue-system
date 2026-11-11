@@ -1,5 +1,5 @@
-# Local demo stack: `docker compose up --build`, then open http://localhost:5173
-# Assumes each app exposes `build` and `start` scripts (see docs/construction/construction-plan.md).
+# Local demo stack: `docker compose up --build`, then open http://localhost:5173 (use localhost, see docs/runbook.md).
+# Demo only: fake adapters, public demo password, demo seed enabled. Never point this at real data.
 x-app-env: &app-env
   DATABASE_URL: postgres://postgres:postgres@postgres:5432/hqms
   HOSPITAL_TZ: Asia/Kolkata
@@ -9,8 +9,6 @@ x-app-env: &app-env
   OCR_PROVIDER: fake
   LLM_PROVIDER: fake
   LLM_MODEL: gemini-3.5-flash-lite
-  # Demo-only value; never reuse outside the local stack.
-  SESSION_SECRET: demo-only-not-a-secret
 
 services:
   postgres:
@@ -20,7 +18,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: hqms
     ports:
-      - '5432:5432'
+      - '${HQMS_PG_PORT:-5432}:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -28,6 +26,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+    restart: unless-stopped
 
   api:
     build:
@@ -36,18 +35,23 @@ services:
     environment:
       <<: *app-env
       PORT: '3000'
-      # Applies db/migrations and seeds demo data on boot (idempotent) so the demo works from a blank volume.
+      # The bundle applies db/migrations and the idempotent demo seed before it listens, so a blank volume works.
       RUN_MIGRATIONS_ON_START: 'true'
       SEED_ON_START: 'true'
-      ALLOW_DEMO_SEED: 'true'   # demo stack only; seed refuses production otherwise (D-022)
+      # The image runs NODE_ENV=production, where the seed refuses unless this is set (D-022). Demo stack only.
+      ALLOW_DEMO_SEED: 'true'
+      # Behind the nginx container: use X-Forwarded-For for the login rate limiter.
+      TRUST_PROXY: 'true'
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - '3000:3000'
+      - '${HQMS_API_PORT:-3000}:3000'
     volumes:
       - storage:/var/hqms/storage
+    restart: unless-stopped
 
+  # Operational worker: call timeouts, reservation release, outbox dispatch.
   worker:
     build:
       context: .
@@ -55,22 +59,43 @@ services:
     environment:
       <<: *app-env
       WORKER_POLL_MS: '1000'
+      WORKER_JOB_TYPES: call_timeout,reservation_release
+      WORKER_DISPATCH_OUTBOX: 'true'
     depends_on:
-      postgres:
-        condition: service_healthy
       api:
-        condition: service_started
+        # api applies the migrations, so wait for it to be healthy.
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Document worker: OCR and the upload reconciler only, so OCR never competes with queue timers (report 6.2).
+  # Shares the storage volume with the api, which writes the uploaded objects.
+  worker-documents:
+    build:
+      context: .
+      dockerfile: infra/docker/worker.Dockerfile
+    environment:
+      <<: *app-env
+      WORKER_POLL_MS: '1000'
+      WORKER_ID: worker-documents
+      WORKER_JOB_TYPES: ocr_document,reconcile_uploads
+      WORKER_DISPATCH_OUTBOX: 'false'
+    depends_on:
+      api:
+        condition: service_healthy
     volumes:
       - storage:/var/hqms/storage
+    restart: unless-stopped
 
   web:
     build:
       context: .
       dockerfile: infra/docker/web.Dockerfile
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
-      - '5173:80'
+      - '${HQMS_WEB_PORT:-5173}:80'
+    restart: unless-stopped
 
 volumes:
   pgdata:
