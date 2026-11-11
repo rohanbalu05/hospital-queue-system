@@ -91,7 +91,25 @@ const SLOTS = {
   afternoon: { start: '14:00:00', end: '18:00:00' },
 } as const;
 
-export async function seed(pool: Pool, opts: { now?: Date; log?: (m: string) => void } = {}): Promise<SeedSummary> {
+/** Thrown when the demo seed is asked to run with NODE_ENV=production and ALLOW_DEMO_SEED is not "true". */
+export class SeedRefusedError extends Error {
+  constructor() {
+    super(
+      'refusing to seed demo accounts (password demo1234) with NODE_ENV=production; set ALLOW_DEMO_SEED=true if this is a demo deployment',
+    );
+    this.name = 'SeedRefusedError';
+  }
+}
+
+export function assertSeedAllowed(env: Record<string, string | undefined>): void {
+  if (env['NODE_ENV'] === 'production' && env['ALLOW_DEMO_SEED'] !== 'true') throw new SeedRefusedError();
+}
+
+export async function seed(
+  pool: Pool,
+  opts: { now?: Date; log?: (m: string) => void; env?: Record<string, string | undefined> } = {},
+): Promise<SeedSummary> {
+  assertSeedAllowed(opts.env ?? process.env);
   const log = opts.log ?? (() => {});
   const now = opts.now ?? new Date();
   const hospitalId = stableId('hospital');
