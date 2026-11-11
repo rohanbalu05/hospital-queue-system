@@ -1,6 +1,6 @@
 {
   "t4InstructionControls": {
-    "ocrLatencyMs": 148,
+    "ocrLatencyMs": 141,
     "preVerificationQuestions": 3,
     "verifiedAnswerCitesV1": true,
     "supersede": {
@@ -130,7 +130,7 @@
     "globalInvariantViolations": []
   },
   "t4OcrFailureIsolation": {
-    "ocrFailureWallMs": 4372,
+    "ocrFailureWallMs": 4188,
     "failedDocument": {
       "finalStatus": "ocr_failed",
       "attempts": 5,
@@ -160,9 +160,9 @@
       },
       "serverErrors": 0,
       "latencyMs": {
-        "p50": 13,
-        "p95": 19,
-        "max": 35
+        "p50": 11,
+        "p95": 18,
+        "max": 39
       }
     },
     "workerErrorLogs": {

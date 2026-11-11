@@ -177,7 +177,8 @@ describe('FR-14-a unsupported questions reach staff', () => {
     expect(answer.escalation!.dueAt).toBe('2041-06-11T05:00:00.000Z');
     expect(answer.answer).toContain('care team');
 
-    const task = (await followup.get(`/follow-up-tasks/${answer.escalation!.taskId}`)).body as FollowUpTask;
+    // Read as admin: the owner is the follow-up user with the fewest open tasks, which depends on run order.
+    const task = (await admin.get(`/follow-up-tasks/${answer.escalation!.taskId}`)).body as FollowUpTask;
     expect(task).toMatchObject({ kind: 'assistant_escalation', patientId: P1, status: 'open', detail: 'Can I go swimming next week?' });
     expect(task.ownerId).toBeTruthy(); // owned, not floating
     expect(task.sourceMessageId).toBeTruthy();
