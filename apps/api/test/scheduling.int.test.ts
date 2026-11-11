@@ -188,7 +188,7 @@ describe('FR-03 booking', () => {
     expect((await capacityInvariant(t.pool, s.id)).ok).toBe(true);
   });
 
-  it('requires an Idempotency-Key and rejects follow-up linkage and unknown sessions', async () => {
+  it('requires an Idempotency-Key and refuses follow-up linkage for reception and unknown sessions', async () => {
     const s = await makeSession(admin);
     const noKey = await patient.post('/appointments', { sessionId: s.id }, null);
     expect(noKey.status).toBe(400);
@@ -198,7 +198,7 @@ describe('FR-03 booking', () => {
       patientId: patientId(12),
       followUpTaskId: randomUUID(),
     });
-    expect(link.status).toBe(400);
+    expect(link.status).toBe(403); // W3: only follow-up staff (and admin) book from a follow-up task
     expect((await patient.post('/appointments', { sessionId: randomUUID() })).status).toBe(404);
     expect((await reception.post('/appointments', { sessionId: s.id })).status).toBe(400); // staff must name the patient
     expect((await reception.post('/appointments', { sessionId: s.id, patientId: randomUUID() })).status).toBe(404);
