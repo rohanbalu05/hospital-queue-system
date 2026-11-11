@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react';
 import type { Appointment } from '@hqms/contracts';
 import { useAppointmentsQuery, useCancelAppointment, useRescheduleAppointment, useSessionsQuery } from '@/api';
 import { PatientPage } from '@/components/layout/PatientPage';
+import { QueueLink } from './TodayPage';
 import { EmptyState, ErrorState, SkeletonRows } from '@/components/queue';
 import { SessionChoiceList } from '@/components/scheduling/sessions';
 import { InlineAlert, StatusWord } from '@/components/scheduling/status';
@@ -80,6 +81,7 @@ export default function VisitsPage() {
                 {upcoming.map((a) => (
                   <li key={a.id} className="border-l-[3px] border-l-appt px-4 py-3">
                     <AppointmentLine a={a} />
+                    {istDate(a.scheduledAt) === today ? <QueueLink sessionId={a.sessionId} className="mt-3 w-full sm:w-auto" /> : null}
                     {a.status === 'booked' ? (
                       <div className="mt-3 flex gap-3">
                         <Button variant="outline" size="lg" className="flex-1 sm:flex-none" onClick={() => setMoving(a)}>

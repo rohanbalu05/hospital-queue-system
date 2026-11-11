@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { PatientShell } from '@/components/layout/Shells';
 import { cn } from '@/lib/utils';
 
@@ -24,26 +24,28 @@ function PatientNav() {
   return (
     <nav aria-label="Patient" className="border-b border-rule bg-surface">
       <ul ref={listRef} className="mx-auto flex max-w-2xl overflow-x-auto px-2 [scrollbar-width:none]">
-        {NAV.map((n) => (
-          <li key={n.to} className="shrink-0">
-            <NavLink
-              to={n.to}
-              end={n.end}
-              aria-current={n.to === '/patient' && pathname.startsWith('/patient/visit/') ? 'page' : undefined}
-              className={({ isActive }) =>
-                cn(
-                  'flex min-h-12 items-center justify-center border-b-[3px] px-3 text-center text-base leading-5 font-bold whitespace-nowrap sm:px-4',
-                  // My visit (/patient/visit/:id) belongs to the Today tab.
-                  isActive || (n.to === '/patient' && pathname.startsWith('/patient/visit/'))
-                    ? 'border-ink text-ink'
-                    : 'border-transparent text-muted-foreground hover:text-ink',
-                )
-              }
-            >
-              {n.label}
-            </NavLink>
-          </li>
-        ))}
+        {NAV.map((n) => {
+          // My visit (/patient/visit/:id) belongs to the Today tab.
+          const forced = n.to === '/patient' && pathname.startsWith('/patient/visit/');
+          const classes = (active: boolean) =>
+            cn(
+              'flex min-h-12 items-center justify-center border-b-[3px] px-3 text-center text-base leading-5 font-bold whitespace-nowrap sm:px-4',
+              active ? 'border-ink text-ink' : 'border-transparent text-muted-foreground hover:text-ink',
+            );
+          return (
+            <li key={n.to} className="shrink-0">
+              {forced ? (
+                <Link to={n.to} aria-current="page" className={classes(true)}>
+                  {n.label}
+                </Link>
+              ) : (
+                <NavLink to={n.to} end={n.end} className={({ isActive }) => classes(isActive)}>
+                  {n.label}
+                </NavLink>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </nav>
   );

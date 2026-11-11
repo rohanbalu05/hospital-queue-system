@@ -114,6 +114,8 @@ export interface Wave3Mock {
   empty: boolean;
   /** Make every Wave 3 GET fail with 503 (error-state shots). */
   failReads: boolean;
+  /** Whether the patient already has an assistant conversation (false: the first question starts one). */
+  hasConversation: boolean;
 }
 
 function buildTasks(): TaskRow[] {
@@ -273,7 +275,7 @@ Do the cat-camel stretch 10 times, morning and evening.
 Come back if there is numbness in the leg.`,
 };
 
-export async function mockWave3(page: Page, sched: SchedulingMock, role: 'followup' | 'doctor' | 'patient' | 'admin' | 'reception' = 'followup'): Promise<Wave3Mock> {
+export async function mockWave3(page: Page, sched: SchedulingMock, _role: 'followup' | 'doctor' | 'patient' | 'admin' | 'reception' = 'followup'): Promise<Wave3Mock> {
   const tasks = buildTasks();
   const documents = buildDocuments();
   const versions: VersionRow[] = [
@@ -330,7 +332,7 @@ export async function mockWave3(page: Page, sched: SchedulingMock, role: 'follow
     },
   ];
 
-  const m: Wave3Mock = { tasks, documents, versions, messages, requests: [], failReturnBookingFull: false, delayTasksMs: 0, empty: false, failReads: false };
+  const m: Wave3Mock = { tasks, documents, versions, messages, requests: [], failReturnBookingFull: false, delayTasksMs: 0, empty: false, failReads: false, hasConversation: true };
 
   const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
   const error = (route: Route, status: number, code: string, message: string, details?: unknown) =>
@@ -423,6 +425,7 @@ export async function mockWave3(page: Page, sched: SchedulingMock, role: 'follow
 
       const w3Read =
         path.startsWith('/follow-up-tasks') ||
+        path === '/me/follow-ups' ||
         path.startsWith('/documents') ||
         path === '/review-inbox' ||
         path === '/instructions' ||
@@ -444,11 +447,36 @@ export async function mockWave3(page: Page, sched: SchedulingMock, role: 'follow
         else if (owner === 'me') list = list.filter((t) => t.ownerId === FOLLOWUP_USER.id);
         else if (owner === 'unassigned') list = list.filter((t) => t.ownerId === null);
         if (q.get('status')) list = list.filter((t) => t.status === q.get('status'));
-        // Patients never get staff notes, owners or detail.
-        if (role === 'patient') {
-          list = list.map((t) => ({ ...t, detail: null, outcomeNote: null, ownerId: null, ownerName: null, sourceVisit: null }));
-        }
         return json(route, 200, list);
+      }
+      // Patients read their own tasks as PatientFollowUp: fixed summary per kind, no staff title, detail, notes or owner.
+      if (method === 'GET' && path === '/me/follow-ups') {
+        if (m.delayTasksMs) await new Promise((r) => setTimeout(r, m.delayTasksMs));
+        if (m.empty) return json(route, 200, []);
+        const SUMMARY: Record<string, string> = {
+          post_visit: 'Check-in after your visit',
+          assistant_escalation: 'Your question for the follow-up team',
+          document_review: 'Review of your uploaded document',
+          return_visit: 'Return visit to arrange',
+        };
+        return json(
+          route,
+          200,
+          tasks
+            .filter((t) => t.patientId === ME_PATIENT_ID)
+            .map(withOverdue)
+            .map((t) => ({
+              id: t.id,
+              kind: t.kind,
+              summary: SUMMARY[t.kind] ?? 'Follow-up',
+              status: t.status,
+              dueAt: t.dueAt,
+              disposition: t.disposition,
+              returnAppointmentId: t.returnAppointmentId,
+              createdAt: t.createdAt,
+              resolvedAt: t.resolvedAt,
+            })),
+        );
       }
       const taskMatch = path.match(/^\/follow-up-tasks\/([^/]+)(?:\/(acknowledge|resolve|cancel|return-booking))?$/);
       if (taskMatch) {
@@ -606,6 +634,11 @@ export async function mockWave3(page: Page, sched: SchedulingMock, role: 'follow
         note();
         const b = body as { question: string };
         const now = ist('2026-11-11', '10:05');
+        if (!m.hasConversation) {
+          // First question: a new conversation starts empty.
+          messages.length = 0;
+          m.hasConversation = true;
+        }
         messages.push({ id: uuid(0x7b20 + messages.length), role: 'patient', body: b.question, outcome: null, citations: [], escalationTaskId: null, createdAt: now });
         const lower = b.question.toLowerCase();
         let answer: MessageRow;
@@ -661,6 +694,9 @@ export async function mockWave3(page: Page, sched: SchedulingMock, role: 'follow
           escalation,
           createdAt: now,
         });
+      }
+      if (method === 'GET' && path === '/assistant/conversations') {
+        return json(route, 200, m.hasConversation ? [{ id: CONVERSATION_ID, createdAt: ist('2026-11-11', '09:12'), lastMessageAt: ist('2026-11-11', '09:14') }] : []);
       }
       if (method === 'GET' && path === `/assistant/conversations/${CONVERSATION_ID}/messages`) return json(route, 200, m.empty ? [] : messages);
 

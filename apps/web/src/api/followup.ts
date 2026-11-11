@@ -4,10 +4,14 @@ import {
   Appointment,
   AssistantAnswer,
   ConversationMessage,
+  Disposition,
   DocumentMeta,
+  FollowUpKind,
+  FollowUpStatus,
   FollowUpTask,
   Id,
   InstructionVersion,
+  Instant,
   LocalDate,
   OcrDraft,
   type AskAssistantRequest,
@@ -39,7 +43,27 @@ export type FollowUpTaskView = z.infer<typeof FollowUpTaskView>;
 export const ReviewItem = DocumentMeta.extend({ patientName: z.string() });
 export type ReviewItem = z.infer<typeof ReviewItem>;
 
+/** GET /me/follow-ups: what a patient sees of a staff task. Status and timing only; the summary is fixed wording per kind. */
+export const PatientFollowUp = z.object({
+  id: Id,
+  kind: FollowUpKind,
+  summary: z.string(),
+  status: FollowUpStatus,
+  dueAt: Instant,
+  disposition: Disposition.nullable(),
+  returnAppointmentId: Id.nullable(),
+  createdAt: Instant,
+  resolvedAt: Instant.nullable(),
+});
+export type PatientFollowUp = z.infer<typeof PatientFollowUp>;
+
+/** GET /assistant/conversations: the patient's conversations, newest first. */
+export const ConversationSummary = z.object({ id: Id, createdAt: Instant, lastMessageAt: Instant.nullable() });
+export type ConversationSummary = z.infer<typeof ConversationSummary>;
+
 export const followKeys = {
+  mine: ['followups', 'mine'] as const,
+  conversations: ['assistant', 'conversations'] as const,
   tasks: ['followups'] as const,
   taskList: (p: TaskFilter) => ['followups', 'list', p] as const,
   task: (id: IdT) => ['followups', 'task', id] as const,
@@ -79,6 +103,25 @@ export function useFollowUpTasks(filter: TaskFilter, options: { enabled?: boolea
       ),
     enabled: options.enabled ?? true,
     refetchInterval: 30_000,
+  });
+}
+
+/** GET /me/follow-ups (patient). Refreshes with the other follow-up lists. */
+export function useMyFollowUps(enabled = true) {
+  return useQuery<PatientFollowUp[], ApiRequestError>({
+    queryKey: followKeys.mine,
+    queryFn: ({ signal }) => get('/me/follow-ups', {}, listOf(PatientFollowUp), signal),
+    enabled,
+    refetchInterval: 30_000,
+  });
+}
+
+/** GET /assistant/conversations: used to reopen the latest conversation. */
+export function useConversations(enabled = true) {
+  return useQuery<ConversationSummary[], ApiRequestError>({
+    queryKey: followKeys.conversations,
+    queryFn: ({ signal }) => get('/assistant/conversations', {}, listOf(ConversationSummary), signal),
+    enabled,
   });
 }
 
@@ -244,6 +287,7 @@ export function useAskAssistant() {
         })
         .catch(() => undefined);
       void qc.invalidateQueries({ queryKey: followKeys.tasks });
+      void qc.invalidateQueries({ queryKey: followKeys.conversations });
     },
   });
 }

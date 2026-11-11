@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { FollowUpStatus } from '@hqms/contracts';
-import { useFollowUpTasks, type FollowUpTaskView } from '@/api';
+import { useMyFollowUps, type PatientFollowUp } from '@/api';
 import { PatientPage } from '@/components/layout/PatientPage';
 import { EmptyState, ErrorState, SkeletonRows } from '@/components/queue';
 import { Button } from '@/components/ui/button';
@@ -17,11 +17,11 @@ export const PATIENT_TASK_WORD: Record<FollowUpStatus, string> = {
   cancelled: 'Closed',
 };
 
-function TaskRow({ task }: { task: FollowUpTaskView }) {
+function TaskRow({ task }: { task: PatientFollowUp }) {
   const closed = isClosed(task.status);
   return (
     <li className={cn('border-l-[3px] px-4 py-3', task.status === 'resolved' ? 'border-l-done' : 'border-l-rule')} data-status={task.status}>
-      <p className="font-bold">{task.title}</p>
+      <p className="font-bold">{task.summary}</p>
       <p className={cn('font-bold', task.status === 'resolved' ? 'text-done' : 'text-ink')}>{PATIENT_TASK_WORD[task.status]}</p>
       <p className="text-muted-foreground">{KIND_WORD[task.kind] ?? 'Follow-up'}</p>
       {!closed ? (
@@ -47,7 +47,7 @@ function TaskRow({ task }: { task: FollowUpTaskView }) {
 export default function FollowUpsPage() {
   const { me } = useAuth();
   const patientId = me?.patientId ?? undefined;
-  const q = useFollowUpTasks({ patientId, owner: 'all' }, { enabled: patientId !== undefined });
+  const q = useMyFollowUps(patientId !== undefined);
   const open = (q.data ?? []).filter((t) => !isClosed(t.status)).sort((a, b) => a.dueAt.localeCompare(b.dueAt));
   const done = (q.data ?? []).filter((t) => isClosed(t.status)).sort((a, b) => (b.resolvedAt ?? b.createdAt).localeCompare(a.resolvedAt ?? a.createdAt));
 
