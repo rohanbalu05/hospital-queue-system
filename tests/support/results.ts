@@ -29,3 +29,14 @@ export function recordResult(key: string, data: unknown, file: string = RESULTS_
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, `${JSON.stringify(current, null, 2)}\n`);
 }
+
+/** Raw numbers of the T4 (follow-up and instruction controls) and T6 (audit and reproducibility) suites. */
+export const T4_RESULTS_FILE = resolve(
+  here,
+  '..',
+  '..',
+  'docs',
+  'evidence',
+  'T4-followup-instruction-controls.raw.json',
+);
+export const T6_RESULTS_FILE = resolve(here, '..', '..', 'docs', 'evidence', 'T6-reproducibility-operations.raw.json');
