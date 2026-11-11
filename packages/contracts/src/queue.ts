@@ -66,6 +66,8 @@ export const QueueEntry = z.object({
   priorityClass: z.number().int().min(1).max(3).nullable(),
   priorityReason: z.string().nullable(),
   calledAt: Instant.nullable(),
+  /** Consultation start (visits.started_at) when in service. */
+  startedAt: Instant.nullable().optional(),
   callCount: z.number().int().nonnegative(),
   /** Minutes waited since eligibleAt at snapshot time (null if not waiting). */
   waitingMinutes: z.number().nullable(),
@@ -104,6 +106,11 @@ export type CallNextResult = z.infer<typeof CallNextResult>;
 
 /** POST /visits/{id}/start, /visits/{id}/complete */
 export const VisitActionRequest = ExpectedVersion;
+/** Response of visit and queue-entry commands: the updated entry plus the new queue version. */
+export const QueueCommandResult = z.object({
+  entry: z.lazy(() => QueueEntry),
+  queueVersion: z.number().int().nonnegative(),
+});
 /** POST /queue-entries/{id}/skip (manual, before timeout), /re-enter, /absent */
 export const QueueEntryActionRequest = ExpectedVersion.extend({ reason: z.string().max(300).optional() });
 
