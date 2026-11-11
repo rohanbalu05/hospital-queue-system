@@ -76,3 +76,6 @@ The session's git proxy only accepts pushes to the session branch, so `wave-N` t
 - Cancel/reschedule/check-in mark the pending `reservation_release` job `cancelled`; the worker also re-checks state.
 - Login rate limit in memory, 10 failures / 60 s per IP+email → 429; responses `Cache-Control: no-store`; error filter never logs bodies or SQL values.
 - Open (W2): an appointment already marked `missed` by the worker cannot be checked in; per report §6.2 ("a late return does not retain guaranteed admission") it should be admissible only as a late admission (walk-in capacity + order). W2 adds the `missed → checked_in` edge restricted to the late-admission path.
+
+## D-021 List responses are plain JSON arrays; staff appointment reads carry patient fields
+All list endpoints return a JSON array (no `{items}` envelope) until pagination is needed. `Appointment` gains optional `patientName`, `patientMrn`, `patientPhone` (staff reads only, never on patient reads) and `queueEntryId`/`token` once checked in, so the reception desk can render today's list and tokens after reload.
