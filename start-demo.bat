@@ -16,6 +16,9 @@ set "DATABASE_URL=postgres://postgres:%DB_PASSWORD%@localhost:5432/hqms"
 set "TEST_DATABASE_URL=postgres://postgres:%DB_PASSWORD%@localhost:5432/hqms_test"
 set "NODE_ENV=development"
 set "PORT=3000"
+REM API and worker must share ONE upload folder (each package runs from its own directory).
+set "STORAGE_DIR=%~dp0var\storage"
+if not exist "%STORAGE_DIR%" mkdir "%STORAGE_DIR%"
 
 where node >nul 2>nul || (echo [x] Node.js not found. Install: winget install -e --id OpenJS.NodeJS.LTS & goto :fail)
 where pnpm >nul 2>nul || (echo [x] pnpm not found. Run: npm install -g pnpm@10.28.0 & goto :fail)
