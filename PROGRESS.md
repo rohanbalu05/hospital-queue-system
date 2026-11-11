@@ -28,3 +28,6 @@ Read this first on resume, then `git log --oneline -30`.
 - Contracts: `Eta.uncertainty` added.
 - Merged: db/worker hardening (0004 migration, lock asserts), W2 web (doctor console, display, my visit; 53 unit + 62 Playwright). verify green 364 tests.
 - Gate 1 met; wave-1 tag (local) = 027a758
+- W2 api merged (89 api tests). db fixture fix merged. authz public-set expectation updated for the tokens-only display routes. verify green, 366 tests; concurrency 12/12. feature_list 26/50.
+- ui-reviewer on W0–W2: P0 = reception lacks live lanes + absent/re-enter; P1 = patient text 14px, red/green misuse, paused copy, mid-animation screenshots. All forwarded to the W3 ui builder.
+- Running: ui W3 (+ review fixes), worker W3 (providers, OCR, reconciler), test T2 + full-visit e2e, api W3 (follow-up, documents, verify, assistant, return booking, reports).

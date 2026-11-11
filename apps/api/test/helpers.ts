@@ -8,7 +8,8 @@ import type { Pool } from '@hqms/db';
 import { AppModule } from '../src/app.module.js';
 import { FakeClock } from '../src/common/clock.js';
 import { loadConfig } from '../src/common/config.js';
-import { CLOCK, DB_POOL } from '../src/common/tokens.js';
+import { CLOCK, DB_POOL, LLM_PROVIDER, OBJECT_STORAGE } from '../src/common/tokens.js';
+import type { LlmProvider, ObjectStorage } from '../src/providers/ports.js';
 import { configureApp } from '../src/setup.js';
 import { stableId } from '../../../db/seed/seed.js';
 
@@ -23,12 +24,12 @@ export interface TestApp {
 }
 
 /** The real application against the real scratch database; only the clock is replaced. */
-export async function createTestApp(): Promise<TestApp> {
+export async function createTestApp(opts: { storage?: ObjectStorage; llm?: LlmProvider } = {}): Promise<TestApp> {
   const clock = new FakeClock();
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-    .overrideProvider(CLOCK)
-    .useValue(clock)
-    .compile();
+  let builder = Test.createTestingModule({ imports: [AppModule] }).overrideProvider(CLOCK).useValue(clock);
+  if (opts.storage) builder = builder.overrideProvider(OBJECT_STORAGE).useValue(opts.storage);
+  if (opts.llm) builder = builder.overrideProvider(LLM_PROVIDER).useValue(opts.llm);
+  const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>();
   configureApp(app, loadConfig());
   await app.init();
@@ -56,6 +57,13 @@ export class Client {
     const r = request(this.server).post(path).set('Cookie', this.cookie);
     if (key !== null) r.set('Idempotency-Key', key);
     return r.send(body);
+  }
+
+  /** multipart upload (field "file" + text fields). */
+  upload(path: string, file: Buffer, fields: Record<string, string>, filename = 'scan.png', contentType = 'image/png') {
+    const r = request(this.server).post(path).set('Cookie', this.cookie);
+    for (const [k, v] of Object.entries(fields)) r.field(k, v);
+    return r.attach('file', file, { filename, contentType });
   }
 
   patch(path: string, body: object = {}) {
@@ -143,4 +151,38 @@ export async function newPatient(reception: Client, name = 'Test Patient'): Prom
   const res = await reception.post('/patients', { fullName: name }, null);
   if (res.status !== 201) throw new Error(`could not register patient: ${res.status}`);
   return res.body.id as string;
+}
+
+/** Link a patient to a doctor the way the product does: an appointment in a fresh session (reception books). */
+export async function linkPatient(
+  admin: Client,
+  reception: Client,
+  patient: string,
+  doctor = 1,
+  opts: { booked?: number; walkin?: number } = {},
+): Promise<{ session: MadeSession; appointmentId: string }> {
+  const session = await makeSession(admin, { doctor, ...opts });
+  const res = await reception.post('/appointments', { sessionId: session.id, patientId: patient });
+  if (res.status !== 201) throw new Error(`could not link patient: ${res.status} ${JSON.stringify(res.body)}`);
+  return { session, appointmentId: res.body.id as string };
+}
+
+/**
+ * A brand-new patient WITH a login, linked to nothing. Test files share one database, so the seeded logins
+ * (patient@ ... patient10@) may already be linked to other doctors by earlier files; isolation tests need a
+ * patient whose links are exactly what the test creates.
+ */
+export async function newLoginPatient(
+  t: TestApp,
+  reception: Client,
+  name = 'Isolated Patient',
+): Promise<{ id: string; client: Client }> {
+  const id = await newPatient(reception, name);
+  const tag = randomUUID().slice(0, 8);
+  await t.pool.query(
+    `INSERT INTO users (hospital_id, email, display_name, role, password_hash, patient_id)
+     SELECT hospital_id, $1, $2, 'patient', password_hash, $3 FROM users WHERE email = 'patient@hqms.test'`,
+    [`w3-${tag}@hqms.test`, name, id],
+  );
+  return { id, client: await loginAs(t.server, `w3-${tag}@hqms.test`) };
 }

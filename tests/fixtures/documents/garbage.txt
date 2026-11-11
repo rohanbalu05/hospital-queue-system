@@ -1,0 +1,2 @@
+HQMS-FIXTURE:garbage
+Synthetic test document for the fake OCR provider. Not a real record.

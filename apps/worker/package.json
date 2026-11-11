@@ -7,6 +7,8 @@
     "dev": "tsx watch src/main.ts",
     "build": "node build.mjs",
     "start": "node dist/main.js",
+    "start:documents": "WORKER_JOB_TYPES=ocr_document,reconcile_uploads WORKER_DISPATCH_OUTBOX=false node dist/main.js",
+    "dev:documents": "WORKER_JOB_TYPES=ocr_document,reconcile_uploads WORKER_DISPATCH_OUTBOX=false tsx watch src/main.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.include=src/** --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reporter=lcov --coverage.reportsDirectory=coverage"
@@ -15,6 +17,7 @@
     "@hqms/contracts": "workspace:*",
     "@hqms/db": "workspace:*",
     "@hqms/domain": "workspace:*",
+    "@hqms/providers": "workspace:*",
     "@node-rs/argon2": "^2.0.2",
     "pg": "^8.13.1"
   },
