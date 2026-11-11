@@ -1,0 +1,19 @@
+# tar tzvf backup/storage.tgz  (listing taken 2026-11-11T13:54:26.482Z)
+drwx------ root/root         0 2026-11-11 13:54 ./
+drwx------ root/root         0 2026-11-11 13:54 ./documents/
+drwx------ root/root         0 2026-11-11 13:54 ./documents/5dd5d709-689d-4612-bf22-0da922d38c7e/
+-rw------- root/root    200073 2026-11-11 13:54 ./documents/5dd5d709-689d-4612-bf22-0da922d38c7e/5d95cb42-c6e9-46f7-97e1-b0d1e1929a3c
+drwx------ root/root         0 2026-11-11 13:54 ./documents/9a26ab57-1db1-4b96-a488-237940cc5b24/
+-rw------- root/root    200085 2026-11-11 13:54 ./documents/9a26ab57-1db1-4b96-a488-237940cc5b24/072bdce7-ef79-4a0a-b733-36c5c0c536d3
+drwx------ root/root         0 2026-11-11 13:54 ./documents/debd6704-a9d0-4c89-ac50-8f105e09899c/
+-rw------- root/root    200073 2026-11-11 13:54 ./documents/debd6704-a9d0-4c89-ac50-8f105e09899c/412488f7-c557-489f-baf6-b3c9de5e4612
+drwx------ root/root         0 2026-11-11 13:54 ./documents/cebfe318-2bd8-4c92-a452-d7e2ec71343d/
+-rw------- root/root    200072 2026-11-11 13:54 ./documents/cebfe318-2bd8-4c92-a452-d7e2ec71343d/da2a6494-1dc1-4a8e-8f68-d5ba8885e309
+drwx------ root/root         0 2026-11-11 13:54 ./documents/d568bea2-3da5-45c3-ac96-0b1f359539bf/
+-rw------- root/root    200072 2026-11-11 13:54 ./documents/d568bea2-3da5-45c3-ac96-0b1f359539bf/e118a3da-d0ef-41d2-9434-f1aef61bb774
+drwx------ root/root         0 2026-11-11 13:54 ./documents/c03f1cf8-f252-4186-8d55-2f0419ffe536/
+-rw------- root/root    200008 2026-11-11 13:54 ./documents/c03f1cf8-f252-4186-8d55-2f0419ffe536/fbb82d30-78c1-461d-8628-a43cd66af8f9
+drwx------ root/root         0 2026-11-11 13:54 ./documents/dfe07225-17d3-47a8-a452-fea60e789c76/
+-rw------- root/root    200085 2026-11-11 13:54 ./documents/dfe07225-17d3-47a8-a452-fea60e789c76/ba0a7f43-ea96-47c6-96d8-b52146dd8141
+drwx------ root/root         0 2026-11-11 13:54 ./documents/874d158d-c995-451c-96ec-dcf8955fc3db/
+-rw------- root/root    200008 2026-11-11 13:54 ./documents/874d158d-c995-451c-96ec-dcf8955fc3db/52e865eb-e4f5-4718-bbc6-1685ed3c1526

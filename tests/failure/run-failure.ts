@@ -114,7 +114,7 @@ async function apiKill(): Promise<void> {
   await recreateDb(DB);
   const pool = newPool(DB, 4);
   let api = await startApi({ dbName: DB });
-  const admin = await login(api.url, 'admin@hqms.test');
+  let admin = await login(api.url, 'admin@hqms.test');
   const reception = await login(api.url, 'reception@hqms.test');
   const ROUNDS = 5;
   const SESSIONS_PER_ROUND = 3;
@@ -150,7 +150,6 @@ async function apiKill(): Promise<void> {
       }
     });
     await killPromise;
-    const exitedAt = performance.now();
 
     // State right after the crash, before any restart: nothing half-written.
     const idleTx = (await pool.query(IDLE_STATE, [DB])).rows[0].n;
@@ -171,6 +170,7 @@ async function apiKill(): Promise<void> {
     api = await startApi({ dbName: DB });
     const restartMs = performance.now() - restartT0;
     const http2 = new Http(api.url, reception.cookie);
+    admin = new Http(api.url, admin.cookie); // the same login cookie works against the restarted process
 
     // Replay EVERY request with the same Idempotency-Key and the same body.
     const replay = await pmap(reqs, 10, async (r) => ({ r, res: await http2.post('/appointments', { sessionId: r.sessionId, patientId: r.patientId }, r.key) }));
@@ -250,12 +250,13 @@ async function workerKill(): Promise<void> {
   const reception = await login(api.url, 'reception@hqms.test');
   const doctors = await Promise.all([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => login(api.url, doctorEmail(n))));
 
-  // 200 booked appointments (two sessions of 100) -> 200 reservation_release jobs
-  const s1 = await futureSession(admin, 1, 0, 100);
-  const s2 = await futureSession(admin, 2, 0, 100);
+  // 200 booked appointments (20 sessions of 10) -> 200 reservation_release jobs
+  const bookSessions: MadeSession[] = [];
+  for (let i = 0; i < 20; i += 1) bookSessions.push(await futureSession(admin, 1 + (i % 10), Math.floor(i / 10), 10));
+  const bookSessionIds = bookSessions.map((x) => x.id);
   const patients = await bulkPatients(pool, 200, 'WK');
   await pmap(patients, 10, async (p, i) => {
-    const r = await reception.post('/appointments', { sessionId: (i < 100 ? s1 : s2).id, patientId: p });
+    const r = await reception.post('/appointments', { sessionId: (bookSessions[Math.floor(i / 10)] as MadeSession).id, patientId: p });
     if (r.status !== 201) throw new Error(`booking failed ${r.status} ${JSON.stringify(r.body)}`);
   });
   // 10 called entries (one per doctor) -> 10 call_timeout jobs
@@ -298,11 +299,11 @@ async function workerKill(): Promise<void> {
   }
   const killedAfterMs = round1(performance.now() - t0);
   const afterKill = (await pool.query(`SELECT state, count(*)::int AS n FROM jobs WHERE job_type IN ('reservation_release','call_timeout') GROUP BY 1 ORDER BY 1`)).rows;
-  const missedAtKill = (await pool.query(`SELECT count(*)::int AS n FROM appointments WHERE status = 'missed'`)).rows[0].n as number;
+  const missedAtKill = (await pool.query(`SELECT count(*)::int AS n FROM appointments WHERE status = 'missed' AND session_id = ANY($1::uuid[])`, [bookSessionIds])).rows[0].n as number;
   c.ok('the worker was killed while holding leases and with work left', runningAtKill.length > 0 && missedAtKill < 200, { runningAtKill: runningAtKill.length, appointmentsAlreadyMissed: missedAtKill, jobStatesAfterKill: afterKill });
 
   await sleep(1000);
-  const stalled = (await pool.query(`SELECT count(*)::int AS n FROM appointments WHERE status = 'missed'`)).rows[0].n as number;
+  const stalled = (await pool.query(`SELECT count(*)::int AS n FROM appointments WHERE status = 'missed' AND session_id = ANY($1::uuid[])`, [bookSessionIds])).rows[0].n as number;
   c.ok('nothing advances while the worker is down', stalled === missedAtKill, { before: missedAtKill, after: stalled });
 
   const restartT0 = performance.now();
@@ -316,9 +317,9 @@ async function workerKill(): Promise<void> {
   const drainMs = round1(performance.now() - restartT0);
   const jobStates = (await pool.query(`SELECT job_type, state, count(*)::int AS n, max(attempts)::int AS max_attempts, count(*) FILTER (WHERE attempts > 1)::int AS retried FROM jobs WHERE job_type IN ('reservation_release','call_timeout') GROUP BY 1, 2 ORDER BY 1, 2`)).rows;
   const effects = (await pool.query(`SELECT
-      (SELECT count(*)::int FROM appointments WHERE status = 'missed') AS missed,
-      (SELECT count(*)::int FROM appointments WHERE status = 'booked') AS still_booked,
-      (SELECT count(*)::int FROM appointments WHERE version <> 2) AS appointments_not_version_2,
+      (SELECT count(*)::int FROM appointments WHERE status = 'missed' AND session_id = ANY($1::uuid[])) AS missed,
+      (SELECT count(*)::int FROM appointments WHERE status = 'booked' AND session_id = ANY($1::uuid[])) AS still_booked,
+      (SELECT count(*)::int FROM appointments WHERE version <> 2 AND session_id = ANY($1::uuid[])) AS appointments_not_version_2,
       (SELECT count(*)::int FROM audit_events WHERE operation = 'appointment.reservation_release') AS release_audits,
       (SELECT count(DISTINCT entity_id)::int FROM audit_events WHERE operation = 'appointment.reservation_release') AS release_audits_distinct,
       (SELECT count(*)::int FROM outbox_events WHERE event_type = 'ReservationReleased') AS release_events,
@@ -327,14 +328,13 @@ async function workerKill(): Promise<void> {
       (SELECT count(DISTINCT entity_id)::int FROM audit_events WHERE operation = 'queue.call_timeout') AS timeout_audits_distinct,
       (SELECT count(*)::int FROM outbox_events WHERE event_type = 'QueuePatientSkipped') AS timeout_events,
       (SELECT count(*)::int FROM queue_entries WHERE version <> 3) AS entries_not_version_3,
-      (SELECT booked_reserved FROM session_capacity WHERE session_id = $1) AS booked_reserved_s1,
-      (SELECT booked_reserved FROM session_capacity WHERE session_id = $2) AS booked_reserved_s2`, [s1.id, s2.id])).rows[0];
+      (SELECT coalesce(sum(booked_reserved), 0)::int FROM session_capacity WHERE session_id = ANY($1::uuid[])) AS booked_reserved_total`, [bookSessionIds])).rows[0];
   const inv = await checkInvariants(pool);
   const dead = (await pool.query(`SELECT count(*)::int AS n FROM jobs WHERE state = 'dead'`)).rows[0].n as number;
   c.ok('all 210 timer jobs reach a terminal state after the restart', jobStates.every((r) => r.state === 'succeeded' || r.state === 'cancelled') && dead === 0, { drainMs, jobStates, dead });
   c.ok('reservation_release effect applied exactly once for each of the 200 appointments (1 status change, 1 audit row, 1 event)', effects.missed === 200 && effects.still_booked === 0 && effects.appointments_not_version_2 === 0 && effects.release_audits === 200 && effects.release_audits_distinct === 200 && effects.release_events === 200, effects);
   c.ok('call_timeout effect applied exactly once for each of the 10 called entries', effects.skipped_entries === 10 && effects.timeout_audits === 10 && effects.timeout_audits_distinct === 10 && effects.timeout_events === 10 && effects.entries_not_version_3 === 0, effects);
-  c.ok('released capacity is returned exactly once (counters 0)', effects.booked_reserved_s1 === 0 && effects.booked_reserved_s2 === 0, { s1: effects.booked_reserved_s1, s2: effects.booked_reserved_s2 });
+  c.ok('released capacity is returned exactly once (counters 0)', effects.booked_reserved_total === 0, { bookedReservedTotalOver20Sessions: effects.booked_reserved_total });
   c.ok('capacity/allocation invariants hold', inv.violations.length === 0, inv.violations.slice(0, 3));
   await worker.stop();
   await api.stop();
@@ -533,31 +533,33 @@ async function dbConn(): Promise<void> {
     void fetch(`${api.url}/health`, { signal: AbortSignal.timeout(5000) }).then((r) => health.push({ t, status: r.status, ms: performance.now() - t1 })).catch(() => health.push({ t, status: 0, ms: performance.now() - t1 }));
   }, 250);
 
+  /** Terminate only backends that are idle (in the pool, not checked out): see dbCrash for what happens when busy ones are terminated. */
+  const adminPg = new pg.Client({ connectionString: ADMIN_URL });
+  await adminPg.connect();
   const terminate = async (all: boolean): Promise<number> => {
-    const r = await pool.query(`SELECT count(pg_terminate_backend(pid))::int AS n FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid() AND ($2::boolean OR application_name = 'hqms-api')`, [DB, all]);
+    const r = await adminPg.query(`SELECT count(pg_terminate_backend(pid))::int AS n FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid() AND state = 'idle' AND ($2::boolean OR application_name = 'hqms-api')`, [DB, all]);
     return r.rows[0].n as number;
   };
 
   const schedule = (async () => {
     await sleep(10_000);
-    events.push({ t: now(), what: `terminated ${await terminate(false)} API backends (one shot)` });
+    events.push({ t: now(), what: `terminated ${await terminate(false)} idle API backends (one shot)` });
     await sleep(15_000);
-    // database refuses connections for 8 s
-    const adminPg = new pg.Client({ connectionString: ADMIN_URL });
-    await adminPg.connect();
+    // database refuses new connections for 8 s; idle pool connections are terminated every 100 ms during that time
     await adminPg.query(`ALTER DATABASE "${DB}" WITH ALLOW_CONNECTIONS false`);
-    const killed = await adminPg.query(`SELECT count(pg_terminate_backend(pid))::int AS n FROM pg_stat_activity WHERE datname = $1`, [DB]);
-    events.push({ t: now(), what: `database closed to new connections; terminated ${killed.rows[0].n} backends (API pool and worker)` });
-    await sleep(8000);
+    events.push({ t: now(), what: 'database closed to new connections (idle pool connections of API and worker terminated every 100 ms for 8 s)' });
+    for (let i = 0; i < 80; i += 1) {
+      await terminate(true);
+      await sleep(100);
+    }
     await adminPg.query(`ALTER DATABASE "${DB}" WITH ALLOW_CONNECTIONS true`);
     events.push({ t: now(), what: 'database accepting connections again' });
-    await adminPg.end();
     await sleep(12_000);
     for (let i = 0; i < 10; i += 1) {
       await terminate(false);
       await sleep(300);
     }
-    events.push({ t: now(), what: 'flapping: API backends terminated 10 times, 300 ms apart (3 s)' });
+    events.push({ t: now(), what: 'flapping: idle API backends terminated 10 times, 300 ms apart (3 s)' });
   })();
 
   // steady open-loop traffic: 60% snapshot reads, 40% bookings
@@ -595,6 +597,7 @@ async function dbConn(): Promise<void> {
     step();
   });
   await schedule;
+  await adminPg.end();
   while (inflight > 0) await sleep(50);
   clearInterval(healthTimer);
   await sleep(500);
@@ -608,7 +611,6 @@ async function dbConn(): Promise<void> {
   const bad = recs.filter((r) => r.status >= 500 || r.status === 0);
   const firstBad = bad.length ? Math.min(...bad.map((r) => r.t)) : undefined;
   const lastBad = bad.length ? Math.max(...bad.map((r) => r.t)) : undefined;
-  const outage = events.find((e) => e.what.startsWith('database closed'));
   const reopened = events.find((e) => e.what.startsWith('database accepting'));
   const okAfterReopen = recs.filter((r) => reopened && r.t >= reopened.t && r.status >= 200 && r.status < 300).sort((a, b) => a.t - b.t)[0];
   const healthBad = health.filter((h) => h.status !== 200);
@@ -622,7 +624,7 @@ async function dbConn(): Promise<void> {
   }
   const booked201 = recs.filter((r) => r.kind === 'book' && r.status === 201).length;
   const bookedKeys = new Set(recs.filter((r) => r.kind === 'book').map((r) => r.key));
-  const apptCount = (await pool.query(`SELECT count(*)::int AS n FROM appointments`)).rows[0].n as number;
+  const apptCount = (await pool.query(`SELECT count(*)::int AS n FROM appointments a JOIN patients p ON p.id = a.patient_id WHERE p.mrn LIKE 'CN-%'`)).rows[0].n as number;
   const idemCount = (await pool.query(`SELECT count(*)::int AS n FROM idempotency_records WHERE idem_key LIKE 't5-conn-%'`)).rows[0].n as number;
   const inv = await checkInvariants(pool);
   const apiAlive = api.alive();
@@ -643,16 +645,86 @@ async function dbConn(): Promise<void> {
   await pool.end();
   await dropDb(DB);
   save('dbConn', {
-    description: '30 req/s (60% snapshot GET, 40% POST /appointments) for 70 s; pg_terminate_backend on the API pool at 10 s, database closed to new connections for 8 s at ~25 s, 10 terminations 300 ms apart at ~45 s',
+    description: '30 req/s (60% snapshot GET, 40% POST /appointments) for 70 s; pg_terminate_backend on IDLE API pool connections at 10 s, database closed to new connections for 8 s at ~25 s (idle connections terminated every 100 ms), 10 terminations 300 ms apart at ~48 s. Terminating BUSY connections crashes the API: see dbCrash',
     events, errorBodies, networkErrors: netErrors, recordsTotal: recs.length, firstBadSec: firstBad, lastBadSec: lastBad,
     health: { probes: health.length, non200: healthBad.length, non200Statuses: healthBad.reduce<Record<string, number>>((m, h) => ((m[h.status] = (m[h.status] ?? 0) + 1), m), {}) },
-    timeline, retryOutcome, apiAlive, workerAlive, checks: c.list, allPass: c.list.every((x) => x.pass),
+    apiLogTail: api.logs.slice(-60), workerLogTail: worker.logs.slice(-15), timeline, retryOutcome, apiAlive, workerAlive, checks: c.list, allPass: c.list.every((x) => x.pass),
   });
 }
 
 // =====================================================================================================
+// 5. pg_terminate_backend on a connection that is checked out (busy or idle in transaction)
+// =====================================================================================================
 
-const SCENARIOS: Record<string, () => Promise<void>> = { 'api-kill': apiKill, 'worker-kill': workerKill, 'ocr-fail': ocrFail, 'db-conn': dbConn };
+async function dbCrash(): Promise<void> {
+  const DB = 'hqms_fail_crash';
+  const c = checks();
+  await recreateDb(DB);
+  const pool = newPool(DB, 4);
+  let api = await startApi({ dbName: DB, env: { DB_POOL_MAX: '10' } });
+  const admin = await login(api.url, 'admin@hqms.test');
+  const reception = await login(api.url, 'reception@hqms.test');
+  const patients = await bulkPatients(pool, 200, 'CR');
+  const sessions: MadeSession[] = [];
+  for (let i = 0; i < 6; i += 1) sessions.push(await futureSession(admin, 1 + i, 0));
+  const reqs = patients.map((patientId, i) => ({ patientId, sessionId: (sessions[i % 6] as MadeSession).id, key: `t5-crash-${i}` }));
+  const outcome = new Map<string, number>();
+  let killed = 0;
+  let killedAt = 0;
+  const t0 = performance.now();
+  const http = new Http(api.url, reception.cookie);
+  const killer = (async () => {
+    // wait until some backend of the API is in a transaction or running a statement, then terminate the API backends that are checked out and idle inside a transaction (between two statements of one command)
+    for (let i = 0; i < 4000; i += 1) {
+      const r = await pool.query(`SELECT count(pg_terminate_backend(pid))::int AS n FROM pg_stat_activity WHERE datname = $1 AND application_name = 'hqms-api' AND state = 'idle in transaction'`, [DB]);
+      if (r.rows[0].n > 0) {
+        killed = r.rows[0].n;
+        killedAt = performance.now() - t0;
+        return;
+      }
+      await sleep(5);
+    }
+  })();
+  await pmap(reqs, 16, async (r) => {
+    const res = await http.post('/appointments', { sessionId: r.sessionId, patientId: r.patientId }, r.key);
+    outcome.set(r.key, res.status);
+  });
+  await killer;
+  await sleep(500);
+  const apiAliveAfter = api.alive();
+  const logTail = api.logs.slice(-14).filter((l) => !/RouterExplorer|RoutesResolver/.test(l));
+  const crashLine = api.logs.find((l) => /Unhandled 'error' event/.test(l));
+  const before = (await pool.query(`SELECT count(*)::int AS n FROM appointments WHERE patient_id = ANY($1::uuid[])`, [patients])).rows[0].n as number;
+  const invBefore = await checkInvariants(pool);
+  let restartMs = 0;
+  if (!apiAliveAfter) {
+    const t1 = performance.now();
+    api = await startApi({ dbName: DB, env: { DB_POOL_MAX: '10' } });
+    restartMs = performance.now() - t1;
+  }
+  const http2 = new Http(api.url, reception.cookie);
+  const replay: Record<string, number> = {};
+  await pmap(reqs, 8, async (r) => {
+    const res = await http2.post('/appointments', { sessionId: r.sessionId, patientId: r.patientId }, r.key);
+    replay[res.status] = (replay[res.status] ?? 0) + 1;
+  });
+  const after = (await pool.query(`SELECT count(*)::int AS n FROM appointments WHERE patient_id = ANY($1::uuid[])`, [patients])).rows[0].n as number;
+  const inv = await checkInvariants(pool);
+  const perSession = (await pool.query(`SELECT count(*)::int AS n FROM appointments WHERE patient_id = ANY($1::uuid[]) GROUP BY session_id`, [patients])).rows.map((r) => r.n as number);
+  c.ok('terminating a checked-out API connection (idle in transaction) with pg_terminate_backend leaves the API process running', apiAliveAfter, { backendsTerminated: killed, afterMs: round1(killedAt), exitedWith: apiAliveAfter ? null : 'see crashLine', crashLine: crashLine ?? null });
+  c.ok('no half-written state after the connection loss', invBefore.violations.length === 0, { before, violations: invBefore.violations.slice(0, 3) });
+  c.ok('after restart every request replays with its Idempotency-Key to 201 or a business 409 (no 5xx)', Object.keys(replay).every((s) => s === '201' || s === '409'), { replay, restartToHealthyMs: round1(restartMs) });
+  c.ok('each session ends with exactly its capacity booked (10 places x 6 sessions, 200 requests)', perSession.length === 6 && perSession.every((n) => n === 10) && after === 60, { perSession, after });
+  c.ok('invariants hold', inv.violations.length === 0, inv.violations.slice(0, 3));
+  await api.stop();
+  await pool.end();
+  await dropDb(DB);
+  save('dbCrash', { description: 'pg_terminate_backend on every non-idle backend of the API pool (state idle-in-transaction: checked out by a command, between two statements) while 200 bookings (16 in flight) are running', backendsTerminated: killed, firstStatusesBeforeRestart: Object.fromEntries([...outcome.values()].map((s) => [s, 0])), outcomeCounts: [...outcome.values()].reduce<Record<string, number>>((m, s) => ((m[s] = (m[s] ?? 0) + 1), m), {}), apiAliveAfter, crashLine: crashLine ?? null, logTail, replay, restartMs: round1(restartMs), checks: c.list, allPass: c.list.every((x) => x.pass) });
+}
+
+// =====================================================================================================
+
+const SCENARIOS: Record<string, () => Promise<void>> = { 'api-kill': apiKill, 'worker-kill': workerKill, 'ocr-fail': ocrFail, 'db-conn': dbConn, 'db-crash': dbCrash };
 
 async function main(): Promise<void> {
   buildAll();

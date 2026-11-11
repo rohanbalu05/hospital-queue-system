@@ -175,6 +175,8 @@ class Client {
   }
 }
 
+const scopeStart = (r: number): number => (r === 0 ? 0 : (r - 1) * 4);
+
 async function pmap<T, R>(items: T[], conc: number, fn: (t: T, i: number) => Promise<R>): Promise<R[]> {
   const out: R[] = new Array(items.length);
   let next = 0;
@@ -233,12 +235,12 @@ async function main(): Promise<void> {
     sessionOfPatient[i] = s;
     const k = Math.floor(i / sessions.length);
     if (k < 3) {
-      const r = await (receptions[i % 6] as Http).post(`/sessions/${s.id}/walk-ins`, { patientId: pid });
+      const r = await (receptions[0] as Http).post(`/sessions/${s.id}/walk-ins`, { patientId: pid });
       if (r.status !== 201) throw new Error(`walk-in ${r.status} ${JSON.stringify(r.body)}`);
     } else {
-      const b = await (receptions[i % 6] as Http).post('/appointments', { sessionId: s.id, patientId: pid });
+      const b = await (receptions[0] as Http).post('/appointments', { sessionId: s.id, patientId: pid });
       if (b.status !== 201) throw new Error(`book ${b.status} ${JSON.stringify(b.body)}`);
-      const c = await (receptions[i % 6] as Http).post(`/appointments/${b.body.id}/check-in`, {});
+      const c = await (receptions[0] as Http).post(`/appointments/${b.body.id}/check-in`, {});
       if (c.status !== 200 && c.status !== 201) throw new Error(`check-in ${c.status} ${JSON.stringify(c.body)}`);
     }
   });
@@ -250,7 +252,7 @@ async function main(): Promise<void> {
   let cid = 0;
   for (let i = 0; i < 170; i += 1) clients.push(new Client(cid++, 'patient', patientHttp[i] as Http, [(sessionOfPatient[i] as MadeSession).id], true));
   for (let d = 0; d < 10; d += 1) clients.push(new Client(cid++, 'staff', doctors[d] as Http, [(sessions[d * 2] as MadeSession).id], true)); // 10 doctors
-  for (let r = 0; r < 6; r += 1) clients.push(new Client(cid++, 'staff', receptions[r] as Http, [(sessions[r * 3] as MadeSession).id], true)); // 6 reception
+  for (let r = 0; r < 6; r += 1) clients.push(new Client(cid++, 'staff', receptions[r] as Http, [(sessions[scopeStart(r)] as MadeSession).id], true)); // 6 reception (reception 1 sees every doctor, 2 to 6 two doctors each)
   clients.push(new Client(cid++, 'staff', admin, [(sessions[1] as MadeSession).id], true), new Client(cid++, 'staff', admin2, [(sessions[2] as MadeSession).id], true)); // 2 admin
   for (let d = 0; d < 4; d += 1) clients.push(new Client(cid++, 'staff', doctors[d] as Http, [(sessions[d * 2 + 1] as MadeSession).id], true)); // 4 second tabs (follow-up users have no session stream route)
   for (let k = 0; k < 8; k += 1) clients.push(new Client(cid++, 'display', new Http(api.url), [], DISPLAY_REFETCH));
@@ -301,7 +303,7 @@ async function main(): Promise<void> {
     while (running) {
       await sleep(between(300, 1500));
       if (!running) return;
-      const s = sessions[rnd(sessions.length)] as MadeSession;
+      const s = sessions[scopeStart(r) + (r === 0 ? rnd(sessions.length) : rnd(4))] as MadeSession;
       const pid = extraPatients[extraCtr++ % extraPatients.length] as string;
       const sentAt = performance.now();
       const w = await http.post(`/sessions/${s.id}/walk-ins`, { patientId: pid });
@@ -571,7 +573,7 @@ async function etaCalibration(apiUrl: string, admin: Http, reception: Http, doct
         doctor: run.doctor,
         patients: n,
         knownDurationsSeconds: run.durations,
-        atCheckInPrediction: { ...share(checkIn), signedErrorMinutesFromRangeMidpoint: dist(checkIn.map((x) => Math.abs(x.midErrorMin))), meanSignedErrorMin: round1(checkIn.reduce((a, x) => a + x.midErrorMin, 0) / Math.max(1, checkIn.length) * 100) / 100, note: 'actual wait (from the prediction until the patient was called) vs predicted [low, high]; every patient predicted at the same moment, cold start (0 samples, range +-50%)' },
+        atCheckInPrediction: { ...share(checkIn), signedErrorMinutesFromRangeMidpoint: dist(checkIn.map((x) => Math.abs(x.midErrorMin))), meanSignedErrorMin: round1(checkIn.reduce((a, x) => a + x.midErrorMin, 0) / Math.max(1, checkIn.length) * 100) / 100, note: 'actual wait (from the prediction until the patient was called) vs predicted [low, high]; every patient predicted at the same moment; the estimator already holds samples from part 1 (see estimatorAtEnd), so this is not a cold start; the API reports ranges in whole minutes' },
         refreshedAfterEachCompletion: { ...share(refreshed), positions1to2: bucket(refreshed, 1, 2), positions3to5: bucket(refreshed, 3, 5), positions6plus: bucket(refreshed, 6, 99) },
         estimatorAtEnd: lastPred ? { meanMinutes: lastPred.mean, samples: lastPred.samples } : null,
         rangeWidthAtCheckInMinutes: checkIn.slice(0, 3).map((x) => [x.low, x.high]),
