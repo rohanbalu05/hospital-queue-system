@@ -20,6 +20,8 @@ export default defineConfig({
       NODE_ENV: 'test',
       // Tests log in many times from one address.
       LOGIN_RATE_LIMIT_MAX: '1000',
+      // The public display snapshot is cached for 1 s in production; tests read their own writes.
+      DISPLAY_CACHE_MS: '0',
     },
     // All files share one scratch database; run them one after another.
     fileParallelism: false,

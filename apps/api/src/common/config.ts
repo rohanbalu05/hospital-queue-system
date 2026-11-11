@@ -45,6 +45,8 @@ const EnvSchema = z.object({
   UPLOAD_MAX_BYTES_PER_PATIENT: z.coerce.number().int().positive().default(200 * 1024 * 1024),
   /** Public display endpoint: requests per client address per minute. */
   DISPLAY_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(120),
+  /** Shared cache of the public display snapshot (0 turns it off). */
+  DISPLAY_CACHE_MS: z.coerce.number().int().min(0).default(1000),
 });
 
 export interface AppConfig {
@@ -82,6 +84,7 @@ export interface AppConfig {
   uploadMaxDocumentsPerPatient: number;
   uploadMaxBytesPerPatient: number;
   displayRateLimitPerMin: number;
+  displayCacheMs: number;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -120,5 +123,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     uploadMaxDocumentsPerPatient: e.UPLOAD_MAX_DOCUMENTS_PER_PATIENT,
     uploadMaxBytesPerPatient: e.UPLOAD_MAX_BYTES_PER_PATIENT,
     displayRateLimitPerMin: e.DISPLAY_RATE_LIMIT_PER_MIN,
+    displayCacheMs: e.DISPLAY_CACHE_MS,
   };
 }

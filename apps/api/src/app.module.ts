@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AdminModule } from './admin/admin.module.js';
 import { AuditModule } from './audit/audit.module.js';
 import { LiveModule } from './live/live.module.js';
 import { QueueModule } from './queue/queue.module.js';
@@ -29,6 +30,7 @@ import { ReportsModule } from './reports/reports.module.js';
     QueueModule,
     LiveModule,
     AuditModule,
+    AdminModule,
     FollowUpModule,
     DocumentsModule,
     AssistantModule,

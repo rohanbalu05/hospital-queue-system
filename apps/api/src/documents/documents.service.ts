@@ -8,7 +8,8 @@ import { PatientScope } from '../access/patient-scope.service.js';
 import type { Clock } from '../common/clock.js';
 import { ApiException, conflict, notFound, validationFailed } from '../common/errors.js';
 import type { RequestCtx } from '../common/request-context.js';
-import { CLOCK, DB_POOL, OBJECT_STORAGE } from '../common/tokens.js';
+import type { AppConfig } from '../common/config.js';
+import { APP_CONFIG, CLOCK, DB_POOL, OBJECT_STORAGE } from '../common/tokens.js';
 import { assertVersion, runCommand } from '../queue/command.js';
 import type { ObjectStorage } from '../providers/ports.js';
 import {
@@ -40,6 +41,7 @@ export class DocumentsService {
     @Inject(AccessPolicy) private readonly access: AccessPolicy,
     @Inject(PatientScope) private readonly scope: PatientScope,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
   /**
@@ -74,8 +76,28 @@ export class DocumentsService {
     const storageKey = `documents/${patientId}/${id}`;
     const sha256 = createHash('sha256').update(file.buffer).digest('hex');
 
-    // tx1: the record exists before the bytes do.
+    // tx1: the record exists before the bytes do. The per-patient quota is checked under a per-patient advisory
+    // lock, so two parallel uploads cannot both slip under the limit.
     await withTransaction(this.pool, async (tx) => {
+      await tx.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`upload-quota:${patientId}`]);
+      const used = await tx.query<{ n: number; bytes: string }>(
+        `SELECT count(*)::int AS n, COALESCE(sum(size_bytes), 0)::text AS bytes FROM documents WHERE patient_id = $1`,
+        [patientId],
+      );
+      const n = used.rows[0]?.n ?? 0;
+      const bytes = Number(used.rows[0]?.bytes ?? 0);
+      if (n >= this.config.uploadMaxDocumentsPerPatient) {
+        throw conflict('CONFLICT', `This patient already has the maximum of ${this.config.uploadMaxDocumentsPerPatient} documents`, {
+          documents: n,
+        });
+      }
+      if (bytes + file.buffer.length > this.config.uploadMaxBytesPerPatient) {
+        throw conflict(
+          'CONFLICT',
+          `This upload would take the patient's stored documents above ${Math.floor(this.config.uploadMaxBytesPerPatient / (1024 * 1024))} MB`,
+          { storedBytes: bytes },
+        );
+      }
       await tx.query(
         `INSERT INTO documents (id, patient_id, visit_id, uploaded_by, storage_key, original_name, mime_type, size_bytes,
                                 page_count, content_hash, status)

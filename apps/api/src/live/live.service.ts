@@ -13,15 +13,14 @@ import { localDate } from '../common/http.js';
  */
 export interface Subscriber {
   mode: 'session' | 'display';
+  /** Who is listening: staff streams carry the event type; patient and display streams only `queue.changed`. */
+  audience: 'staff' | 'patient' | 'display';
   sessionIds: ReadonlySet<string>;
   /** Highest version already announced per session (so a change is never missed or repeated). */
   sent: Map<string, number>;
   send(notice: QueueVersionNotice): void;
   close(): void;
 }
-
-/** Hard cap so a flood of public display connections cannot exhaust file descriptors. */
-const MAX_SUBSCRIBERS = 1000;
 
 /**
  * One shared poller per API instance (report 6.2: "compare active session versions in a batch rather than
@@ -36,7 +35,11 @@ export class LiveService implements OnModuleDestroy {
   private readonly log = new Logger('LiveService');
   private readonly subs = new Set<Subscriber>();
   private timer: NodeJS.Timeout | null = null;
-  private chain: Promise<void> = Promise.resolve();
+  /** The tick in flight, if any: the timer skips a tick while one is running, so ticks never pile up. */
+  private running: Promise<void> | null = null;
+  private authenticated = 0;
+  private displays = 0;
+  private readonly perIp = new Map<string, number>();
 
   constructor(
     @Inject(DB_POOL) private readonly pool: Pool,
@@ -48,15 +51,43 @@ export class LiveService implements OnModuleDestroy {
     return this.config.ssePingMs;
   }
 
+  /**
+   * Reserve a connection slot BEFORE any stream header is written, so a refusal is an ordinary 503 JSON error:
+   * separate caps for the public display and authenticated streams, and one per client address.
+   * Returns the release function (idempotent).
+   */
+  reserve(kind: 'display' | 'authenticated', ip: string): () => void {
+    const cfg = this.config;
+    const tooMany = (): never => {
+      throw new ApiException(503, 'INTERNAL', 'Too many live connections; try again shortly');
+    };
+    if (kind === 'display' ? this.displays >= cfg.sseMaxDisplay : this.authenticated >= cfg.sseMaxAuthenticated) tooMany();
+    if ((this.perIp.get(ip) ?? 0) >= cfg.sseMaxPerIp) tooMany();
+    if (kind === 'display') this.displays += 1;
+    else this.authenticated += 1;
+    this.perIp.set(ip, (this.perIp.get(ip) ?? 0) + 1);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      if (kind === 'display') this.displays -= 1;
+      else this.authenticated -= 1;
+      const n = (this.perIp.get(ip) ?? 1) - 1;
+      if (n <= 0) this.perIp.delete(ip);
+      else this.perIp.set(ip, n);
+    };
+  }
+
   /** Register a subscriber and announce the current version(s) to it immediately. Returns the unsubscribe function. */
   async subscribe(sub: Subscriber): Promise<() => void> {
-    if (this.subs.size >= MAX_SUBSCRIBERS) throw new ApiException(503, 'INTERNAL', 'Too many live connections');
     this.subs.add(sub);
     this.ensureTimer();
     const off = (): void => {
       this.subs.delete(sub);
       if (this.subs.size === 0) this.stopTimer();
     };
+    // A tick that started before this subscriber was added cannot have served it: wait it out, then poll once.
+    if (this.running) await this.running;
     await this.pollNow();
     return off;
   }
@@ -73,7 +104,9 @@ export class LiveService implements OnModuleDestroy {
 
   private ensureTimer(): void {
     if (this.timer) return;
-    this.timer = setInterval(() => void this.pollNow(), this.config.ssePollMs);
+    this.timer = setInterval(() => {
+      if (!this.running) void this.pollNow(); // skip while the previous tick is still in flight
+    }, this.config.ssePollMs);
     this.timer.unref();
   }
 
@@ -82,12 +115,18 @@ export class LiveService implements OnModuleDestroy {
     this.timer = null;
   }
 
-  /** Serialise ticks: a connect-time poll and the timer never run concurrently. */
+  /** One tick at a time: a connect-time poll and the timer never run concurrently (an in-flight tick is shared). */
   private pollNow(): Promise<void> {
-    this.chain = this.chain.then(() => this.tick()).catch((err: unknown) => {
-      this.log.warn(`poll failed: ${err instanceof Error ? err.name : 'error'}`);
-    });
-    return this.chain;
+    if (this.running) return this.running;
+    const run = this.tick()
+      .catch((err: unknown) => {
+        this.log.warn(`poll failed: ${err instanceof Error ? err.name : 'error'}`);
+      })
+      .finally(() => {
+        if (this.running === run) this.running = null;
+      });
+    this.running = run;
+    return run;
   }
 
   private async tick(): Promise<void> {
@@ -119,8 +158,14 @@ export class LiveService implements OnModuleDestroy {
         if (last !== undefined && row.queue_version <= last) continue;
         let eventType = 'connected';
         if (last !== undefined) {
-          if (!types.has(row.id)) types.set(row.id, await this.latestEventType(row.id));
-          eventType = types.get(row.id) ?? 'queue.changed';
+          if (sub.audience !== 'staff') {
+            // Patients and the public display learn only that the queue moved: no event name that hints at a
+            // clinical signal (priority, pause, a call). They refetch the snapshot they are allowed to see.
+            eventType = 'queue.changed';
+          } else {
+            if (!types.has(row.id)) types.set(row.id, await this.latestEventType(row.id));
+            eventType = types.get(row.id) ?? 'queue.changed';
+          }
         }
         sub.sent.set(row.id, row.queue_version);
         sub.send({

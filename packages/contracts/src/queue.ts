@@ -113,6 +113,12 @@ export const QueueCommandResult = z.object({
 });
 /** POST /queue-entries/{id}/skip (manual, before timeout), /re-enter, /absent */
 export const QueueEntryActionRequest = ExpectedVersion.extend({ reason: z.string().max(300).optional() });
+/**
+ * POST /queue-entries/{id}/re-enter: the action request plus `admitLate`, which reception sets to confirm a
+ * returning group-A patient who is now past the grace period (FR-05-b / FR-08-b).
+ */
+export const ReEnterRequest = QueueEntryActionRequest.extend({ admitLate: z.boolean().optional() });
+export type ReEnterRequest = z.infer<typeof ReEnterRequest>;
 
 /** POST /queue-entries/{id}/priority (doctor only; clinical actor). class null clears. */
 export const SetPriorityRequest = ExpectedVersion.extend({

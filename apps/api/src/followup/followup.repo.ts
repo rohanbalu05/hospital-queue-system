@@ -8,8 +8,11 @@ import { notFound } from '../common/errors.js';
 const TASK_COLS = `
   t.id, t.patient_id, p.full_name AS patient_name, t.source_visit_id, t.source_message_id, t.kind, t.title, t.detail,
   t.owner_id, ou.display_name AS owner_name, t.status, t.due_at, t.acknowledged_at, t.disposition, t.outcome_note,
-  t.resolved_at, t.return_appointment_id, t.version, t.created_at`;
-const TASK_FROM = `FROM follow_up_tasks t JOIN patients p ON p.id = t.patient_id LEFT JOIN users ou ON ou.id = t.owner_id`;
+  t.resolved_at, t.return_appointment_id, t.version, t.created_at,
+  ss.session_date AS sv_date, sd.id AS sv_doctor_id, sd.full_name AS sv_doctor_name, sd.department AS sv_department`;
+const TASK_FROM = `FROM follow_up_tasks t JOIN patients p ON p.id = t.patient_id LEFT JOIN users ou ON ou.id = t.owner_id
+  LEFT JOIN visits sv ON sv.id = t.source_visit_id LEFT JOIN sessions ss ON ss.id = sv.session_id
+  LEFT JOIN doctors sd ON sd.id = sv.doctor_id`;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- pg row
 function mapTask(r: any, now: Date): FollowUpTask {
@@ -20,6 +23,9 @@ function mapTask(r: any, now: Date): FollowUpTask {
     patientName: r.patient_name,
     sourceVisitId: r.source_visit_id,
     sourceMessageId: r.source_message_id,
+    sourceVisit: r.sv_doctor_id
+      ? { sessionDate: String(r.sv_date), doctorId: r.sv_doctor_id, doctorName: r.sv_doctor_name, department: r.sv_department }
+      : null,
     kind: r.kind,
     title: r.title,
     detail: r.detail,
