@@ -108,3 +108,16 @@ worker-engineer (providers package, OCR job, upload reconciler) and ui-engineer 
 - Skip and start cancel the pending `call_timeout` job; absent emits `QueuePatientSkipped` with `kind:'absent'`; open/close emit no outbox event (no event type in §6.7) but audit + bump.
 - SSE: one batched poller per API instance (500 ms) over watched sessions' `queue_version`; immediate version on connect; ping 15 s; no LISTEN/NOTIFY needed for the 2 s objective.
 - Past-slot booking fixed (slot + grace > now); one active appointment per patient per session (migration 0003); patient search reception/admin only, ≥3 chars, audited by length only.
+
+## D-026 Follow-up loop API choices (api-engineer, W3)
+- Migration 0005 adds `instruction_versions.title` (immutable with the version) so retitling v2 cannot rewrite what v1 showed.
+- `PatientScope`: staff see a patient only when linked by appointment/visit to a doctor in their scope (admin all); out of scope → 404.
+- Reception may upload and read document metadata and retry OCR for in-scope patients, but cannot download files, read OCR drafts or read instructions (clinical content); doctor/followup/admin can. Only doctors verify (FR-01-b).
+- Completing a consultation does not auto-create a follow-up task; the doctor creates it explicitly.
+- Assistant escalation owner = the follow-up user assigned to one of the patient's doctors with the fewest open tasks (else unassigned); due in 24 h; provider reason text goes to audit only (≤200 chars); the patient sees fixed wording. Provider error, timeout (`ASSISTANT_TIMEOUT_MS`, 15 s), no context, or a citation outside the supplied current versions all escalate.
+- Return booking shares one private booking path with normal booking; lock order doctor → session → capacity → task row; both links written in the same transaction.
+- PDF page count from `/Type /Page` objects with `/Count` fallback; undeterminable → refused (400).
+- Report: wait = latest call decision − `eligible_at`; group P = any entry with a priority class; target rows carry null sample size and "Phase 1 target, not measured here".
+
+## D-027 Black-box test database isolation
+`tests/` suites recreate a scratch DB; parallel runs (orchestrator + builders) must set `BLACKBOX_DB_NAME` to a unique name. Two flaky failures this session (ECONNREFUSED, "database does not exist") were caused by concurrent runs sharing `hqms_test_blackbox`, not by the app.
