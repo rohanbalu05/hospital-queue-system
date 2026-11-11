@@ -128,3 +128,9 @@ Spec + concurrency-security reviews of W2–W3: no P0. All P1s and most P2s assi
 - **Paused session call-next returns 409 SESSION_NOT_CALLABLE** rather than a NO_ALLOCATION decision row (§6.4 pseudocode); FR-08-a is met and the 409 tells the caller why.
 - **Late re-entry does not re-check capacity** (Q&A 18 says reception rechecks): the re-entering patient's place was consumed at first check-in and consumed places never reopen (D-025); reception's confirmation (`admitLate`) is the review step.
 - **ConsultationCompleted does not auto-open a follow-up task** (D-026); the doctor opens it explicitly. HQ to confirm.
+
+## D-029 Fix-pass details (api-engineer, after D-028)
+- Assistant audit rows store reason codes, ids and lengths only (`denied_intent`, `no_context`, `busy`, `timeout`, `provider_error`, `not_cited`, `stale_version`, `unsupported`) — corrects D-026, which said provider reason text went to audit.
+- Patient scope is widened narrowly: a doctor/follow-up user may read a patient while they **own an open task** for that patient, even without a recent appointment/visit link (needed so fallback-owned escalations are actionable). Otherwise scope = appointment (booked/checked_in/completed) or visit within 180 days.
+- Abuse limits (all env-configurable, listed in `.env.example`): SSE caps (display 50, authenticated 1000, per IP 20, 30-min lifetime, 64 KB backpressure), display rate limit 120/min/IP + 1 s cache, assistant 10 questions/10 min/patient and ≤3 open escalations (further questions join the latest), uploads 4 concurrent, ≤50 documents / 200 MB per patient. Behind nginx `TRUST_PROXY=true` is required so limits apply per client. Test harnesses lift per-IP caps because all test clients share one IP; evidence files declare it.
+- `audit_events` is append-only (migration 0006 trigger; TRUNCATE not blocked, for test resets).
