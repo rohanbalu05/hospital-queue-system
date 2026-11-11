@@ -1,0 +1,1596 @@
+{
+  "schemaVersion": 1,
+  "notes": "Measured in simulation on synthetic, seeded sessions. Not a hospital measurement and not clinical validation. Wait = eligible to called, minutes.",
+  "policy": {
+    "version": 1,
+    "rotation": [
+      "A",
+      "A",
+      "W"
+    ],
+    "earlyEligibilityMin": 10,
+    "lateGraceMin": 15,
+    "agingTriggerMin": 45,
+    "calledTimeoutSec": 120,
+    "ewmaAlpha": 0.2,
+    "initialEstimateMin": 12,
+    "defaultBookedCapacity": 10,
+    "defaultWalkinCapacity": 5
+  },
+  "model": {
+    "sessionMinutes": 240,
+    "consultationCapacityMinutes": 210,
+    "trialsPerScenario": 500
+  },
+  "scenarios": [
+    {
+      "name": "appointment-heavy",
+      "title": "Appointment-heavy",
+      "description": "10 booked slots, light walk-in demand (about 3 attempts), mean consultation 12 min.",
+      "params": {
+        "lateProb": 0.1,
+        "lateExtraMeanMin": 12,
+        "onTimeOffsetMeanMin": -6,
+        "onTimeOffsetSdMin": 7,
+        "walkInCapacity": 5,
+        "priorityClassWeights": [
+          0.2,
+          0.3,
+          0.5
+        ],
+        "durationSigma": 0.4,
+        "name": "appointment-heavy",
+        "title": "Appointment-heavy",
+        "description": "10 booked slots, light walk-in demand (about 3 attempts), mean consultation 12 min.",
+        "baseSeed": 1000000,
+        "bookedCount": 10,
+        "noShowProb": 0.08,
+        "walkInIntensity": [
+          {
+            "fromMin": 0,
+            "toMin": 210,
+            "ratePerMin": 0.014285714285714285
+          }
+        ],
+        "priorityProb": 0.03,
+        "durationMeanMin": 12
+      },
+      "baseSeed": 1000000,
+      "trials": 500,
+      "firstSeed": 1000000,
+      "lastSeed": 1000499,
+      "workload": {
+        "booked": 10,
+        "noShows": 0.826,
+        "lateDropped": 0.038,
+        "lateAdmitted": 0.976,
+        "walkInAttempts": 3.02,
+        "walkInAdmitted": 2.908,
+        "walkInTurnedAway": 0.112,
+        "priority": 0.374,
+        "totalWorkMin": 143.885,
+        "attending": 12.044
+      },
+      "arms": {
+        "fcfs": {
+          "wait": {
+            "n": 6022,
+            "mean": 9.233,
+            "median": 3.758,
+            "p95": 36.266,
+            "max": 95.717
+          },
+          "waitByGroup": {
+            "A": {
+              "n": 3949,
+              "mean": 8.343,
+              "median": 1.883,
+              "p95": 35.043,
+              "max": 95.717
+            },
+            "W": {
+              "n": 1886,
+              "mean": 11.083,
+              "median": 7.05,
+              "p95": 37.287,
+              "max": 82.667
+            },
+            "P": {
+              "n": 187,
+              "mean": 9.355,
+              "median": 2.45,
+              "p95": 38.545,
+              "max": 79.517
+            }
+          },
+          "appointmentStartDelay": {
+            "n": 4080,
+            "mean": 3.925,
+            "median": 0.133,
+            "p95": 29.884,
+            "max": 85.717,
+            "shareLaterThan15Min": 0.15
+          },
+          "shareWaitOver45": 0.025,
+          "shareTrialsAnyOver45": 0.114,
+          "perTrialMean": {
+            "patients": 12.044,
+            "medianWait": 6.218,
+            "p95Wait": 23.323,
+            "meanWait": 8.739,
+            "maxWait": 26.39,
+            "over45": 0.302,
+            "completedBySessionEnd": 11.616,
+            "completedTotal": 12.044,
+            "overrunMin": 3.601,
+            "utilization": 0.668,
+            "agingCalls": 0,
+            "priorityCalls": 0,
+            "rotationCalls": 0
+          },
+          "perTrialMaxWait": {
+            "n": 500,
+            "mean": 26.39,
+            "median": 22.85,
+            "p95": 54.872,
+            "max": 95.717
+          }
+        },
+        "policy": {
+          "wait": {
+            "n": 6022,
+            "mean": 9.207,
+            "median": 3.117,
+            "p95": 40.276,
+            "max": 95.717
+          },
+          "waitByGroup": {
+            "A": {
+              "n": 3949,
+              "mean": 7.245,
+              "median": 1.45,
+              "p95": 30.783,
+              "max": 95.717
+            },
+            "W": {
+              "n": 1886,
+              "mean": 13.741,
+              "median": 7.292,
+              "p95": 51.529,
+              "max": 86.483
+            },
+            "P": {
+              "n": 187,
+              "mean": 4.917,
+              "median": 1.95,
+              "p95": 19.863,
+              "max": 37.017
+            }
+          },
+          "appointmentStartDelay": {
+            "n": 4080,
+            "mean": 2.749,
+            "median": 0,
+            "p95": 25.702,
+            "max": 87.917,
+            "shareLaterThan15Min": 0.116
+          },
+          "shareWaitOver45": 0.039,
+          "shareTrialsAnyOver45": 0.198,
+          "perTrialMean": {
+            "patients": 12.044,
+            "medianWait": 5.557,
+            "p95Wait": 25.329,
+            "meanWait": 8.724,
+            "maxWait": 29.619,
+            "over45": 0.47,
+            "completedBySessionEnd": 11.612,
+            "completedTotal": 12.044,
+            "overrunMin": 3.601,
+            "utilization": 0.668,
+            "agingCalls": 0.47,
+            "priorityCalls": 0.374,
+            "rotationCalls": 11.2
+          },
+          "perTrialMaxWait": {
+            "n": 500,
+            "mean": 29.619,
+            "median": 24.733,
+            "p95": 61.521,
+            "max": 95.717
+          }
+        },
+        "fcfs_priority": {
+          "wait": {
+            "n": 6022,
+            "mean": 9.222,
+            "median": 3.675,
+            "p95": 36.732,
+            "max": 105.15
+          },
+          "waitByGroup": {
+            "A": {
+              "n": 3949,
+              "mean": 8.43,
+              "median": 1.883,
+              "p95": 35.687,
+              "max": 105.15
+            },
+            "W": {
+              "n": 1886,
+              "mean": 11.307,
+              "median": 7.075,
+              "p95": 39.662,
+              "max": 82.667
+            },
+            "P": {
+              "n": 187,
+              "mean": 4.912,
+              "median": 1.7,
+              "p95": 20.062,
+              "max": 37.017
+            }
+          },
+          "appointmentStartDelay": {
+            "n": 4080,
+            "mean": 3.899,
+            "median": 0.083,
+            "p95": 29.972,
+            "max": 95.15,
+            "shareLaterThan15Min": 0.148
+          },
+          "shareWaitOver45": 0.027,
+          "shareTrialsAnyOver45": 0.124,
+          "perTrialMean": {
+            "patients": 12.044,
+            "medianWait": 6.187,
+            "p95Wait": 23.501,
+            "meanWait": 8.729,
+            "maxWait": 26.75,
+            "over45": 0.326,
+            "completedBySessionEnd": 11.616,
+            "completedTotal": 12.044,
+            "overrunMin": 3.601,
+            "utilization": 0.668,
+            "agingCalls": 0,
+            "priorityCalls": 0,
+            "rotationCalls": 0
+          },
+          "perTrialMaxWait": {
+            "n": 500,
+            "mean": 26.75,
+            "median": 22.941,
+            "p95": 55.302,
+            "max": 105.15
+          }
+        }
+      },
+      "pairedPolicyVsFcfs": {
+        "medianWait": {
+          "trials": 500,
+          "meanDiff": -0.661,
+          "ci95Low": -0.858,
+          "ci95High": -0.463,
+          "policyHigher": 15,
+          "policyLower": 126,
+          "equal": 359
+        },
+        "p95Wait": {
+          "trials": 500,
+          "meanDiff": 2.006,
+          "ci95Low": 1.602,
+          "ci95High": 2.41,
+          "policyHigher": 188,
+          "policyLower": 47,
+          "equal": 265
+        },
+        "meanWait": {
+          "trials": 500,
+          "meanDiff": -0.015,
+          "ci95Low": -0.088,
+          "ci95High": 0.058,
+          "policyHigher": 118,
+          "policyLower": 134,
+          "equal": 248
+        },
+        "maxWait": {
+          "trials": 500,
+          "meanDiff": 3.23,
+          "ci95Low": 2.657,
+          "ci95High": 3.803,
+          "policyHigher": 174,
+          "policyLower": 28,
+          "equal": 298
+        },
+        "over45": {
+          "trials": 500,
+          "meanDiff": 0.168,
+          "ci95Low": 0.123,
+          "ci95High": 0.213,
+          "policyHigher": 69,
+          "policyLower": 7,
+          "equal": 424
+        },
+        "completedBySessionEnd": {
+          "trials": 500,
+          "meanDiff": -0.004,
+          "ci95Low": -0.018,
+          "ci95High": 0.01,
+          "policyHigher": 4,
+          "policyLower": 5,
+          "equal": 491
+        },
+        "overrunMin": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        },
+        "utilization": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        }
+      },
+      "pairedPolicyVsFcfsPriority": {
+        "medianWait": {
+          "trials": 500,
+          "meanDiff": -0.63,
+          "ci95Low": -0.814,
+          "ci95High": -0.446,
+          "policyHigher": 13,
+          "policyLower": 119,
+          "equal": 368
+        },
+        "p95Wait": {
+          "trials": 500,
+          "meanDiff": 1.828,
+          "ci95Low": 1.431,
+          "ci95High": 2.226,
+          "policyHigher": 179,
+          "policyLower": 43,
+          "equal": 278
+        },
+        "meanWait": {
+          "trials": 500,
+          "meanDiff": -0.006,
+          "ci95Low": -0.069,
+          "ci95High": 0.058,
+          "policyHigher": 111,
+          "policyLower": 127,
+          "equal": 262
+        },
+        "maxWait": {
+          "trials": 500,
+          "meanDiff": 2.869,
+          "ci95Low": 2.303,
+          "ci95High": 3.436,
+          "policyHigher": 160,
+          "policyLower": 26,
+          "equal": 314
+        },
+        "over45": {
+          "trials": 500,
+          "meanDiff": 0.144,
+          "ci95Low": 0.104,
+          "ci95High": 0.184,
+          "policyHigher": 64,
+          "policyLower": 6,
+          "equal": 430
+        },
+        "completedBySessionEnd": {
+          "trials": 500,
+          "meanDiff": -0.004,
+          "ci95Low": -0.018,
+          "ci95High": 0.01,
+          "policyHigher": 4,
+          "policyLower": 5,
+          "equal": 491
+        },
+        "overrunMin": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        },
+        "utilization": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        }
+      }
+    },
+    {
+      "name": "walk-in-heavy",
+      "title": "Walk-in-heavy",
+      "description": "5 booked slots; walk-in demand of about 10 attempts front-loaded into the first 90 minutes, so the 5-walk-in cap is reached early; mean 12 min.",
+      "params": {
+        "lateProb": 0.1,
+        "lateExtraMeanMin": 12,
+        "onTimeOffsetMeanMin": -6,
+        "onTimeOffsetSdMin": 7,
+        "walkInCapacity": 5,
+        "priorityClassWeights": [
+          0.2,
+          0.3,
+          0.5
+        ],
+        "durationSigma": 0.4,
+        "name": "walk-in-heavy",
+        "title": "Walk-in-heavy",
+        "description": "5 booked slots; walk-in demand of about 10 attempts front-loaded into the first 90 minutes, so the 5-walk-in cap is reached early; mean 12 min.",
+        "baseSeed": 2000000,
+        "bookedCount": 5,
+        "noShowProb": 0.08,
+        "walkInIntensity": [
+          {
+            "fromMin": 0,
+            "toMin": 90,
+            "ratePerMin": 0.07777777777777778
+          },
+          {
+            "fromMin": 90,
+            "toMin": 210,
+            "ratePerMin": 0.025
+          }
+        ],
+        "priorityProb": 0.03,
+        "durationMeanMin": 12
+      },
+      "baseSeed": 2000000,
+      "trials": 500,
+      "firstSeed": 2000000,
+      "lastSeed": 2000499,
+      "workload": {
+        "booked": 5,
+        "noShows": 0.446,
+        "lateDropped": 0.034,
+        "lateAdmitted": 0.406,
+        "walkInAttempts": 9.996,
+        "walkInAdmitted": 4.966,
+        "walkInTurnedAway": 5.03,
+        "priority": 0.31,
+        "totalWorkMin": 113.902,
+        "attending": 9.486
+      },
+      "arms": {
+        "fcfs": {
+          "wait": {
+            "n": 4743,
+            "mean": 10.212,
+            "median": 5,
+            "p95": 38.107,
+            "max": 97.6
+          },
+          "waitByGroup": {
+            "A": {
+              "n": 1989,
+              "mean": 8.008,
+              "median": 0,
+              "p95": 35.74,
+              "max": 97.6
+            },
+            "W": {
+              "n": 2599,
+              "mean": 11.869,
+              "median": 8.1,
+              "p95": 40.428,
+              "max": 93.05
+            },
+            "P": {
+              "n": 155,
+              "mean": 10.706,
+              "median": 4.35,
+              "p95": 38.962,
+              "max": 80.85
+            }
+          },
+          "appointmentStartDelay": {
+            "n": 2057,
+            "mean": 3.53,
+            "median": 0,
+            "p95": 29.94,
+            "max": 89.583,
+            "shareLaterThan15Min": 0.153
+          },
+          "shareWaitOver45": 0.028,
+          "shareTrialsAnyOver45": 0.168,
+          "perTrialMean": {
+            "patients": 9.486,
+            "medianWait": 7.266,
+            "p95Wait": 26.409,
+            "meanWait": 10.141,
+            "maxWait": 29.388,
+            "over45": 0.264,
+            "completedBySessionEnd": 9.426,
+            "completedTotal": 9.486,
+            "overrunMin": 0.493,
+            "utilization": 0.54,
+            "agingCalls": 0,
+            "priorityCalls": 0,
+            "rotationCalls": 0
+          },
+          "perTrialMaxWait": {
+            "n": 500,
+            "mean": 29.388,
+            "median": 25.883,
+            "p95": 59.4,
+            "max": 97.6
+          }
+        },
+        "policy": {
+          "wait": {
+            "n": 4743,
+            "mean": 10.281,
+            "median": 4.15,
+            "p95": 43.898,
+            "max": 113.133
+          },
+          "waitByGroup": {
+            "A": {
+              "n": 1989,
+              "mean": 4.986,
+              "median": 0,
+              "p95": 21.113,
+              "max": 79.667
+            },
+            "W": {
+              "n": 2599,
+              "mean": 14.659,
+              "median": 8.95,
+              "p95": 51.003,
+              "max": 113.133
+            },
+            "P": {
+              "n": 155,
+              "mean": 4.813,
+              "median": 2.067,
+              "p95": 17.137,
+              "max": 26.733
+            }
+          },
+          "appointmentStartDelay": {
+            "n": 2057,
+            "mean": 0.513,
+            "median": -0.633,
+            "p95": 17.57,
+            "max": 69.667,
+            "shareLaterThan15Min": 0.067
+          },
+          "shareWaitOver45": 0.047,
+          "shareTrialsAnyOver45": 0.268,
+          "perTrialMean": {
+            "patients": 9.486,
+            "medianWait": 5.972,
+            "p95Wait": 28.941,
+            "meanWait": 10.206,
+            "maxWait": 32.769,
+            "over45": 0.446,
+            "completedBySessionEnd": 9.426,
+            "completedTotal": 9.486,
+            "overrunMin": 0.493,
+            "utilization": 0.54,
+            "agingCalls": 0.446,
+            "priorityCalls": 0.31,
+            "rotationCalls": 8.73
+          },
+          "perTrialMaxWait": {
+            "n": 500,
+            "mean": 32.769,
+            "median": 28.583,
+            "p95": 63.025,
+            "max": 113.133
+          }
+        },
+        "fcfs_priority": {
+          "wait": {
+            "n": 4743,
+            "mean": 10.217,
+            "median": 5,
+            "p95": 39.167,
+            "max": 97.6
+          },
+          "waitByGroup": {
+            "A": {
+              "n": 1989,
+              "mean": 8.076,
+              "median": 0,
+              "p95": 36.34,
+              "max": 97.6
+            },
+            "W": {
+              "n": 2599,
+              "mean": 12.182,
+              "median": 8.183,
+              "p95": 41.567,
+              "max": 93.05
+            },
+            "P": {
+              "n": 155,
+              "mean": 4.752,
+              "median": 2.067,
+              "p95": 15.49,
+              "max": 26.733
+            }
+          },
+          "appointmentStartDelay": {
+            "n": 2057,
+            "mean": 3.5,
+            "median": 0,
+            "p95": 29.94,
+            "max": 89.583,
+            "shareLaterThan15Min": 0.15
+          },
+          "shareWaitOver45": 0.031,
+          "shareTrialsAnyOver45": 0.18,
+          "perTrialMean": {
+            "patients": 9.486,
+            "medianWait": 7.102,
+            "p95Wait": 26.655,
+            "meanWait": 10.144,
+            "maxWait": 29.688,
+            "over45": 0.29,
+            "completedBySessionEnd": 9.426,
+            "completedTotal": 9.486,
+            "overrunMin": 0.493,
+            "utilization": 0.54,
+            "agingCalls": 0,
+            "priorityCalls": 0,
+            "rotationCalls": 0
+          },
+          "perTrialMaxWait": {
+            "n": 500,
+            "mean": 29.688,
+            "median": 25.883,
+            "p95": 59.754,
+            "max": 97.6
+          }
+        }
+      },
+      "pairedPolicyVsFcfs": {
+        "medianWait": {
+          "trials": 500,
+          "meanDiff": -1.294,
+          "ci95Low": -1.535,
+          "ci95High": -1.053,
+          "policyHigher": 14,
+          "policyLower": 187,
+          "equal": 299
+        },
+        "p95Wait": {
+          "trials": 500,
+          "meanDiff": 2.533,
+          "ci95Low": 2.087,
+          "ci95High": 2.979,
+          "policyHigher": 204,
+          "policyLower": 38,
+          "equal": 258
+        },
+        "meanWait": {
+          "trials": 500,
+          "meanDiff": 0.065,
+          "ci95Low": -0.027,
+          "ci95High": 0.157,
+          "policyHigher": 142,
+          "policyLower": 122,
+          "equal": 236
+        },
+        "maxWait": {
+          "trials": 500,
+          "meanDiff": 3.381,
+          "ci95Low": 2.782,
+          "ci95High": 3.98,
+          "policyHigher": 177,
+          "policyLower": 27,
+          "equal": 296
+        },
+        "over45": {
+          "trials": 500,
+          "meanDiff": 0.182,
+          "ci95Low": 0.139,
+          "ci95High": 0.225,
+          "policyHigher": 78,
+          "policyLower": 4,
+          "equal": 418
+        },
+        "completedBySessionEnd": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        },
+        "overrunMin": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        },
+        "utilization": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        }
+      },
+      "pairedPolicyVsFcfsPriority": {
+        "medianWait": {
+          "trials": 500,
+          "meanDiff": -1.13,
+          "ci95Low": -1.352,
+          "ci95High": -0.907,
+          "policyHigher": 13,
+          "policyLower": 170,
+          "equal": 317
+        },
+        "p95Wait": {
+          "trials": 500,
+          "meanDiff": 2.286,
+          "ci95Low": 1.854,
+          "ci95High": 2.718,
+          "policyHigher": 186,
+          "policyLower": 35,
+          "equal": 279
+        },
+        "meanWait": {
+          "trials": 500,
+          "meanDiff": 0.062,
+          "ci95Low": -0.027,
+          "ci95High": 0.151,
+          "policyHigher": 133,
+          "policyLower": 109,
+          "equal": 258
+        },
+        "maxWait": {
+          "trials": 500,
+          "meanDiff": 3.081,
+          "ci95Low": 2.517,
+          "ci95High": 3.645,
+          "policyHigher": 163,
+          "policyLower": 22,
+          "equal": 315
+        },
+        "over45": {
+          "trials": 500,
+          "meanDiff": 0.156,
+          "ci95Low": 0.115,
+          "ci95High": 0.197,
+          "policyHigher": 68,
+          "policyLower": 5,
+          "equal": 427
+        },
+        "completedBySessionEnd": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        },
+        "overrunMin": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        },
+        "utilization": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        }
+      }
+    },
+    {
+      "name": "priority-heavy",
+      "title": "Priority-heavy",
+      "description": "10 booked slots and about 6 walk-in attempts; 20% of attending patients receive an authorized clinical priority (classes 1/2/3 at 20/30/50%); mean 12 min.",
+      "params": {
+        "lateProb": 0.1,
+        "lateExtraMeanMin": 12,
+        "onTimeOffsetMeanMin": -6,
+        "onTimeOffsetSdMin": 7,
+        "walkInCapacity": 5,
+        "priorityClassWeights": [
+          0.2,
+          0.3,
+          0.5
+        ],
+        "durationSigma": 0.4,
+        "name": "priority-heavy",
+        "title": "Priority-heavy",
+        "description": "10 booked slots and about 6 walk-in attempts; 20% of attending patients receive an authorized clinical priority (classes 1/2/3 at 20/30/50%); mean 12 min.",
+        "baseSeed": 3000000,
+        "bookedCount": 10,
+        "noShowProb": 0.08,
+        "walkInIntensity": [
+          {
+            "fromMin": 0,
+            "toMin": 210,
+            "ratePerMin": 0.02857142857142857
+          }
+        ],
+        "priorityProb": 0.2,
+        "durationMeanMin": 12
+      },
+      "baseSeed": 3000000,
+      "trials": 500,
+      "firstSeed": 3000000,
+      "lastSeed": 3000499,
+      "workload": {
+        "booked": 10,
+        "noShows": 0.8,
+        "lateDropped": 0.068,
+        "lateAdmitted": 0.94,
+        "walkInAttempts": 5.84,
+        "walkInAdmitted": 4.46,
+        "walkInTurnedAway": 1.38,
+        "priority": 2.642,
+        "totalWorkMin": 163.169,
+        "attending": 13.592
+      },
+      "arms": {
+        "fcfs": {
+          "wait": {
+            "n": 6796,
+            "mean": 13.917,
+            "median": 8.617,
+            "p95": 47.404,
+            "max": 119.767
+          },
+          "waitByGroup": {
+            "A": {
+              "n": 3291,
+              "mean": 12.91,
+              "median": 7.167,
+              "p95": 46.45,
+              "max": 119.767
+            },
+            "W": {
+              "n": 2184,
+              "mean": 15.059,
+              "median": 10.333,
+              "p95": 47.571,
+              "max": 88.683
+            },
+            "P": {
+              "n": 1321,
+              "mean": 14.54,
+              "median": 9.2,
+              "p95": 49.45,
+              "max": 90.667
+            }
+          },
+          "appointmentStartDelay": {
+            "n": 4096,
+            "mean": 8.774,
+            "median": 4.217,
+            "p95": 41.85,
+            "max": 109.767,
+            "shareLaterThan15Min": 0.274
+          },
+          "shareWaitOver45": 0.058,
+          "shareTrialsAnyOver45": 0.274,
+          "perTrialMean": {
+            "patients": 13.592,
+            "medianWait": 11.403,
+            "p95Wait": 32.547,
+            "meanWait": 13.565,
+            "maxWait": 36.246,
+            "over45": 0.79,
+            "completedBySessionEnd": 12.962,
+            "completedTotal": 13.592,
+            "overrunMin": 5.207,
+            "utilization": 0.752,
+            "agingCalls": 0,
+            "priorityCalls": 0,
+            "rotationCalls": 0
+          },
+          "perTrialMaxWait": {
+            "n": 500,
+            "mean": 36.246,
+            "median": 34.408,
+            "p95": 66.435,
+            "max": 119.767
+          }
+        },
+        "policy": {
+          "wait": {
+            "n": 6796,
+            "mean": 13.939,
+            "median": 6.433,
+            "p95": 54.321,
+            "max": 145.217
+          },
+          "waitByGroup": {
+            "A": {
+              "n": 3291,
+              "mean": 11.644,
+              "median": 4.9,
+              "p95": 47.325,
+              "max": 124.317
+            },
+            "W": {
+              "n": 2184,
+              "mean": 21.473,
+              "median": 13.008,
+              "p95": 66.168,
+              "max": 145.217
+            },
+            "P": {
+              "n": 1321,
+              "mean": 7.2,
+              "median": 4.417,
+              "p95": 25.45,
+              "max": 79.433
+            }
+          },
+          "appointmentStartDelay": {
+            "n": 4096,
+            "mean": 6.394,
+            "median": 1.775,
+            "p95": 38.479,
+            "max": 114.317,
+            "shareLaterThan15Min": 0.19
+          },
+          "shareWaitOver45": 0.09,
+          "shareTrialsAnyOver45": 0.476,
+          "perTrialMean": {
+            "patients": 13.592,
+            "medianWait": 9.041,
+            "p95Wait": 38.261,
+            "meanWait": 13.585,
+            "maxWait": 44.702,
+            "over45": 1.222,
+            "completedBySessionEnd": 12.96,
+            "completedTotal": 13.592,
+            "overrunMin": 5.207,
+            "utilization": 0.752,
+            "agingCalls": 1.214,
+            "priorityCalls": 2.642,
+            "rotationCalls": 9.736
+          },
+          "perTrialMaxWait": {
+            "n": 500,
+            "mean": 44.702,
+            "median": 43.65,
+            "p95": 83.649,
+            "max": 145.217
+          }
+        },
+        "fcfs_priority": {
+          "wait": {
+            "n": 6796,
+            "mean": 13.947,
+            "median": 7.417,
+            "p95": 51.142,
+            "max": 145.217
+          },
+          "waitByGroup": {
+            "A": {
+              "n": 3291,
+              "mean": 14.205,
+              "median": 7.3,
+              "p95": 52.667,
+              "max": 124.317
+            },
+            "W": {
+              "n": 2184,
+              "mean": 17.689,
+              "median": 11.192,
+              "p95": 57.445,
+              "max": 145.217
+            },
+            "P": {
+              "n": 1321,
+              "mean": 7.122,
+              "median": 4.383,
+              "p95": 25.45,
+              "max": 79.433
+            }
+          },
+          "appointmentStartDelay": {
+            "n": 4096,
+            "mean": 8.42,
+            "median": 3.05,
+            "p95": 43.517,
+            "max": 114.317,
+            "shareLaterThan15Min": 0.244
+          },
+          "shareWaitOver45": 0.071,
+          "shareTrialsAnyOver45": 0.368,
+          "perTrialMean": {
+            "patients": 13.592,
+            "medianWait": 10.111,
+            "p95Wait": 35.817,
+            "meanWait": 13.595,
+            "maxWait": 41.055,
+            "over45": 0.964,
+            "completedBySessionEnd": 12.96,
+            "completedTotal": 13.592,
+            "overrunMin": 5.207,
+            "utilization": 0.752,
+            "agingCalls": 0,
+            "priorityCalls": 0,
+            "rotationCalls": 0
+          },
+          "perTrialMaxWait": {
+            "n": 500,
+            "mean": 41.055,
+            "median": 36.842,
+            "p95": 83.569,
+            "max": 145.217
+          }
+        }
+      },
+      "pairedPolicyVsFcfs": {
+        "medianWait": {
+          "trials": 500,
+          "meanDiff": -2.362,
+          "ci95Low": -2.764,
+          "ci95High": -1.959,
+          "policyHigher": 18,
+          "policyLower": 280,
+          "equal": 202
+        },
+        "p95Wait": {
+          "trials": 500,
+          "meanDiff": 5.714,
+          "ci95Low": 4.988,
+          "ci95High": 6.44,
+          "policyHigher": 325,
+          "policyLower": 58,
+          "equal": 117
+        },
+        "meanWait": {
+          "trials": 500,
+          "meanDiff": 0.021,
+          "ci95Low": -0.085,
+          "ci95High": 0.127,
+          "policyHigher": 197,
+          "policyLower": 208,
+          "equal": 95
+        },
+        "maxWait": {
+          "trials": 500,
+          "meanDiff": 8.455,
+          "ci95Low": 7.464,
+          "ci95High": 9.447,
+          "policyHigher": 325,
+          "policyLower": 33,
+          "equal": 142
+        },
+        "over45": {
+          "trials": 500,
+          "meanDiff": 0.432,
+          "ci95Low": 0.357,
+          "ci95High": 0.507,
+          "policyHigher": 176,
+          "policyLower": 21,
+          "equal": 303
+        },
+        "completedBySessionEnd": {
+          "trials": 500,
+          "meanDiff": -0.002,
+          "ci95Low": -0.018,
+          "ci95High": 0.014,
+          "policyHigher": 8,
+          "policyLower": 9,
+          "equal": 483
+        },
+        "overrunMin": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        },
+        "utilization": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        }
+      },
+      "pairedPolicyVsFcfsPriority": {
+        "medianWait": {
+          "trials": 500,
+          "meanDiff": -1.07,
+          "ci95Low": -1.308,
+          "ci95High": -0.833,
+          "policyHigher": 23,
+          "policyLower": 186,
+          "equal": 291
+        },
+        "p95Wait": {
+          "trials": 500,
+          "meanDiff": 2.444,
+          "ci95Low": 1.988,
+          "ci95High": 2.9,
+          "policyHigher": 218,
+          "policyLower": 63,
+          "equal": 219
+        },
+        "meanWait": {
+          "trials": 500,
+          "meanDiff": -0.009,
+          "ci95Low": -0.091,
+          "ci95High": 0.072,
+          "policyHigher": 161,
+          "policyLower": 162,
+          "equal": 177
+        },
+        "maxWait": {
+          "trials": 500,
+          "meanDiff": 3.647,
+          "ci95Low": 2.883,
+          "ci95High": 4.411,
+          "policyHigher": 200,
+          "policyLower": 39,
+          "equal": 261
+        },
+        "over45": {
+          "trials": 500,
+          "meanDiff": 0.258,
+          "ci95Low": 0.208,
+          "ci95High": 0.308,
+          "policyHigher": 121,
+          "policyLower": 12,
+          "equal": 367
+        },
+        "completedBySessionEnd": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": -0.012,
+          "ci95High": 0.012,
+          "policyHigher": 5,
+          "policyLower": 5,
+          "equal": 490
+        },
+        "overrunMin": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        },
+        "utilization": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        }
+      }
+    },
+    {
+      "name": "overloaded",
+      "title": "Overloaded",
+      "description": "Full capacity (10 booked, about 8 walk-in attempts so the cap of 5 is normally reached), mean consultation 16 min (report Table 3 sensitivity case).",
+      "params": {
+        "lateProb": 0.1,
+        "lateExtraMeanMin": 12,
+        "onTimeOffsetMeanMin": -6,
+        "onTimeOffsetSdMin": 7,
+        "walkInCapacity": 5,
+        "priorityClassWeights": [
+          0.2,
+          0.3,
+          0.5
+        ],
+        "durationSigma": 0.4,
+        "name": "overloaded",
+        "title": "Overloaded",
+        "description": "Full capacity (10 booked, about 8 walk-in attempts so the cap of 5 is normally reached), mean consultation 16 min (report Table 3 sensitivity case).",
+        "baseSeed": 4000000,
+        "bookedCount": 10,
+        "noShowProb": 0.03,
+        "walkInIntensity": [
+          {
+            "fromMin": 0,
+            "toMin": 210,
+            "ratePerMin": 0.0380952380952381
+          }
+        ],
+        "priorityProb": 0.05,
+        "durationMeanMin": 16
+      },
+      "baseSeed": 4000000,
+      "trials": 500,
+      "firstSeed": 4000000,
+      "lastSeed": 4000499,
+      "workload": {
+        "booked": 10,
+        "noShows": 0.294,
+        "lateDropped": 0.05,
+        "lateAdmitted": 0.892,
+        "walkInAttempts": 7.87,
+        "walkInAdmitted": 4.88,
+        "walkInTurnedAway": 2.99,
+        "priority": 0.746,
+        "totalWorkMin": 230.817,
+        "attending": 14.536
+      },
+      "arms": {
+        "fcfs": {
+          "wait": {
+            "n": 7268,
+            "mean": 36.073,
+            "median": 31.283,
+            "p95": 92.716,
+            "max": 154.817
+          },
+          "waitByGroup": {
+            "A": {
+              "n": 4147,
+              "mean": 36.774,
+              "median": 32.55,
+              "p95": 95.958,
+              "max": 146.733
+            },
+            "W": {
+              "n": 2748,
+              "mean": 35.095,
+              "median": 29.733,
+              "p95": 90.133,
+              "max": 154.817
+            },
+            "P": {
+              "n": 373,
+              "mean": 35.478,
+              "median": 30.5,
+              "p95": 85.983,
+              "max": 146.617
+            }
+          },
+          "appointmentStartDelay": {
+            "n": 4382,
+            "mean": 32.387,
+            "median": 27.808,
+            "p95": 90.756,
+            "max": 152.817,
+            "shareLaterThan15Min": 0.63
+          },
+          "shareWaitOver45": 0.353,
+          "shareTrialsAnyOver45": 0.852,
+          "perTrialMean": {
+            "patients": 14.536,
+            "medianWait": 36.815,
+            "p95Wait": 69.079,
+            "meanWait": 35.812,
+            "maxWait": 73.378,
+            "over45": 5.13,
+            "completedBySessionEnd": 11.952,
+            "completedTotal": 14.536,
+            "overrunMin": 34.779,
+            "utilization": 0.934,
+            "agingCalls": 0,
+            "priorityCalls": 0,
+            "rotationCalls": 0
+          },
+          "perTrialMaxWait": {
+            "n": 500,
+            "mean": 73.378,
+            "median": 72.025,
+            "p95": 117.36,
+            "max": 154.817
+          }
+        },
+        "policy": {
+          "wait": {
+            "n": 7268,
+            "mean": 36.003,
+            "median": 27.95,
+            "p95": 97.122,
+            "max": 175.283
+          },
+          "waitByGroup": {
+            "A": {
+              "n": 4147,
+              "mean": 33.471,
+              "median": 21.767,
+              "p95": 98.017,
+              "max": 156.633
+            },
+            "W": {
+              "n": 2748,
+              "mean": 43.311,
+              "median": 45.55,
+              "p95": 98.098,
+              "max": 175.283
+            },
+            "P": {
+              "n": 373,
+              "mean": 10.319,
+              "median": 8.433,
+              "p95": 27.803,
+              "max": 51.75
+            }
+          },
+          "appointmentStartDelay": {
+            "n": 4382,
+            "mean": 27.715,
+            "median": 15.967,
+            "p95": 91.763,
+            "max": 154.85,
+            "shareLaterThan15Min": 0.51
+          },
+          "shareWaitOver45": 0.384,
+          "shareTrialsAnyOver45": 0.932,
+          "perTrialMean": {
+            "patients": 14.536,
+            "medianWait": 34.879,
+            "p95Wait": 74.125,
+            "meanWait": 35.742,
+            "maxWait": 79.77,
+            "over45": 5.576,
+            "completedBySessionEnd": 11.946,
+            "completedTotal": 14.536,
+            "overrunMin": 34.779,
+            "utilization": 0.934,
+            "agingCalls": 5.572,
+            "priorityCalls": 0.746,
+            "rotationCalls": 8.218
+          },
+          "perTrialMaxWait": {
+            "n": 500,
+            "mean": 79.77,
+            "median": 78.675,
+            "p95": 122.064,
+            "max": 175.283
+          }
+        },
+        "fcfs_priority": {
+          "wait": {
+            "n": 7268,
+            "mean": 36.125,
+            "median": 30.042,
+            "p95": 96.027,
+            "max": 175.283
+          },
+          "waitByGroup": {
+            "A": {
+              "n": 4147,
+              "mean": 37.979,
+              "median": 33.333,
+              "p95": 98.608,
+              "max": 156.633
+            },
+            "W": {
+              "n": 2748,
+              "mean": 36.885,
+              "median": 30.992,
+              "p95": 93.343,
+              "max": 175.283
+            },
+            "P": {
+              "n": 373,
+              "mean": 9.921,
+              "median": 8.017,
+              "p95": 27.77,
+              "max": 51.75
+            }
+          },
+          "appointmentStartDelay": {
+            "n": 4382,
+            "mean": 31.948,
+            "median": 26.108,
+            "p95": 92.416,
+            "max": 154.85,
+            "shareLaterThan15Min": 0.604
+          },
+          "shareWaitOver45": 0.353,
+          "shareTrialsAnyOver45": 0.868,
+          "perTrialMean": {
+            "patients": 14.536,
+            "medianWait": 35.823,
+            "p95Wait": 71.682,
+            "meanWait": 35.867,
+            "maxWait": 76.459,
+            "over45": 5.13,
+            "completedBySessionEnd": 11.94,
+            "completedTotal": 14.536,
+            "overrunMin": 34.779,
+            "utilization": 0.934,
+            "agingCalls": 0,
+            "priorityCalls": 0,
+            "rotationCalls": 0
+          },
+          "perTrialMaxWait": {
+            "n": 500,
+            "mean": 76.459,
+            "median": 75.425,
+            "p95": 122.019,
+            "max": 175.283
+          }
+        }
+      },
+      "pairedPolicyVsFcfs": {
+        "medianWait": {
+          "trials": 500,
+          "meanDiff": -1.936,
+          "ci95Low": -2.598,
+          "ci95High": -1.275,
+          "policyHigher": 120,
+          "policyLower": 256,
+          "equal": 124
+        },
+        "p95Wait": {
+          "trials": 500,
+          "meanDiff": 5.047,
+          "ci95Low": 4.358,
+          "ci95High": 5.736,
+          "policyHigher": 281,
+          "policyLower": 33,
+          "equal": 186
+        },
+        "meanWait": {
+          "trials": 500,
+          "meanDiff": -0.07,
+          "ci95Low": -0.22,
+          "ci95High": 0.081,
+          "policyHigher": 222,
+          "policyLower": 246,
+          "equal": 32
+        },
+        "maxWait": {
+          "trials": 500,
+          "meanDiff": 6.392,
+          "ci95Low": 5.518,
+          "ci95High": 7.265,
+          "policyHigher": 241,
+          "policyLower": 22,
+          "equal": 237
+        },
+        "over45": {
+          "trials": 500,
+          "meanDiff": 0.446,
+          "ci95Low": 0.363,
+          "ci95High": 0.529,
+          "policyHigher": 229,
+          "policyLower": 60,
+          "equal": 211
+        },
+        "completedBySessionEnd": {
+          "trials": 500,
+          "meanDiff": -0.006,
+          "ci95Low": -0.03,
+          "ci95High": 0.018,
+          "policyHigher": 16,
+          "policyLower": 18,
+          "equal": 466
+        },
+        "overrunMin": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        },
+        "utilization": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        }
+      },
+      "pairedPolicyVsFcfsPriority": {
+        "medianWait": {
+          "trials": 500,
+          "meanDiff": -0.944,
+          "ci95Low": -1.44,
+          "ci95High": -0.449,
+          "policyHigher": 102,
+          "policyLower": 211,
+          "equal": 187
+        },
+        "p95Wait": {
+          "trials": 500,
+          "meanDiff": 2.443,
+          "ci95Low": 1.985,
+          "ci95High": 2.902,
+          "policyHigher": 199,
+          "policyLower": 35,
+          "equal": 266
+        },
+        "meanWait": {
+          "trials": 500,
+          "meanDiff": -0.124,
+          "ci95Low": -0.252,
+          "ci95High": 0.003,
+          "policyHigher": 193,
+          "policyLower": 228,
+          "equal": 79
+        },
+        "maxWait": {
+          "trials": 500,
+          "meanDiff": 3.311,
+          "ci95Low": 2.706,
+          "ci95High": 3.917,
+          "policyHigher": 159,
+          "policyLower": 18,
+          "equal": 323
+        },
+        "over45": {
+          "trials": 500,
+          "meanDiff": 0.446,
+          "ci95Low": 0.381,
+          "ci95High": 0.511,
+          "policyHigher": 211,
+          "policyLower": 29,
+          "equal": 260
+        },
+        "completedBySessionEnd": {
+          "trials": 500,
+          "meanDiff": 0.006,
+          "ci95Low": -0.007,
+          "ci95High": 0.019,
+          "policyHigher": 7,
+          "policyLower": 4,
+          "equal": 489
+        },
+        "overrunMin": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        },
+        "utilization": {
+          "trials": 500,
+          "meanDiff": 0,
+          "ci95Low": 0,
+          "ci95High": 0,
+          "policyHigher": 0,
+          "policyLower": 0,
+          "equal": 500
+        }
+      }
+    }
+  ]
+}
