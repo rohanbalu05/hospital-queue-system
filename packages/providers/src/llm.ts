@@ -88,7 +88,7 @@ const DENIED_INTENTS: ReadonlyArray<{ intent: string; patterns: RegExp[] }> = [
 ];
 
 const STOPWORDS = new Set(
-  `a an and are as at be been but by can could did do does for from had has have how i if in into is it its may me my of on or our should so than that the their them then there these they this to us was we were what when where which who why will with would you your about after before also not any some very just get got take takes taking took use using often long many much need tell know please want time times day days`.split(
+  `a an and are as at be been but by can could did do does for from had has have how i if in into is it its may me my of on or our should so than that the their them then there these they this to us was we were what when where which who why will with would you your about after before also not any some very just get got take takes taking took use using often long many much need tell know please want time times day days one ones two three give gives gave giving new make makes made let lets go goes going come comes say said see look like other another same more less only own still well yes no ok okay thing things way back out up down off over again here now today tomorrow next first last each every either both few other another`.split(
     /\s+/,
   ),
 );

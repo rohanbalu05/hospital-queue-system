@@ -1,11 +1,11 @@
-import { z } from 'zod';
-import {
+import type { z } from 'zod';
+import type {
+  MarkUnavailableRequest,
+  PauseSessionRequest,
+  QueueCommandResult,
   QueueEntryActionRequest,
-  type MarkUnavailableRequest,
-  type PauseSessionRequest,
-  type QueueCommandResult,
-  type SetPriorityRequest,
-  type VisitActionRequest,
+  SetPriorityRequest,
+  VisitActionRequest,
 } from '@hqms/contracts';
 
 /** The contracts package exports these without inferred types; infer them once here. */
