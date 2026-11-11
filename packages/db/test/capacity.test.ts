@@ -51,11 +51,13 @@ function race(f: Fixture, patientId: string) {
 
 describe('T1 (persistence level): N parallel connections race for the last place', () => {
   it('20 concurrent bookings, 1 place left: exactly one succeeds; counters match allocation rows', async () => {
-    const f = await makeFixture(pool, { booked: 5, patients: 20 });
+    // 4 patients fill 4 of 5 places; 20 further, distinct patients race for the last one (one active
+    // appointment per patient per session, migration 0003, so a racer must not already hold a place).
+    const f = await makeFixture(pool, { booked: 5, patients: 24 });
     for (let i = 0; i < 4; i++) await bookOne(pool, f, nth(f.patientIds, i)); // 4 of 5 taken, 1 left
     expect((await capacityInvariant(pool, f.sessionId)).counters.bookedReserved).toBe(4);
 
-    const racers = f.patientIds.slice(0, 20).map((p) => race(f, p).then((id) => ({ ok: true as const, id }), (e) => ({ ok: false as const, e })));
+    const racers = f.patientIds.slice(4, 24).map((p) => race(f, p).then((id) => ({ ok: true as const, id }), (e) => ({ ok: false as const, e })));
     const results = await Promise.all(racers);
 
     const wins = results.filter((r) => r.ok);
