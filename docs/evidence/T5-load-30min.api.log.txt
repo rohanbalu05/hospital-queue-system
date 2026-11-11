@@ -1,0 +1,104 @@
+[t5-harness] api pid 15945 started 2026-11-11T14:23:35.644Z
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [NestFactory] Starting Nest application...
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] ProvidersModule dependencies initialized +15ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] CoreModule dependencies initialized +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] AccessModule dependencies initialized +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] AppModule dependencies initialized +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] AuditModule dependencies initialized +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] AdminModule dependencies initialized +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] PatientsModule dependencies initialized +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] CatalogueModule dependencies initialized +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] ArrivalsModule dependencies initialized +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] QueueModule dependencies initialized +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] ReportsModule dependencies initialized +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] LiveModule dependencies initialized +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] SchedulingModule dependencies initialized +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] AssistantModule dependencies initialized +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] FollowUpModule dependencies initialized +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] IdentityModule dependencies initialized +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [InstanceLoader] DocumentsModule dependencies initialized +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] HealthController {/}: +3ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/health, GET} route +3ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] AuthController {/}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/auth/login, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/auth/logout, POST} route +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/me, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] PatientsController {/patients}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/patients, POST} route +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/patients, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/patients/:id, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] CatalogueController {/}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/doctors, GET} route +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/policies/current, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions, GET} route +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions/:id, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions/:id/slots, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions/:id/capacity, PATCH} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] AppointmentsController {/appointments}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/appointments, POST} route +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/appointments, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/appointments/:id, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/appointments/:id/cancel, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/appointments/:id/reschedule, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] ArrivalsController {/}: +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/appointments/:id/check-in, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions/:id/walk-ins, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] QueueController {/}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions/:id/call-next, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/visits/:id/start, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/visits/:id/complete, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/queue-entries/:id/skip, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/queue-entries/:id/absent, POST} route +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/queue-entries/:id/re-enter, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/queue-entries/:id/priority, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions/:id/open, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions/:id/pause, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions/:id/resume, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions/:id/unavailable, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions/:id/close, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions/:id/queue, GET} route +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions/:id/decisions, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/display/sessions, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] LiveController {/}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/sessions/:id/events, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/display/events, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] AuditController {/audit}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/audit, GET} route +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] AdminController {/admin/staff}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/admin/staff, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/admin/staff/:userId/assignments, PUT} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] FollowUpController {/follow-up-tasks}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/follow-up-tasks, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/follow-up-tasks, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/follow-up-tasks/:id, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/follow-up-tasks/:id/acknowledge, POST} route +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/follow-up-tasks/:id/resolve, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/follow-up-tasks/:id/cancel, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/follow-up-tasks/:id/return-booking, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] MyFollowUpsController {/me}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/me/follow-ups, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] DocumentsController {/documents}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/documents, POST} route +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/documents, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/documents/:id, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/documents/:id/file, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/documents/:id/drafts, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/documents/:id/retry-ocr, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/documents/:id/verify, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] ReviewInboxController {/review-inbox}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/review-inbox, GET} route +1ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] InstructionsController {/instructions}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/instructions, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] AssistantController {/assistant}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/assistant/messages, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/assistant/conversations, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/assistant/conversations/:id/messages, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] ReportsController {/reports}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/reports/operations, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RoutesResolver] NotificationsController {/notifications}: +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/notifications, GET} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [RouterExplorer] Mapped {/notifications/:id/read, POST} route +0ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [NestApplication] Nest application successfully started +3ms
+[Nest] 15945  - 11/11/2026, 2:23:36 PM     LOG [Bootstrap] HQMS API listening on :45295 (identity provider: local)
+[t5-harness] process 15945 exited (code=null signal=SIGTERM) at 2026-11-11T14:56:24.866Z
