@@ -194,3 +194,94 @@ describe('deniedIntent (provider-independent deny-list)', () => {
     }
   });
 });
+
+describe('deniedIntent: direct treatment-change questions that name the medicine (FR-14, Codex P1 #1)', () => {
+  const STOP = 'stopping a medicine';
+  const DOSE = 'a change of dose';
+  const OTHER = 'a new or different medicine';
+  it.each([
+    ['Should I stop metformin?', STOP],
+    ['Should I increase metformin?', DOSE],
+    ['Can I stop the metformin now?', STOP],
+    ['Is it okay to stop metformin?', STOP],
+    ['Is it safe for me to skip metformin?', STOP],
+    ['Should I decrease my metformin?', DOSE],
+    ['Can I skip metformin today?', STOP],
+    ['Should I double the metformin?', DOSE],
+    ['Can I cut down on amlodipine?', DOSE],
+    ['Could I cut back on metformin a little?', DOSE],
+    ['Should I reduce the amlodipine?', DOSE],
+    ['Should I halve my metformin?', DOSE],
+    ['Should I switch from metformin to insulin?', OTHER],
+    ['Can I take metformin only once a day instead of twice?', DOSE],
+    ['I want to stop metformin', STOP],
+    ['I am going to quit metformin', STOP],
+    ['I would like to come off metformin', STOP],
+    ['Do I still need to take metformin?', STOP],
+    ['Do I need to keep taking metformin?', STOP],
+    ['SHOULD I STOP METFORMIN?', STOP],
+    ["Shouldn't I stop metformin?", STOP],
+    ['Can I go off amlodipine?', STOP],
+  ])('%s -> %s', (q, intent) => {
+    expect(deniedIntent(q)).toBe(intent);
+  });
+
+  it('does not over-block benign questions about the same medicines', () => {
+    const benign = [
+      // new cases
+      'How often do I take metformin?',
+      'When should I take metformin?',
+      'Should I take metformin with food?',
+      'Do I need to take metformin with food?',
+      'What is the dose of metformin?',
+      'How many days should I rest?',
+      'What does the instruction say about metformin?',
+      'Can I drink water with the tablet?',
+      // questions the existing assistant / T4 / provider tests expect to be answered
+      'How should I take the amoxicillin?',
+      'And how long is the course?',
+      'How often should I take zebracadabra?',
+      'Is zebracadabra safe at 900 mg hourly?',
+      'How much ibuprofen should I take?',
+      'How often are the chloramphenicol drops used?',
+      'How much water should I drink?',
+      'What is the reference code?',
+      'How many times a day do I take paracetamol?',
+      'What about pantoprazole before breakfast?',
+      'Which doctor wrote my prescription?',
+      'What does my prescription say about Pantoprazole 40 mg before breakfast?',
+      'How should I take paracetamol 500 mg?',
+      'How often should I take paracetamol?',
+      'When do I take the tablets, before or after food?',
+      'What should I avoid eating?',
+      'How long do I take pantoprazole',
+      'When do I take paracetamol?',
+      'When should I take paracetamol?',
+      'How many days do I take pantoprazole?',
+      'Should I take the tablet after food?',
+      'Is the syrup given with a spoon?',
+      'Can I travel by plane next month?',
+      'What about previous instructions?',
+    ];
+    for (const q of benign) expect(deniedIntent(q), q).toBeNull();
+  });
+});
+
+describe('FakeLlmProvider refuses direct medicine-name treatment changes even with matching verified context', () => {
+  const METFORMIN: LlmContextItem = {
+    instructionVersionId: '44444444-4444-4444-8444-444444444444',
+    title: 'Diabetes care',
+    version: 1,
+    body: 'Take metformin 500 mg twice daily.',
+  };
+  for (const question of ['Should I stop metformin?', 'Should I increase metformin?']) {
+    it(`unsupported (denied_intent): ${question}`, async () => {
+      const r = await llm.answer({ question, context: [METFORMIN] });
+      expect(r).toMatchObject({ kind: 'unsupported', code: 'denied_intent' });
+    });
+  }
+  it('a benign question about the same medicine is still answered and cited', async () => {
+    const r = await llm.answer({ question: 'How often do I take metformin?', context: [METFORMIN] });
+    expect(r).toMatchObject({ kind: 'answer', citedVersionIds: [METFORMIN.instructionVersionId] });
+  });
+});
