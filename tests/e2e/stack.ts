@@ -111,6 +111,11 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       NODE_ENV: 'test',
       DB_POOL_MAX: '20',
       LOGIN_RATE_LIMIT_MAX: '100000',
+      // All test clients share one IP; lift per-IP caps for the harness (declared in evidence).
+      SSE_MAX_PER_IP: '1000',
+      SSE_MAX_DISPLAY: '500',
+      DISPLAY_RATE_LIMIT_PER_MIN: '100000',
+      ASSISTANT_RATE_LIMIT_MAX: '1000',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

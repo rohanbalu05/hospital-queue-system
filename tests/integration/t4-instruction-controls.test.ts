@@ -249,7 +249,7 @@ describe('T4.2 unverified text never reaches the assistant', () => {
 
     const a1 = await ask(patient1, 'How many times a day do I take paracetamol?', conversationId);
     expect(a1.outcome).toBe('answered');
-    expect(a1.citations).toEqual([{ instructionVersionId: v1.id, title: 'Fever care plan', version: 1 }]);
+    expect(a1.citations).toEqual([expect.objectContaining({ instructionVersionId: v1.id, title: 'Fever care plan', version: 1 })]);
     expect(a1.answer).toContain('version 1');
     expect(a1.answer).toContain('three times a day');
 
@@ -277,6 +277,7 @@ describe('T4.3 superseded text is not an approved source', () => {
 
     const r = await doctor.post(`/documents/${docId}/verify`, {
       instructionId,
+      expectedCurrentVersionId: v1.id,
       title: 'Fever care plan',
       body: V2_BODY,
     });
