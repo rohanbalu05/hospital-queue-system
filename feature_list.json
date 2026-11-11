@@ -4,8 +4,8 @@
     "requirement": "FR-01",
     "acceptance": "A patient cannot retrieve another patient's appointment or document.",
     "test": "apps/api/test/authz.int.test.ts",
-    "passes": true,
-    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
+    "passes": false,
+    "note": "Appointment half green (apps/api/test/authz.int.test.ts); document half pending W3 — spec review P0"
   },
   {
     "id": "FR-01-b",
@@ -75,8 +75,8 @@
     "requirement": "FR-04",
     "acceptance": "Completed visits never reopen consumed capacity.",
     "test": "apps/api/test/arrivals.int.test.ts",
-    "passes": true,
-    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
+    "passes": false,
+    "note": "Checked-in case green; completed-visit case pending W2 complete route — spec review P0"
   },
   {
     "id": "FR-05-a",
@@ -91,8 +91,8 @@
     "requirement": "FR-05",
     "acceptance": "Arrival after 15-min grace requires walk-in capacity and follows walk-in ordering.",
     "test": "apps/api/test/arrivals.int.test.ts",
-    "passes": true,
-    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
+    "passes": false,
+    "note": "Passes only without the worker; missed→late admission path pending W2 — spec review P0"
   },
   {
     "id": "FR-05-c",
