@@ -19,6 +19,7 @@
     "verify:fast": "pnpm --filter \"...[${HQMS_BASE_REF:-origin/claude/wonderful-galileo-2es87v}]\" --if-present typecheck && pnpm --filter \"...[${HQMS_BASE_REF:-origin/claude/wonderful-galileo-2es87v}]\" --if-present test",
     "test:concurrency": "pnpm --filter @hqms/tests test:concurrency",
     "e2e": "pnpm --filter @hqms/tests e2e",
+    "smoke": "node scripts/smoke.mjs",
     "db:migrate": "pnpm --filter @hqms/db migrate",
     "db:seed": "pnpm --filter @hqms/db seed",
     "db:reset": "pnpm --filter @hqms/db reset",

@@ -43,7 +43,7 @@ write `docs/gates/G<N>.md`.
 
 Internal packages ship TypeScript source and have no build step (D-010). Apps need `build` and `start` scripts:
 `apps/web` emits `apps/web/dist` (served by nginx); `apps/api` and `apps/worker` bundle to a runnable output. The
-Dockerfiles in `infra/docker/` assume exactly `pnpm --filter @hqms/<app> build` and `pnpm --filter @hqms/<app> start`.
+Dockerfiles in `infra/docker/` run `pnpm --filter @hqms/<app> build` (api: tsup bundle, worker: esbuild bundle, web: Vite) and start the bundle with `node dist/main.js` as the unprivileged `node` user. They were built and run in a Docker daemon in Wave 4 (see `docs/runbook.md`).
 
 ### Dependency rules (enforced by dependency-cruiser, `.dependency-cruiser.cjs`)
 

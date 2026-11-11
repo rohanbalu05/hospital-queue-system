@@ -1,5 +1,7 @@
 # API image. Build context is the repo root.
-# Assumption: apps/api defines `build` (bundles TS source incl. workspace packages, D-010) and `start`.
+# `pnpm --filter @hqms/api build` bundles the API and the workspace TypeScript packages (D-010) into
+# apps/api/dist/main.js; third-party packages stay in node_modules. The bundle resolves db/migrations
+# relative to itself (/repo/db/migrations), so the repo layout is kept in the runtime image.
 FROM node:22-slim AS build
 RUN corepack enable
 WORKDIR /repo
@@ -12,10 +14,13 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @hqms/api build
 
 FROM node:22-slim
-RUN corepack enable
 ENV NODE_ENV=production
-WORKDIR /repo
-COPY --from=build /repo ./
-RUN mkdir -p /var/hqms/storage
+WORKDIR /repo/apps/api
+COPY --from=build /repo /repo
+# Private document storage (OBJECT_STORAGE=local-disk). Mount the shared named volume here.
+RUN mkdir -p /var/hqms/storage && chown -R node:node /var/hqms
+USER node
 EXPOSE 3000
-CMD ["pnpm", "--filter", "@hqms/api", "start"]
+HEALTHCHECK --interval=10s --timeout=5s --start-period=40s --retries=6 \
+  CMD ["node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+CMD ["node", "dist/main.js"]
