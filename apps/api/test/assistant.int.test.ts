@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ApiError, AssistantAnswer, ConversationMessage, FollowUpTask, InstructionVersion } from '@hqms/contracts';
-import { type Client, count, createTestApp, linkPatient, loginAs, makeSession, patientId, type TestApp } from './helpers.js';
+import { type Client, count, createTestApp, linkPatient, loginAs, makeSession, newLoginPatient, type TestApp } from './helpers.js';
 import { MemoryStorage, SpyLlm, makePng, openApiTransactions } from './fakes.js';
 
 // The provider call is abandoned quickly in the timeout test.
@@ -18,9 +18,9 @@ let followup2: Client; // doctors 1-4
 let patient1: Client;
 let patient2: Client;
 let patient3: Client;
-const P1 = patientId(1);
-const P2 = patientId(2);
-const P3 = patientId(3);
+let P1: string;
+let P2: string;
+let P3: string;
 
 beforeAll(async () => {
   llm = new SpyLlm();
@@ -30,9 +30,12 @@ beforeAll(async () => {
   doctor1 = await loginAs(t.server, 'doctor@hqms.test');
   followup = await loginAs(t.server, 'followup@hqms.test');
   followup2 = await loginAs(t.server, 'followup2@hqms.test');
-  patient1 = await loginAs(t.server, 'patient@hqms.test');
-  patient2 = await loginAs(t.server, 'patient2@hqms.test');
-  patient3 = await loginAs(t.server, 'patient3@hqms.test');
+  const a = await newLoginPatient(t, reception, 'Assist One');
+  const b = await newLoginPatient(t, reception, 'Assist Two');
+  const c = await newLoginPatient(t, reception, 'Assist Three');
+  [patient1, P1] = [a.client, a.id];
+  [patient2, P2] = [b.client, b.id];
+  [patient3, P3] = [c.client, c.id];
   await linkPatient(admin, reception, P1, 1);
   await linkPatient(admin, reception, P3, 1);
   await linkPatient(admin, reception, P2, 1);
@@ -195,7 +198,7 @@ describe('FR-14-a unsupported questions reach staff', () => {
   });
 
   it('a patient with no doctor yet gets an unassigned task (still visible to staff once they are linked)', async () => {
-    const lone = await loginAs(t.server, 'patient10@hqms.test');
+    const lone = (await newLoginPatient(t, reception, 'Assist Lone')).client;
     const res = await ask(lone, 'What should I eat?');
     expect(res.body.outcome).toBe('escalated');
     const row = (await t.pool.query(`SELECT owner_id, status FROM follow_up_tasks WHERE id = $1`, [res.body.escalation.taskId])).rows[0]!;
