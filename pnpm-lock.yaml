@@ -229,6 +229,9 @@ importers:
       '@hqms/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@hqms/providers':
+        specifier: workspace:*
+        version: link:../../packages/providers
       '@node-rs/argon2':
         specifier: ^2.0.2
         version: 2.2.2
@@ -316,6 +319,21 @@ importers:
       fast-check:
         specifier: ^3.23.1
         version: 3.23.2
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.5)(jsdom@31.0.0(@noble/hashes@1.8.0))(lightningcss@1.33.0)
+
+  packages/providers:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.5
+      '@vitest/coverage-v8':
+        specifier: ^2.1.9
+        version: 2.1.9(vitest@2.1.9(@types/node@22.20.5)(jsdom@31.0.0(@noble/hashes@1.8.0))(lightningcss@1.33.0))
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
