@@ -95,21 +95,24 @@
     "requirement": "FR-06",
     "acceptance": "Identical state, policy and decision time select the same candidate and reason.",
     "test": "packages/domain/test/select.property.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green"
   },
   {
     "id": "FR-06-b",
     "requirement": "FR-06",
     "acceptance": "Table 8 selection trace reproduces exactly (golden test).",
     "test": "packages/domain/test/table8.golden.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green"
   },
   {
     "id": "FR-06-c",
     "requirement": "FR-06",
     "acceptance": "Priority and aging overrides preserve the rotation pointer; empty groups are skipped without credits.",
     "test": "packages/domain/test/select.property.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green"
   },
   {
     "id": "FR-07-a",
@@ -172,21 +175,24 @@
     "requirement": "FR-10",
     "acceptance": "A pause with unknown duration withholds the ETA.",
     "test": "packages/domain/test/eta.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green"
   },
   {
     "id": "FR-10-b",
     "requirement": "FR-10",
     "acceptance": "Estimates identify their timestamp and uncertainty status.",
     "test": "packages/domain/test/eta.test.ts",
-    "passes": false
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green"
   },
   {
     "id": "FR-10-c",
     "requirement": "FR-10",
     "acceptance": "EWMA estimator m = 0.2*d + 0.8*m, initial 12 min.",
-    "test": "packages/domain/test/ewma.test.ts",
-    "passes": false
+    "test": "packages/domain/test/eta.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green"
   },
   {
     "id": "FR-11-a",
@@ -332,8 +338,9 @@
     "id": "NFR-08-a",
     "requirement": "NFR-08",
     "acceptance": "Versioned migrations and policy; repeatable setup via ./init.sh.",
-    "test": "scripts/ci or tests/integration/migrations.test.ts",
-    "passes": false
+    "test": "packages/db/test/migrate.test.ts + ./init.sh (idempotent rerun)",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green"
   },
   {
     "id": "NFR-08-b",
