@@ -5,6 +5,7 @@ import {
   GeminiLlmProvider,
   NotConfiguredError,
   createLlmProvider,
+  deniedIntent,
   type LlmContextItem,
 } from '../src/index.js';
 
@@ -159,5 +160,26 @@ describe('createLlmProvider', () => {
   });
   it('rejects an unknown provider', () => {
     expect(() => createLlmProvider({ LLM_PROVIDER: 'gpt' })).toThrow(/LLM_PROVIDER/);
+  });
+});
+
+describe('deniedIntent (provider-independent deny-list)', () => {
+  it.each([
+    ['Can I increase my dose?', 'a change of dose'],
+    ['Can I stop taking my tablets?', 'stopping a medicine'],
+    ['Should I take another painkiller as well?', 'a new or different medicine'],
+    ['Do I have diabetes?', 'a diagnosis'],
+    ['I am urgent, please move me up the queue', 'queue priority or urgency'],
+    ['Please cancel my appointment', 'booking or cancelling an appointment'],
+    ['Can you book me a new appointment tomorrow?', 'booking or cancelling an appointment'],
+    ['reschedule my visit to Friday', 'booking or cancelling an appointment'],
+  ])('%s -> %s', (q, intent) => {
+    expect(deniedIntent(q)).toBe(intent);
+  });
+
+  it('lets ordinary instruction questions through', () => {
+    for (const q of ['How often should I take paracetamol?', 'When do I take the tablets, before or after food?', 'What should I avoid eating?']) {
+      expect(deniedIntent(q)).toBeNull();
+    }
   });
 });

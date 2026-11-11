@@ -19,6 +19,7 @@ import { notFound } from '../common/errors.js';
 import { localDate } from '../common/http.js';
 import type { RequestCtx } from '../common/request-context.js';
 import { AccessPolicy } from '../access/access-policy.service.js';
+import { computePressure } from './pressure.js';
 import {
   readActiveForDoctor,
   readDecisions,
@@ -74,13 +75,19 @@ function residualMinutes(state: QueueState, now: Date): number {
   return m;
 }
 
-/** Waiting ids in projected policy order, starting when the doctor is next free (and any known pause is over). */
-function projectedOrder(state: QueueState, now: Date): string[] {
-  if (state.waiting.length === 0) return [];
+/** When the doctor is next free (and any known pause is over): where the projection starts, epoch ms. */
+function projectionStartMs(state: QueueState, now: Date): number {
   let startMs = now.getTime() + residualMinutes(state, now) * 60_000;
   if (state.session.status === 'paused' && state.session.pauseUntil) {
     startMs = Math.max(startMs, new Date(state.session.pauseUntil).getTime());
   }
+  return startMs;
+}
+
+/** Waiting ids in projected policy order, starting when the doctor is next free (and any known pause is over). */
+function projectedOrder(state: QueueState, now: Date): string[] {
+  if (state.waiting.length === 0) return [];
+  const startMs = projectionStartMs(state, now);
   return projectOrder(
     { entries: state.waiting.map(toCandidate), rotationPointer: state.session.rotationPointer },
     state.session.policy,
@@ -196,6 +203,17 @@ export class SnapshotService {
         completedCount: completed.rows[0]?.n ?? 0,
         lastDecision,
         capacity: state.session.capacity,
+        pressure: computePressure({
+          entries: state.waiting.map(toCandidate),
+          rotationPointer: state.session.rotationPointer,
+          policy: state.session.policy,
+          startMs: projectionStartMs(state, now),
+          serviceMin: state.estimator.meanMinutes,
+          nowMs: now.getTime(),
+          sessionEndsAtMs: new Date(state.session.endsAt).getTime(),
+          sessionStatus: state.session.status,
+          capacity: state.session.capacity,
+        }),
       } satisfies StaffQueueSnapshot;
     });
   }

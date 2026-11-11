@@ -154,6 +154,16 @@ export type Eta = z.infer<typeof Eta>;
 // Snapshots (FR-09): GET /sessions/{id}/queue (role-scoped)
 // ---------------------------------------------------------------------------
 
+/**
+ * Workload pressure of a session (report 6.6 "demand exceeds capacity: expose workload pressure"; 6.4 records
+ * priority starvation). Computed from the same projection as the ETA. `reasons` are plain-language sentences.
+ */
+export const QueuePressure = z.object({
+  level: z.enum(['normal', 'high', 'overloaded']),
+  reasons: z.array(z.string()),
+});
+export type QueuePressure = z.infer<typeof QueuePressure>;
+
 export const StaffQueueSnapshot = z.object({
   view: z.literal('staff'),
   sessionId: Id,
@@ -179,6 +189,7 @@ export const StaffQueueSnapshot = z.object({
     bookedReserved: z.number().int(),
     walkinUsed: z.number().int(),
   }),
+  pressure: QueuePressure,
 });
 export type StaffQueueSnapshot = z.infer<typeof StaffQueueSnapshot>;
 
