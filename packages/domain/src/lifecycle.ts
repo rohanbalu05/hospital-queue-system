@@ -41,7 +41,8 @@ export const TRANSITIONS: { readonly [M in MachineName]: Table<MachineStates[M]>
     checked_in: ['completed'],
     completed: [],
     cancelled: [],
-    missed: [],
+    // missed -> checked_in is the late-admission path only (staff confirmed capacity; walk-in ordering).
+    missed: ['checked_in'],
     rescheduled: [],
   },
   visit: {

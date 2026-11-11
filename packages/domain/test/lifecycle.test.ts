@@ -17,6 +17,7 @@ const LEGAL: { [M in MachineName]: readonly Edge[] } = {
     ['booked', 'checked_in'],
     ['booked', 'cancelled'],
     ['booked', 'missed'],
+    ['missed', 'checked_in'],
     ['booked', 'rescheduled'],
     ['checked_in', 'completed'],
   ],
@@ -141,7 +142,6 @@ describe('selected rules from the report', () => {
     const terminals: [MachineName, string][] = [
       ['appointment', 'completed'],
       ['appointment', 'cancelled'],
-      ['appointment', 'missed'],
       ['appointment', 'rescheduled'],
       ['visit', 'completed'],
       ['visit', 'left'],
