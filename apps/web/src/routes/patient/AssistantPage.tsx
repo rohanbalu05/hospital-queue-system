@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ConversationMessage, InstructionVersion } from '@hqms/contracts';
+import type { ConversationMessage } from '@hqms/contracts';
 import { AskAssistantRequest } from '@hqms/contracts';
-import { useAskAssistant, useConversationMessages, useConversations, useInstructions, useMyFollowUps } from '@/api';
+import { useAskAssistant, useConversationMessages, useConversations } from '@/api';
 import { Field } from '@/components/layout/Field';
 import { PatientPage } from '@/components/layout/PatientPage';
 import { ErrorState, SkeletonRows } from '@/components/queue';
@@ -16,14 +16,8 @@ export function citationLine(c: { title: string; version: number }, verifiedAt: 
   return `From: ${c.title} (version ${c.version}${verifiedAt ? `, verified ${formatIST(verifiedAt, 'date')}` : ''})`;
 }
 
-interface MessageViewProps {
-  message: ConversationMessage;
-  versions: Map<string, InstructionVersion>;
-  dueByTask: Map<string, string>;
-}
-
 /** One message. Answers are plain rows with an ink edge: no avatar, no sparkle. */
-export function MessageView({ message: m, versions, dueByTask }: MessageViewProps) {
+export function MessageView({ message: m }: { message: ConversationMessage }) {
   if (m.role === 'patient') {
     return (
       <li className="border-l-[3px] border-l-rule px-4 py-3" data-role="patient">
@@ -33,7 +27,7 @@ export function MessageView({ message: m, versions, dueByTask }: MessageViewProp
     );
   }
   if (m.outcome === 'escalated') {
-    const due = m.escalationTaskId ? dueByTask.get(m.escalationTaskId) : undefined;
+    const due = m.escalationDueAt;
     return (
       <li className="border-l-[3px] border-l-ink px-4 py-3" data-role="assistant" data-outcome="escalated">
         <p className="text-sm font-bold text-muted-foreground">Reply</p>
@@ -52,7 +46,7 @@ export function MessageView({ message: m, versions, dueByTask }: MessageViewProp
       {m.citations.length > 0 ? (
         <ul className="mt-2 grid gap-0.5 text-sm text-muted-foreground tabular-nums">
           {m.citations.map((c) => (
-            <li key={c.instructionVersionId}>{citationLine(c, versions.get(c.instructionVersionId)?.verifiedAt)}</li>
+            <li key={c.instructionVersionId}>{citationLine(c, c.verifiedAt)}</li>
           ))}
         </ul>
       ) : null}
@@ -70,20 +64,10 @@ export default function AssistantPage() {
   const [question, setQuestion] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [asked, setAsked] = useState<string | null>(null);
-  const [dueNow, setDueNow] = useState<Record<string, string>>({});
   const endRef = useRef<HTMLDivElement>(null);
 
   const messages = useConversationMessages(conversationId);
-  const instructions = useInstructions(patientId);
-  const tasks = useMyFollowUps(patientId !== null);
   const ask = useAskAssistant();
-
-  const versions = useMemo(() => new Map((instructions.data ?? []).map((v) => [v.id, v])), [instructions.data]);
-  const dueByTask = useMemo(() => {
-    const m = new Map<string, string>(Object.entries(dueNow));
-    for (const t of tasks.data ?? []) m.set(t.id, t.dueAt);
-    return m;
-  }, [tasks.data, dueNow]);
 
   const list = useMemo(() => [...(messages.data ?? [])].sort((a, b) => a.createdAt.localeCompare(b.createdAt)), [messages.data]);
 
@@ -102,8 +86,6 @@ export default function AssistantPage() {
     ask.mutate(parsed.data, {
       onSuccess: (a) => {
         setStarted(a.conversationId);
-        const esc = a.escalation;
-        if (esc) setDueNow((d) => ({ ...d, [esc.taskId]: esc.dueAt }));
         setQuestion('');
         setAsked(null);
       },
@@ -129,7 +111,7 @@ export default function AssistantPage() {
         ) : (
           <ul className="divide-y divide-rule overflow-hidden rounded-xl border border-rule bg-surface" aria-live="polite">
             {list.map((m) => (
-              <MessageView key={m.id} message={m} versions={versions} dueByTask={dueByTask} />
+              <MessageView key={m.id} message={m} />
             ))}
             {asked !== null ? (
               <>

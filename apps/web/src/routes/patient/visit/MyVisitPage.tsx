@@ -72,7 +72,7 @@ function VisitBody({ snapshot, status, lastUpdated }: { snapshot: PatientQueueSn
     <div className="flex flex-col gap-4">
       <StaleBanner status={status === 'reconnecting' ? 'reconnecting' : 'live'} lastUpdated={lastUpdated} />
       {sessionNote ? (
-        <p role="status" className="rounded-md border border-l-[3px] border-rule border-l-priority bg-surface px-4 py-3">
+        <p role="status" className="rounded-md border border-l-[3px] border-rule border-l-ink bg-surface px-4 py-3">
           {sessionNote}
         </p>
       ) : null}

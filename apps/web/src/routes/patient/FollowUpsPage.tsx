@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { FollowUpStatus } from '@hqms/contracts';
-import { useMyFollowUps, type PatientFollowUp } from '@/api';
+import type { PatientFollowUp } from '@hqms/contracts';
+import { useMyFollowUps } from '@/api';
 import { PatientPage } from '@/components/layout/PatientPage';
 import { EmptyState, ErrorState, SkeletonRows } from '@/components/queue';
 import { Button } from '@/components/ui/button';

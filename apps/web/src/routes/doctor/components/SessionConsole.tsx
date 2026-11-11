@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import type { CallNextResult, QueueDecision, QueueEntry, Session } from '@hqms/contracts';
-import { ErrorState, SkeletonRows, StaleBanner } from '@/components/queue';
+import { ErrorState, PressureNote, SkeletonRows, StaleBanner } from '@/components/queue';
 import { Button } from '@/components/ui/button';
 import {
   useCallNext,
@@ -201,7 +201,7 @@ export function SessionConsole({ session, date, picker }: SessionConsoleProps) {
         <div
           role="status"
           data-testid="session-status"
-          className="rounded-md border border-l-[3px] border-rule border-l-priority bg-surface px-3 py-2"
+          className="rounded-md border border-l-[3px] border-rule border-l-ink bg-surface px-3 py-2"
         >
           <p className="font-bold">
             {snapshot.status === 'paused' && 'Session paused'}
@@ -220,6 +220,8 @@ export function SessionConsole({ session, date, picker }: SessionConsoleProps) {
           </p>
         </div>
       ) : null}
+
+      <PressureNote pressure={snapshot.pressure} />
 
       <StaleBanner status={status === 'reconnecting' ? 'reconnecting' : 'live'} lastUpdated={lastUpdated} />
       {query.isRefetchError && status !== 'reconnecting' ? (
