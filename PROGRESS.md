@@ -15,3 +15,4 @@ Read this first on resume, then `git log --oneline -30`.
 - Open: db lint errors (100, non-null assertions) — sent back to db-engineer.
 - Decisions: D-015..D-018.
 - W1 started: api-engineer, worker-engineer, ui-engineer (D-018).
+- wave-0 tag (local) = 3652f18

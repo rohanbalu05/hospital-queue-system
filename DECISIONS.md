@@ -64,3 +64,6 @@ Also: idempotency advisory lock is rank 0 (taken before the doctor); ids within 
 
 ## D-018 Wave 1 composition
 W1 = api-engineer (bootstrap, identity, authz, scheduling, arrivals), ui-engineer (patient booking, reception desk), worker-engineer (job runner + call_timeout / reservation_release timers + outbox dispatcher, pulled forward from W2 because it only needs `@hqms/db`). test-engineer joins after the API merges (T1 over HTTP) and meanwhile builds the seeded FCFS-vs-policy simulation (only needs `@hqms/domain`).
+
+## D-019 Wave tags are local only
+The session's git proxy only accepts pushes to the session branch, so `wave-N` tags exist in the local clone and are recorded with their commit hashes in PROGRESS.md. HQ can recreate them (`git tag wave-N <hash>`) after merging. wave-0 = the G0 build-state commit.
