@@ -16,3 +16,4 @@ Read this first on resume, then `git log --oneline -30`.
 - Decisions: D-015..D-018.
 - W1 started: api-engineer, worker-engineer, ui-engineer (D-018).
 - wave-0 tag (local) = 3652f18
+- W1: worker merged (44 tests: runner leases, call_timeout, reservation_release, outbox dispatcher, NFR-07 isolation). verify green, 260 tests.
