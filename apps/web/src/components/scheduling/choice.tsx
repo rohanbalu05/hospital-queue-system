@@ -58,10 +58,10 @@ export function Choice({ value, disabled, title, detail, aside }: ChoiceProps) {
       <RadioGroupItem id={id} value={value} disabled={disabled} className="row-span-2 self-center" />
       <span className="min-w-0">
         <span className="block font-bold">{title}</span>
-        {detail ? <span className="block text-sm text-muted-foreground">{detail}</span> : null}
+        {detail ? <span className="block text-base text-muted-foreground">{detail}</span> : null}
       </span>
       {aside ? (
-        <span className="col-start-2 text-sm tabular-nums sm:col-start-3 sm:row-span-2 sm:row-start-1 sm:text-right">{aside}</span>
+        <span className="col-start-2 text-base tabular-nums sm:col-start-3 sm:row-span-2 sm:row-start-1 sm:text-right">{aside}</span>
       ) : null}
     </label>
   );

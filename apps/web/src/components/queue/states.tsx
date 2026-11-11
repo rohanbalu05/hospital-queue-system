@@ -14,7 +14,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, children, action, className }: EmptyStateProps) {
   return (
-    <div className={cn('rounded-xl border border-dashed border-rule bg-surface px-4 py-8', className)}>
+    <div className={cn('rounded-xl border border-rule bg-surface px-4 py-8', className)}>
       <h2 className="text-lg font-bold">{title}</h2>
       {children ? <p className="mt-1 max-w-prose text-muted-foreground">{children}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}
@@ -38,12 +38,39 @@ const HINTS: Partial<Record<string, string>> = {
   UNAUTHENTICATED: 'Your session has ended. Sign in again.',
 };
 
+/**
+ * What happened, in plain words. A raw server string is shown only for codes whose message the API writes for people
+ * (conflicts, capacity, validation); for everything else a fixed sentence replaces it, so "Not mocked." or a stack
+ * summary never reaches the screen.
+ */
+export function plainErrorMessage(err: ApiRequestError | null, fallback?: string): string | null {
+  if (!err) return fallback ?? null;
+  switch (err.code) {
+    case 'NETWORK':
+    case 'BAD_RESPONSE':
+      return err.message;
+    case 'NOT_FOUND':
+      return 'The server could not find what this screen asked for.';
+    case 'FORBIDDEN':
+      return 'Your account is not allowed to see this.';
+    case 'UNAUTHENTICATED':
+      return 'You are signed out.';
+    case 'INTERNAL':
+    case 'UNKNOWN':
+      return 'The server had a problem and could not finish.';
+    case 'RATE_LIMITED':
+      return 'There were too many requests in a short time.';
+    default:
+      return err.message;
+  }
+}
+
 export function ErrorState({ title = 'This could not be loaded', error, hint, onRetry, className }: ErrorStateProps) {
   const api = error instanceof ApiRequestError ? error : null;
-  const message = api?.message ?? (error instanceof Error ? error.message : null);
+  const message = api ? plainErrorMessage(api) : error instanceof Error ? 'Something went wrong while loading this.' : null;
   const fix = hint ?? (api ? HINTS[api.code] : undefined) ?? 'Try again. If it keeps failing, tell the front desk.';
   return (
-    <div role="alert" className={cn('rounded-xl border border-l-[3px] border-rule border-l-priority bg-surface px-4 py-4', className)}>
+    <div role="alert" className={cn('rounded-xl border border-l-[3px] border-rule border-l-ink bg-surface px-4 py-4', className)}>
       <h2 className="text-lg font-bold">{title}</h2>
       {message ? <p className="mt-1">{message}</p> : null}
       <p className="mt-1 text-muted-foreground">{fix}</p>

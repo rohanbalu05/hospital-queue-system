@@ -5,7 +5,7 @@ import { mockApi } from './mocks';
 import { ETA_WITHHELD, SESSION_ID, installFakeEventSource, mockQueue, type QueueMock, type QueueMockOptions } from './mocks-queue';
 
 const SHOTS = path.resolve(import.meta.dirname, '../../../docs/evidence/screenshots');
-const shot = (page: Page, name: string, fullPage = true) => page.screenshot({ path: path.join(SHOTS, `w2-${name}.png`), fullPage });
+const shot = (page: Page, name: string, fullPage = true) => page.screenshot({ path: path.join(SHOTS, `w2-${name}.png`), fullPage, animations: 'disabled' });
 
 type Role = 'doctor' | 'patient' | 'reception' | null;
 
@@ -336,13 +336,16 @@ test.describe('waiting-room display at 1920', () => {
   });
 
   test('error state keeps trying and says what to do', async ({ page }) => {
+    test.setTimeout(60_000);
     const mock = await setup(page, null);
     mock.world.failDisplay = true;
     await page.goto('/display');
     await expect(page.getByRole('alert')).toContainText('The queue cannot be shown right now');
+    // A TV has nobody to press a button: the text says it keeps trying, and it recovers on its own.
+    await expect(page.getByRole('alert')).toContainText('tries again on its own');
+    await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(0);
     mock.world.failDisplay = false;
-    await page.getByRole('button', { name: 'Try again' }).click();
-    await expect(page.getByTestId('display-column')).toHaveCount(4);
+    await expect(page.getByTestId('display-column')).toHaveCount(4, { timeout: 30_000 });
   });
 });
 
@@ -405,7 +408,7 @@ test.describe('my visit on a phone', () => {
     mock.world.patient.eta = ETA_WITHHELD;
     await page.goto(`/patient/visit/${SESSION_ID}`);
     await expect(page.getByTestId('eta')).toContainText('Estimate paused');
-    await expect(page.getByTestId('eta')).toContainText('Doctor paused (unknown duration)');
+    await expect(page.getByTestId('eta')).toContainText("The doctor has paused this session. We'll show a new estimate when it resumes.");
     await expect(page.getByTestId('eta')).not.toContainText('about');
     await expect(page.getByRole('status').filter({ hasText: 'paused this session' })).toBeVisible();
     await shot(page, 'myvisit-withheld-390');

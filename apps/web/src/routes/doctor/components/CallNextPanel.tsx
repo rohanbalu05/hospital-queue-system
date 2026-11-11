@@ -29,14 +29,14 @@ export function CallNextPanel({ snapshot, decision, blockedReason, calling, butt
       <Button
         ref={buttonRef}
         size="lg"
-        className={cn('h-14 w-full text-lg aria-disabled:cursor-not-allowed aria-disabled:opacity-50')}
+        className={cn('h-14 w-full text-lg aria-disabled:cursor-not-allowed aria-disabled:border aria-disabled:border-rule aria-disabled:bg-secondary aria-disabled:text-muted-foreground aria-disabled:opacity-100 aria-disabled:hover:bg-secondary')}
         aria-disabled={blocked}
         aria-describedby={blockedReason ? 'call-blocked' : 'call-hint'}
         aria-keyshortcuts="N"
         onClick={() => !blocked && onCall()}
       >
         {calling ? 'Calling…' : 'Call next'}
-        <kbd className="ml-1 rounded-xs bg-white/20 px-1.5 py-0.5 font-sans text-sm" aria-hidden="true">
+        <kbd className="ml-1 rounded-xs bg-current/15 px-1.5 py-0.5 font-sans text-sm" aria-hidden="true">
           N
         </kbd>
       </Button>
@@ -73,7 +73,7 @@ export function CallNextPanel({ snapshot, decision, blockedReason, calling, butt
       </div>
 
       <p className="mt-4 border-t border-rule pt-3 text-sm text-muted-foreground tabular-nums">
-        Rotation {rotation.join(', ')}. Policy v{snapshot.policyVersion}.
+        Rotation {rotation.join(', ')}.
       </p>
     </section>
   );
