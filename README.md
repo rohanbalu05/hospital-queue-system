@@ -13,11 +13,38 @@ The approved design is in `docs/spec/phase1-report.md`. This repo is being built
 - `docs/gates/`: gate summaries per wave
 - `docs/evidence/`: test, analysis and performance evidence for Phase 2
 
-## Quick start (filled in during Wave 0)
+## Quick start
+
+Prerequisites: Node 22, pnpm 10 (`corepack enable`), and either a local PostgreSQL 16 or Docker.
 
 ```bash
-./init.sh   # start Postgres, install, migrate, seed
-pnpm dev    # api :3000, web :5173
+git clone <repo-url> && cd hospital-queue-system
+./init.sh   # start Postgres, create hqms + hqms_test, install, migrate, seed (idempotent)
+pnpm dev    # api :3000, worker, web :5173
 ```
 
-Demo accounts use password `demo1234`. No API keys are needed: OCR, the assistant and login use local adapters by default.
+Open http://localhost:5173. No API keys are needed: OCR, the assistant, storage and login use local or fake adapters by
+default (see `.env.example`). Container demo: `docker compose up --build`.
+
+### Demo accounts
+
+All demo accounts use password `demo1234`. The accounts per role are created by the seed in `db/seed`; the table below
+is filled in when the seed lands.
+
+| Role | Email | Notes |
+| --- | --- | --- |
+| Patient | see `db/seed` | |
+| Receptionist | see `db/seed` | |
+| Doctor | see `db/seed` | |
+| Admin | see `db/seed` | |
+
+### Checks
+
+```bash
+pnpm verify             # typecheck, ESLint, dependency-cruiser, tests, Semgrep
+pnpm verify:fast        # changed packages only
+pnpm test:concurrency   # real-Postgres race tests
+pnpm e2e                # Playwright flows (api and web running)
+```
+
+More: `docs/construction/` (plan, configuration management, rollout) and `docs/runbook.md`.
