@@ -123,6 +123,7 @@ const CONNECTION_MESSAGES = [
   'timeout exceeded when trying to connect',
   'cannot use a pool after calling end',
   'server closed the connection unexpectedly',
+  'not currently accepting connections', // ALLOW_CONNECTIONS false (SQLSTATE 55000 is too generic to match on)
 ];
 
 /** True for connection-level failures: terminated backend, shutdown, refused/reset socket, pool connect timeout. */
