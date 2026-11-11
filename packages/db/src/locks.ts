@@ -47,10 +47,13 @@ async function lockMany<R>(
   sql: string,
   mapRow: (row: QueryResultRow) => R,
   rowId: (r: R) => string,
+  /** Runs after the order check and before the locking SELECT (parent-lock assertions). */
+  beforeLock?: (unique: string[]) => Promise<void>,
 ): Promise<R[]> {
   const unique = [...new Set(ids.map((i) => i.toLowerCase()))].sort();
   if (unique.length === 0) return [];
   tx.checkOrder(kind, unique);
+  if (beforeLock) await beforeLock(unique);
   const res = await tx.query(sql, [unique]);
   const rows = res.rows.map(mapRow);
   const found = new Set(rows.map((r) => rowId(r).toLowerCase()));
@@ -105,7 +108,13 @@ const mapSession = (r: QueryResultRow): SessionLockRow => ({
   version: r.version,
 });
 
-/** Lock session rows (rank 2) in ascending id order. */
+/**
+ * Lock session rows (rank 2) in ascending id order. The doctor of every session must already be locked in
+ * this transaction (LockOrderError otherwise). The doctor id is read with a plain non-locking SELECT first
+ * (sessions.doctor_id never changes), so a violation is reported before any session lock is taken. There is
+ * deliberately no opt-out: no caller needs a session snapshot without its doctor lock, and read-only
+ * snapshots do not need a lock at all (use getSession).
+ */
 export function lockSessions(tx: Tx, ids: string[]): Promise<SessionLockRow[]> {
   return lockMany(
     tx,
@@ -117,6 +126,13 @@ export function lockSessions(tx: Tx, ids: string[]): Promise<SessionLockRow[]> {
        FROM sessions WHERE id = ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE`,
     mapSession,
     (r) => r.id,
+    async (unique) => {
+      const res = await tx.query<{ id: string; doctor_id: string }>(
+        `SELECT id, doctor_id FROM sessions WHERE id = ANY($1::uuid[])`,
+        [unique],
+      );
+      for (const row of res.rows) tx.assertHolds('doctor', row.doctor_id, `Locking session ${row.id}`);
+    },
   );
 }
 
@@ -135,7 +151,7 @@ export const toCapacity = (r: QueryResultRow): CapacityLockRow => ({
   version: r.version,
 });
 
-/** Lock capacity guard rows (rank 3), keyed by session id, in ascending id order. */
+/** Lock capacity guard rows (rank 3), keyed by session id, in ascending id order. The session lock must be held. */
 export function lockCapacities(tx: Tx, sessionIds: string[]): Promise<CapacityLockRow[]> {
   return lockMany(
     tx,
@@ -146,6 +162,9 @@ export function lockCapacities(tx: Tx, sessionIds: string[]): Promise<CapacityLo
        FROM session_capacity WHERE session_id = ANY($1::uuid[]) ORDER BY session_id FOR NO KEY UPDATE`,
     toCapacity,
     (r) => r.sessionId,
+    async (unique) => {
+      for (const id of unique) tx.assertHolds('session', id, 'Locking the capacity guard');
+    },
   );
 }
 
