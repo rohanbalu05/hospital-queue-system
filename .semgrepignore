@@ -5,3 +5,4 @@ coverage/
 var/
 **/fixtures/
 *.test.ts
+.claude/
