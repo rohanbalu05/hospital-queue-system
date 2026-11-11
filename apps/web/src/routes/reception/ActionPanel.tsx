@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { RegisterPatientRequest, type ArrivalResult, type Session } from '@hqms/contracts';
 import { GroupTag, TokenText } from '@/components/queue';
@@ -23,6 +23,8 @@ interface ActionPanelProps {
   outcome: ArrivalOutcome | null;
   onDismissOutcome: () => void;
   error: PanelError | null;
+  /** Queue-entry actions (mark absent, re-enter skipped) for the entry selected on the live board. */
+  entryPanel?: ReactNode;
 }
 
 export function ActionPanel(p: ActionPanelProps) {
@@ -107,6 +109,8 @@ export function ActionPanel(p: ActionPanelProps) {
 
         <RegisterForm pending={p.registerPending} disabled={walkinFull || sessionOff || !p.session} onSubmit={p.onRegister} />
       </div>
+
+      {p.entryPanel}
     </section>
   );
 }

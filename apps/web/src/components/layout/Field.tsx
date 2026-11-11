@@ -40,7 +40,7 @@ export function Field({ label, hint, error, children, className }: FieldProps) {
         </p>
       ) : null}
       {error ? (
-        <p id={errId} role="alert" className="text-sm font-bold text-priority">
+        <p id={errId} role="alert" className="text-sm font-bold">
           {error}
         </p>
       ) : null}

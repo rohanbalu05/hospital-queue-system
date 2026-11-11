@@ -19,6 +19,8 @@ interface SessionBoardLiveProps {
   /** When set, rows become buttons: focusable, Enter or Space selects. */
   onSelectEntry?: (entry: QueueEntry) => void;
   className?: string;
+  /** Hide the capacity bar when the screen already shows it (the reception board header does). */
+  hideCapacity?: boolean;
 }
 
 function waited(min: number | null): string | null {
@@ -30,7 +32,7 @@ function waited(min: number | null): string | null {
  * Subscribes to the session's SSE stream and refetches the snapshot on each version notice (FR-09).
  * Mount it anywhere a staff role needs the board: reception centre column, doctor tablet, admin.
  */
-export function SessionBoardLive({ sessionId, selectedEntryId = null, onSelectEntry, className }: SessionBoardLiveProps) {
+export function SessionBoardLive({ sessionId, selectedEntryId = null, onSelectEntry, className, hideCapacity = false }: SessionBoardLiveProps) {
   const { query, snapshot, status, lastUpdated } = useLiveQueue(sessionId);
 
   if (query.isPending) {
@@ -69,6 +71,7 @@ export function SessionBoardLive({ sessionId, selectedEntryId = null, onSelectEn
       selectedEntryId={selectedEntryId}
       onSelectEntry={onSelectEntry}
       className={className}
+      hideCapacity={hideCapacity}
     />
   );
 }
@@ -81,9 +84,10 @@ interface BoardBodyProps {
   selectedEntryId: string | null;
   onSelectEntry: ((entry: QueueEntry) => void) | undefined;
   className: string | undefined;
+  hideCapacity: boolean;
 }
 
-function BoardBody({ snapshot, status, lastUpdated, refreshFailed, selectedEntryId, onSelectEntry, className }: BoardBodyProps) {
+function BoardBody({ snapshot, status, lastUpdated, refreshFailed, selectedEntryId, onSelectEntry, className, hideCapacity }: BoardBodyProps) {
   const waitingA = snapshot.waiting.filter((e) => e.group === 'A');
   const waitingW = snapshot.waiting.filter((e) => e.group === 'W');
   const called = snapshot.active?.state === 'called' ? [snapshot.active] : [];
@@ -126,12 +130,14 @@ function BoardBody({ snapshot, status, lastUpdated, refreshFailed, selectedEntry
         <p className="ml-auto text-muted-foreground tabular-nums">Completed today {snapshot.completedCount}</p>
       </div>
 
-      <CapacityBar
-        booked={snapshot.capacity.bookedReserved}
-        bookedCapacity={snapshot.capacity.bookedCapacity}
-        walkin={snapshot.capacity.walkinUsed}
-        walkinCapacity={snapshot.capacity.walkinCapacity}
-      />
+      {hideCapacity ? null : (
+        <CapacityBar
+          booked={snapshot.capacity.bookedReserved}
+          bookedCapacity={snapshot.capacity.bookedCapacity}
+          walkin={snapshot.capacity.walkinUsed}
+          walkinCapacity={snapshot.capacity.walkinCapacity}
+        />
+      )}
 
       <StaleBanner status={status === 'reconnecting' ? 'reconnecting' : 'live'} lastUpdated={lastUpdated} />
       {refreshFailed && status !== 'reconnecting' ? (
