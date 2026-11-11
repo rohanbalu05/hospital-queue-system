@@ -157,6 +157,9 @@ importers:
       '@types/pg':
         specifier: ^8.11.10
         version: 8.23.1
+      '@vitest/coverage-v8':
+        specifier: ^2.1.9
+        version: 2.1.9(vitest@2.1.9(@types/node@22.20.5)(jsdom@31.0.0)(lightningcss@1.33.0))
       esbuild:
         specifier: ^0.21.5
         version: 0.21.5
@@ -176,6 +179,9 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
     devDependencies:
+      '@vitest/coverage-v8':
+        specifier: ^2.1.9
+        version: 2.1.9(vitest@2.1.9(@types/node@22.20.5)(jsdom@31.0.0)(lightningcss@1.33.0))
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
@@ -201,6 +207,9 @@ importers:
       '@types/pg':
         specifier: ^8.11.10
         version: 8.23.1
+      '@vitest/coverage-v8':
+        specifier: ^2.1.9
+        version: 2.1.9(vitest@2.1.9(@types/node@22.20.5)(jsdom@31.0.0)(lightningcss@1.33.0))
       tsx:
         specifier: ^4.19.2
         version: 4.23.15
@@ -243,6 +252,9 @@ importers:
       '@types/pg':
         specifier: ^8.11.10
         version: 8.23.1
+      '@vitest/coverage-v8':
+        specifier: ^2.1.9
+        version: 2.1.9(vitest@2.1.9(@types/node@22.20.5)(jsdom@31.0.0)(lightningcss@1.33.0))
       pg:
         specifier: ^8.13.1
         version: 8.23.1

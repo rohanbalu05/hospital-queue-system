@@ -9,13 +9,15 @@
     "test:simulation": "vitest run --config simulation/vitest.config.ts",
     "simulate": "tsx simulation/run.ts",
     "test:concurrency": "vitest run --dir concurrency --passWithNoTests",
-    "e2e": "playwright test --trace off"
+    "e2e": "playwright test --trace off",
+    "test:coverage": "vitest run --config simulation/vitest.config.ts --coverage --coverage.include=simulation/** --coverage.exclude=simulation/**/*.test.ts --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reporter=lcov --coverage.reportsDirectory=coverage"
   },
   "devDependencies": {
     "@hqms/domain": "workspace:*",
     "@playwright/test": "1.63.0",
     "@types/node": "^22.10.0",
     "@types/pg": "^8.11.10",
+    "@vitest/coverage-v8": "^2.1.9",
     "pg": "^8.13.1",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
