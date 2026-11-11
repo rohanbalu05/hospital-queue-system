@@ -64,7 +64,7 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(^|/)(dist|build|coverage|node_modules|var|playwright-report)/' },
+    exclude: { path: '(^|/)(dist|build|coverage|node_modules|var|playwright-report|[.]claude)/' },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: 'tsconfig.base.json' },
     moduleSystems: ['es6', 'cjs'],
