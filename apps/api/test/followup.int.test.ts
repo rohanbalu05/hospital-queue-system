@@ -153,12 +153,19 @@ describe('FR-11 follow-up tasks: create, scope, ownership', () => {
 describe('FR-11 overdue and lifecycle', () => {
   it('FR-11-a: an overdue task stays open and listed until resolved or cancelled', async () => {
     const p = await newPatient(reception, 'Follow Up Patient');
-    await linkPatient(admin, reception, p, 1);
-    t.clock.set('2041-03-01T06:00:00Z');
-    const task = await taskFor(p, { dueAt: '2041-03-01T08:00:00Z' });
+    // Anchor the clock to the linked session's own date: patient scope only counts links within 180 days
+    // (D-028), and makeSession's date drifts with how many sessions earlier tests created.
+    const { session } = await linkPatient(admin, reception, p, 1);
+    const day = (offsetDays: number, hhmm: string): string => {
+      const d = new Date(`${session.date}T${hhmm}:00Z`);
+      d.setUTCDate(d.getUTCDate() + offsetDays);
+      return d.toISOString();
+    };
+    t.clock.set(day(0, '06:00'));
+    const task = await taskFor(p, { dueAt: day(0, '08:00') });
     expect(task.overdue).toBe(false);
 
-    t.clock.set('2041-03-03T06:00:00Z'); // two days past due
+    t.clock.set(day(2, '06:00')); // two days past due
     const overdue = await doctor1.get(`/follow-up-tasks?owner=all&overdue=true&patientId=${p}`);
     expect((overdue.body as FollowUpTask[]).map((x) => x.id)).toEqual([task.id]);
     expect((overdue.body as FollowUpTask[])[0]).toMatchObject({ status: 'open', overdue: true });
@@ -177,7 +184,7 @@ describe('FR-11 overdue and lifecycle', () => {
     expect((await doctor1.get(`/follow-up-tasks?owner=all&status=resolved&patientId=${p}`)).body).toHaveLength(1);
 
     // A cancelled one leaves the overdue list too, and the reason is recorded.
-    const second = await taskFor(p, { dueAt: '2041-03-01T09:00:00Z' });
+    const second = await taskFor(p, { dueAt: day(0, '09:00') });
     expect((await doctor1.get(`/follow-up-tasks?owner=all&overdue=true&patientId=${p}`)).body).toHaveLength(1);
     const cancelled = await followup.post(`/follow-up-tasks/${second.id}/cancel`, { reason: 'Duplicate of an earlier task' });
     expect(cancelled.body).toMatchObject({ status: 'cancelled', outcomeNote: 'Duplicate of an earlier task', overdue: false });

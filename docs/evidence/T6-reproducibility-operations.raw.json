@@ -188,7 +188,7 @@
       "actor": "doctor",
       "reason": "Chest pain on arrival",
       "policyVersion": 1,
-      "occurredAt": "2026-11-11T13:40:33.692Z",
+      "occurredAt": "2026-11-11T14:59:09.710Z",
       "nextDecision": "CLINICAL_PRIORITY"
     },
     "auditTableTriggers": 1,
