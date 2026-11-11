@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useTodayIST } from '@/live';
 import { SessionConsole } from './components/SessionConsole';
 import { SessionPicker } from './components/SessionPicker';
+import ReviewPage from './review/ReviewPage';
 
 function DoctorNav() {
   const link = ({ isActive }: { isActive: boolean }) =>
@@ -77,24 +78,12 @@ function QueuePage() {
   );
 }
 
-/** Slot for the W3 review inbox (OCR drafts awaiting verification). */
-function ReviewSlot() {
-  return (
-    <StaffShell title="Doctor console" description="Review inbox">
-      <DoctorNav />
-      <EmptyState title="Review inbox is not switched on yet">
-        Prescription drafts that need your verification will be listed here, with the draft and the editable instruction side by side.
-        For now, the Queue tab is all you need.
-      </EmptyState>
-    </StaffShell>
-  );
-}
-
 export default function DoctorHome() {
   return (
     <Routes>
       <Route index element={<QueuePage />} />
-      <Route path="review" element={<ReviewSlot />} />
+      <Route path="review" element={<ReviewPage nav={<DoctorNav />} />} />
+      <Route path="review/:documentId" element={<ReviewPage nav={<DoctorNav />} />} />
       <Route path="*" element={<Navigate to="/doctor" replace />} />
     </Routes>
   );

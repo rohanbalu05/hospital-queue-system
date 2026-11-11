@@ -50,6 +50,17 @@ describe('apiFetch', () => {
     expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/json');
   });
 
+  it('sends a multipart upload as it is, without a JSON content type', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(json(201, { ok: true }));
+    vi.stubGlobal('fetch', fetchMock);
+    const form = new FormData();
+    form.append('file', new Blob(['x'], { type: 'image/png' }), 'scan.png');
+    await apiFetch('/documents', { method: 'POST', body: form });
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.body).toBe(form);
+    expect((init.headers as Record<string, string>)['Content-Type']).toBeUndefined();
+  });
+
   it('throws a typed error for non-2xx', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(403, { error: { code: 'FORBIDDEN', message: 'Not allowed.' } })));
     await expect(apiFetch('/admin/staff')).rejects.toMatchObject({ code: 'FORBIDDEN', status: 403 });

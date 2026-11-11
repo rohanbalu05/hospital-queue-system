@@ -6,7 +6,9 @@ import { StatusWord } from '@/components/scheduling/status';
 import type { StaffAppointment } from '@/api/schemas';
 import { formatIST } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { SessionBoardLive } from '@/live';
 import { shortRef } from './model';
+import type { QueueEntry } from '@hqms/contracts';
 
 const SESSION_WORD: Record<SessionStatus, string> = {
   scheduled: 'Not started',
@@ -31,6 +33,9 @@ interface SessionBoardProps {
   onRetry: () => void;
   /** Tokens issued at this desk, by appointment id (the Appointment contract carries no token). */
   tokens: Record<string, ArrivalResult>;
+  /** Live queue board selection: the reception action panel acts on this entry. */
+  selectedEntryId?: string | null;
+  onSelectEntry?: (entry: QueueEntry) => void;
 }
 
 /**
@@ -72,7 +77,7 @@ export function SessionBoard(p: SessionBoardProps) {
               {sessionLabelWord(s)}, {sessionTimes(s)}
             </p>
             <p>
-              <span className={cn('font-bold', s.status === 'open' ? 'text-done' : s.status === 'paused' || s.status === 'unavailable' ? 'text-priority' : 'text-ink')}>
+              <span className={cn('font-bold', s.status === 'paused' || s.status === 'unavailable' ? 'text-ink' : 'text-muted-foreground')}>
                 {SESSION_WORD[s.status]}
               </span>
             </p>
@@ -85,8 +90,16 @@ export function SessionBoard(p: SessionBoardProps) {
           walkin={s.capacity.walkinUsed}
           walkinCapacity={s.capacity.walkinCapacity}
         />
-        <StaleBanner className="mt-3" status={p.stale ? 'reconnecting' : 'live'} lastUpdated={p.lastUpdated} />
+        {/* The live board below carries the "Last updated" line; this one speaks up only when the arrivals list went stale. */}
+        {p.stale ? <StaleBanner className="mt-3" status="reconnecting" lastUpdated={p.lastUpdated} /> : null}
       </div>
+
+      <SessionBoardLive
+        sessionId={s.id}
+        hideCapacity
+        selectedEntryId={p.selectedEntryId ?? null}
+        {...(p.onSelectEntry ? { onSelectEntry: p.onSelectEntry } : {})}
+      />
 
       {p.appointmentsLoading ? <SkeletonRows count={5} /> : null}
       {p.appointmentsError && !p.appointments ? <ErrorState title="Appointments could not be loaded" error={p.appointmentsError} onRetry={p.onRetry} /> : null}

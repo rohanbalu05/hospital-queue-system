@@ -55,11 +55,18 @@ describe('EtaBlock', () => {
     expect(screen.getByText(/currently running longer|current consultation is running longer/i)).toBeVisible();
   });
 
-  it.each(['withheld', 'unsupported'] as const)('shows "Estimate paused" and the note when %s', (status) => {
-    render(<EtaBlock eta={{ ...baseEta, status, lowMinutes: null, highMinutes: null, uncertainty: null, note: 'Doctor paused (unknown duration)' }} />);
+  it('says the doctor paused the session when the estimate is withheld, without the model note', () => {
+    render(<EtaBlock eta={{ ...baseEta, status: 'withheld', lowMinutes: null, highMinutes: null, uncertainty: null, note: 'Doctor paused (unknown duration). Model estimate.' }} />);
     expect(screen.getByText('Estimate paused')).toBeVisible();
-    expect(screen.getByText(/Doctor paused \(unknown duration\)/)).toBeVisible();
+    expect(screen.getByText("The doctor has paused this session. We'll show a new estimate when it resumes.")).toBeVisible();
+    expect(screen.queryByText(/Model estimate/)).toBeNull();
     expect(screen.queryByText(/about/)).toBeNull();
+  });
+
+  it('shows the reason when the estimate is unsupported', () => {
+    render(<EtaBlock eta={{ ...baseEta, status: 'unsupported', lowMinutes: null, highMinutes: null, uncertainty: null, note: 'Not enough data for this session' }} />);
+    expect(screen.getByText('Estimate paused')).toBeVisible();
+    expect(screen.getByText(/Not enough data for this session/)).toBeVisible();
   });
 });
 
