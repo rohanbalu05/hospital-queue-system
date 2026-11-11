@@ -118,3 +118,12 @@ export async function hasActiveEntry(db: Queryable, sessionId: string, patientId
   );
   return (res.rowCount ?? 0) > 0;
 }
+
+/** Does this patient hold a booked or checked-in appointment in the session (they should check in, not walk in)? */
+export async function hasActiveAppointment(db: Queryable, sessionId: string, patientId: string): Promise<boolean> {
+  const res = await db.query(
+    `SELECT 1 FROM appointments WHERE session_id = $1 AND patient_id = $2 AND status IN ('booked','checked_in') LIMIT 1`,
+    [sessionId, patientId],
+  );
+  return (res.rowCount ?? 0) > 0;
+}

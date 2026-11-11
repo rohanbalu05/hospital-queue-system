@@ -32,6 +32,7 @@ import { AccessPolicy } from '../access/access-policy.service.js';
 import { cancelReservationReleaseJob, toDomainPolicy } from '../scheduling/shared.js';
 import {
   findArrivalByAppointment,
+  hasActiveAppointment,
   hasActiveEntry,
   insertQueueEntry,
   insertVisit,
@@ -74,15 +75,22 @@ export class ArrivalsService {
 
         const appt = await getAppointment(tx, appointmentId);
         if (!appt) throw notFound('Appointment');
-        assertTransition('appointment', appt.status, 'checked_in');
+        assertTransition('appointment', appt.status, 'checked_in'); // booked, or missed (late admission only, below)
         const now = this.clock.now();
         this.assertSessionAcceptsArrivals(session, now);
+        if (await hasActiveEntry(tx, session.id, appt.patientId)) {
+          throw conflict('CONFLICT', 'This patient already has an active place in this session');
+        }
 
         const policyRow = await getPolicyById(tx, session.policyId);
         if (!policyRow) throw notFound('Policy');
         const policy = toDomainPolicy(policyRow);
 
-        const arrival = classifyArrival({ scheduledAt: new Date(appt.scheduledAt), arrivedAt: now }, policy);
+        // A 'missed' appointment (the worker released its place after the grace period) is by definition late.
+        const alreadyMissed = appt.status === 'missed';
+        const arrival = alreadyMissed
+          ? 'late_requires_review'
+          : classifyArrival({ scheduledAt: new Date(appt.scheduledAt), arrivedAt: now }, policy);
         let kind: VisitKind;
         let group: QueueGroup;
         let allocationId: string;
@@ -110,7 +118,18 @@ export class ArrivalsService {
           }
           // Staff approved: take a walk-in place (CAPACITY_FULL rolls back), give up the missed booked place.
           allocationId = await admitWalkin(tx, session.id);
-          await releaseAllocation(tx, appt.allocationId);
+          // The booked place goes back to the pool unless the worker already released it (missed).
+          if (!alreadyMissed && (await releaseAllocation(tx, appt.allocationId)) === 'released') {
+            await writeOutbox(tx, {
+              eventType: 'ReservationReleased',
+              entityType: 'appointment',
+              entityId: appt.id,
+              entityVersion: appt.version,
+              sessionId: session.id,
+              patientId: appt.patientId,
+              payload: {},
+            });
+          }
           kind = 'late_admission';
           group = 'W';
           eligibleAt = new Date(computeEligibleAt({ kind: 'late_admission', acceptedAt: now }, policy));
@@ -194,6 +213,12 @@ export class ArrivalsService {
         this.assertSessionAcceptsArrivals(session, now);
         if (await hasActiveEntry(tx, sessionId, body.patientId)) {
           throw conflict('CONFLICT', 'This patient already has an active place in this session');
+        }
+        if (await hasActiveAppointment(tx, sessionId, body.patientId)) {
+          throw conflict(
+            'CONFLICT',
+            'This patient has an active appointment in this session; check the appointment in instead of admitting a walk-in',
+          );
         }
         const policyRow = await getPolicyById(tx, session.policyId);
         if (!policyRow) throw notFound('Policy');
