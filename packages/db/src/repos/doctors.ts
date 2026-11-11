@@ -14,7 +14,10 @@ export async function getDoctor(db: Queryable, id: string): Promise<Doctor | nul
   return r ? mapDoctor(r) : null;
 }
 
-export async function listDoctors(db: Queryable, opts: { department?: string; activeOnly?: boolean } = {}): Promise<Doctor[]> {
+export async function listDoctors(
+  db: Queryable,
+  opts: { department?: string; activeOnly?: boolean } = {},
+): Promise<Doctor[]> {
   const rows = await many(
     db,
     `SELECT id, full_name, department, room, active FROM doctors

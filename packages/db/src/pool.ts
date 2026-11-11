@@ -53,6 +53,24 @@ const customTypes = {
   },
 };
 
+const brokenClients = new WeakSet<object>();
+const guardedClients = new WeakSet<object>();
+
+/** Attach the permanent 'error' listener (idempotent) that marks the client as broken instead of crashing. */
+export function guardClient(client: pg.PoolClient | pg.Client): void {
+  if (guardedClients.has(client)) return;
+  guardedClients.add(client);
+  client.on('error', (err: Error) => {
+    brokenClients.add(client);
+    console.error('[hqms/db] client connection error:', err.message);
+  });
+}
+
+/** True once the client emitted a connection error; such a client must be released with an error. */
+export function isBrokenClient(client: object): boolean {
+  return brokenClients.has(client);
+}
+
 export interface PoolOptions {
   max?: number;
   applicationName?: string;
@@ -73,6 +91,11 @@ export function createPool(url: string | undefined = process.env['DATABASE_URL']
   pool.on('error', (err) => {
     console.error('[hqms/db] idle client error:', err.message);
   });
+  // pg-pool only listens to a client while it is idle. A client that is checked out (for example between two
+  // statements of a transaction) has no listener, so a terminated backend would emit an unhandled 'error' and
+  // kill the process. Keep a permanent listener that records the client as broken; whoever holds the client
+  // sees the failure on its next query and releases it with release(err), which destroys it.
+  pool.on('connect', (client) => guardClient(client));
   return pool;
 }
 

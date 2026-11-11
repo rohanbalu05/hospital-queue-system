@@ -2,7 +2,14 @@ import { Catch, HttpException, Logger, type ArgumentsHost, type ExceptionFilter 
 import type { Response } from 'express';
 import { ZodError } from 'zod';
 import { InvalidTransitionError } from '@hqms/domain';
-import { ConflictError, LockOrderError, NotFoundError, sqlState } from '@hqms/db';
+import {
+  ConflictError,
+  DatabaseUnavailableError,
+  LockOrderError,
+  NotFoundError,
+  isConnectionError,
+  sqlState,
+} from '@hqms/db';
 import type { ApiError, ErrorCode } from '@hqms/contracts';
 import { ApiException } from './errors.js';
 import type { HqmsRequest } from './request-context.js';
@@ -13,6 +20,8 @@ interface Mapped {
   message: string;
   details?: unknown;
 }
+
+const RETRY_AFTER_SEC = 2;
 
 const STATUS_CODE: Record<number, ErrorCode> = {
   400: 'VALIDATION_FAILED',
@@ -55,6 +64,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
       },
     };
     if (res.headersSent) return;
+    if (mapped.status === 503) res.setHeader('Retry-After', String(RETRY_AFTER_SEC));
     res.status(mapped.status).json(body);
   }
 
@@ -72,6 +82,15 @@ export class ApiExceptionFilter implements ExceptionFilter {
     }
     if (err instanceof ConflictError) {
       return { status: 409, code: err.code, message: err.message, details: err.details };
+    }
+    if (err instanceof DatabaseUnavailableError || isConnectionError(err)) {
+      // Connection lost or refused (restart, failover, terminated backend): not a bug, retry-able with the same key.
+      return {
+        status: 503,
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'The service is temporarily unavailable; please retry',
+        details: { retryAfterSec: RETRY_AFTER_SEC },
+      };
     }
     if (err instanceof NotFoundError) {
       return { status: 404, code: 'NOT_FOUND', message: `${err.entity} not found` };
