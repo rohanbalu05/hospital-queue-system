@@ -29,6 +29,27 @@ export const DEFAULT_LLM_MODEL = 'gemini-3.5-flash-lite';
 const MAX_QUESTION_CHARS = 2000;
 
 /**
+ * Building blocks for treatment-change phrasings that name the medicine directly ("Should I stop metformin?")
+ * and so need no generic noun such as "medicine" or "dose". The patterns carry the intent in the verb and the
+ * modal/intent frame; they never look at the medicine name (so any drug, or none, is covered).
+ */
+const STOP_VERBS =
+  "(?:stop(?:ping)?|quit(?:ting)?|discontinu(?:e|ing)|ceas(?:e|ing)|skip(?:ping)?|come off|coming off|go off|going off|taper(?:ing)?(?: off)?|give up|giving up)";
+const DOSE_VERBS =
+  "(?:cut(?:ting)? (?:down|back)(?: on)?|reduc(?:e|ing)|lower(?:ing)?|decreas(?:e|ing)|increas(?:e|ing)|rais(?:e|ing)|doubl(?:e|ing)|halv(?:e|ing)|tripl(?:e|ing))";
+/** "should I", "can I", "shouldn't I", "do I still need to" ... followed by the verb. */
+const modal = (verbs: string): RegExp =>
+  new RegExp(`\\b(?:should|shall|can|could|may|might|must|do|would)(?:n't)? i (?:just |still |now |also )?(?:need to |have to )?${verbs}\\b`);
+/** "is it ok to ...", "would it be safe for me to ..." */
+const approval = (verbs: string): RegExp =>
+  new RegExp(`\\b(?:is it|would it be|is it going to be) (?:ok|okay|fine|safe|alright|all right|acceptable|allowed|better|best)(?: for me)? to ${verbs}\\b`);
+/** "I want to ...", "I'd like to ...", "I am going to ...", "I plan to ..." */
+const wantTo = (verbs: string): RegExp =>
+  new RegExp(
+    `\\bi(?:'d| would)? (?:want|like|wish|plan|intend|need|decided|have decided)(?: to)? ${verbs}\\b|\\bi(?: am|'m) (?:going|planning|thinking|trying|about|ready|deciding)(?: to| of| about)? ${verbs}\\b`,
+  );
+
+/**
  * Intents the assistant refuses whatever the context says (FR-14: no diagnosis, no treatment change,
  * no priority). Matched on the patient's question only; context text is never consulted for this.
  */
@@ -50,6 +71,12 @@ const DENIED_INTENTS: ReadonlyArray<{ intent: string; patterns: RegExp[] }> = [
       /\b(dose|dosage)\b[^.?!]{0,30}\b(increase|decrease|double|change|higher|lower|bigger|smaller)\b/,
       /\btake (more|less|double|extra|half)\b/,
       /\bdouble up\b/,
+      modal(DOSE_VERBS),
+      approval(DOSE_VERBS),
+      wantTo(DOSE_VERBS),
+      // "take it only once a day instead of twice", "only half a tablet"
+      /\b(?:once|twice|thrice|\d+ times?|one time|two times|three times) (?:a|per|each|every) (?:day|week|night)\b[^.?!]{0,20}\binstead\b/,
+      /\b(?:take|use|have)\b[^.?!]{0,40}\bonly (?:once|twice|thrice|one|two|three|half|a half|every other)\b/,
     ],
   },
   {
@@ -58,6 +85,12 @@ const DENIED_INTENTS: ReadonlyArray<{ intent: string; patterns: RegExp[] }> = [
       /\b(stop|stopping|quit|discontinue|cease|give up)\b[^.?!]{0,30}\b(taking|medicine|medicines|medication|medications|tablet|tablets|pill|pills|antibiotic|antibiotics|treatment|course|injection)\b/,
       /\bcan i (just )?stop\b/,
       /\bno longer (need|take)\b/,
+      modal(STOP_VERBS),
+      approval(STOP_VERBS),
+      wantTo(STOP_VERBS),
+      // "do I still need to take X", "do I need to keep taking X"
+      /\bdo i still (?:need|have) to (?:take|use)\b/,
+      /\bdo i (?:still )?(?:need|have) to (?:keep|continue) (?:taking|using|take|use)\b/,
     ],
   },
   {
@@ -65,6 +98,7 @@ const DENIED_INTENTS: ReadonlyArray<{ intent: string; patterns: RegExp[] }> = [
     patterns: [
       /\b(new|another|different|alternative|extra|additional)\b[^.?!]{0,20}\b(medicine|medicines|medication|drug|drugs|tablet|tablets|pill|antibiotic|painkiller|supplement|remedy)\b/,
       /\b(also take|can i add|add (a|an|another)|combine|mix (it )?with|along with|in addition to|instead of|switch to|replace)\b/,
+      /\b(?:switch|switching|swap|swapping)(?: over)? from\b/,
       /\b(can|may|should) i (also )?(take|use|try) (ibuprofen|aspirin|antibiotics?|painkillers?|herbal|ayurvedic|homeopathic|alcohol|steroids?)\b/,
     ],
   },
