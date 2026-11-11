@@ -1,7 +1,7 @@
 import type { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { withTransaction, writeOutbox, type OutboxInput } from '@hqms/db';
-import { dispatchOutboxBatch, OutboxDispatcher, renderNotification } from '../src/outbox.js';
+import { dispatchOutboxBatch, OutboxDispatcher, renderNotification, reservationReleasedBody } from '../src/outbox.js';
 import { bookAppointment, makeEntry, makePool, makeWorld, testLog, type World } from './helpers.js';
 
 let pool: Pool;
@@ -26,6 +26,46 @@ const notificationsFor = async (eventId: string) =>
   (await pool.query(`SELECT * FROM notifications WHERE event_id = $1`, [eventId])).rows;
 const pending = async () =>
   Number((await pool.query(`SELECT count(*) AS n FROM outbox_events WHERE dispatched_at IS NULL`)).rows[0].n);
+
+describe('ReservationReleased wording', () => {
+  const when = '1 Mar, 10:20 am';
+  it('depends on payload.reason and defaults to a neutral sentence', () => {
+    expect(reservationReleasedBody('timer', when)).toBe(
+      'Your reserved place on 1 Mar, 10:20 am was released because you had not checked in. Please speak to reception if you are here.',
+    );
+    expect(reservationReleasedBody('cancelled', when)).toContain('because the appointment was cancelled');
+    expect(reservationReleasedBody('rescheduled', when)).toContain('moved to another time');
+    expect(reservationReleasedBody('late_admission', when)).toContain('admitted as a late arrival');
+    for (const r of [undefined, null, 'something-new', 42]) {
+      expect(reservationReleasedBody(r, when)).toBe('Your reserved place on 1 Mar, 10:20 am was released.');
+      expect(reservationReleasedBody(r, null)).toBe('Your reserved place was released.');
+    }
+    // only the timer wording says the patient had not checked in
+    expect(reservationReleasedBody('cancelled', when)).not.toMatch(/not checked in/);
+  });
+
+  it('the dispatcher renders the stored reason into the notification', async () => {
+    for (const [reason, needle] of [
+      ['timer', 'had not checked in'],
+      ['cancelled', 'was cancelled'],
+      [undefined, 'was released.'],
+    ] as const) {
+      const a = await bookAppointment(pool, w, { scheduledAt: new Date('2030-03-01T04:50:00Z'), login: true });
+      const ev = await emit({
+        eventType: 'ReservationReleased',
+        entityType: 'appointment',
+        entityId: a.appointmentId,
+        entityVersion: 2,
+        sessionId: w.sessionId,
+        patientId: a.patientId,
+        ...(reason ? { payload: { reason } } : {}),
+      });
+      await dispatchOutboxBatch(pool);
+      const n = await pool.query(`SELECT body FROM notifications WHERE event_id = $1`, [ev.id]);
+      expect(n.rows[0]?.body).toContain(needle);
+    }
+  });
+});
 
 describe('outbox dispatcher', () => {
   it('creates a plain-text notification for a called patient (token + room, no clinical text)', async () => {

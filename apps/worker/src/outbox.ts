@@ -94,6 +94,26 @@ async function queueFacts(tx: Tx, ev: OutboxEventRow): Promise<{ token: string; 
   return { token: payloadToken ?? row.token, room: row.room };
 }
 
+/**
+ * Wording for ReservationReleased by `payload.reason` ('timer' | 'cancelled' | 'rescheduled' | 'late_admission').
+ * A missing or unknown reason gets a neutral sentence that never blames the patient.
+ */
+export function reservationReleasedBody(reason: unknown, when: string | null): string {
+  const place = when ? `Your reserved place on ${when}` : 'Your reserved place';
+  switch (reason) {
+    case 'timer':
+      return `${place} was released because you had not checked in. Please speak to reception if you are here.`;
+    case 'cancelled':
+      return `${place} was released because the appointment was cancelled.`;
+    case 'rescheduled':
+      return `${place} was released because the appointment was moved to another time.`;
+    case 'late_admission':
+      return `${place} was released because you were admitted as a late arrival. You are in today's queue.`;
+    default:
+      return `${place} was released.`;
+  }
+}
+
 /** Default renderer: patient-facing events -> one in-app notification for the patient's login, if any. */
 export const renderNotification: NotificationRenderer = async (tx, ev) => {
   if (!PATIENT_EVENTS.has(ev.eventType)) return null;
@@ -126,9 +146,7 @@ export const renderNotification: NotificationRenderer = async (tx, ev) => {
     }
     case 'ReservationReleased': {
       const f = await appointmentFacts(tx, ev.entityId);
-      body = f
-        ? `Your reserved place on ${f.when} was released because you had not checked in. Please speak to reception if you are here.`
-        : 'Your reserved place was released because you had not checked in. Please speak to reception if you are here.';
+      body = reservationReleasedBody(ev.payload['reason'], f?.when ?? null);
       break;
     }
     case 'QueuePatientCalled': {

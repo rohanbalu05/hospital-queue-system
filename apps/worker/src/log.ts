@@ -48,8 +48,25 @@ export const silentLogger: Logger = {
   child: () => silentLogger,
 };
 
-/** Error to a loggable/storable string: class name plus message, truncated. Never includes `cause` or stack. */
+/** A node-postgres DatabaseError: has a 5-character SQLSTATE and server-side fields such as `severity`. */
+export function isPgError(err: unknown): err is Error & { code: string; constraint?: string } {
+  if (typeof err !== 'object' || err === null) return false;
+  const e = err as { code?: unknown; severity?: unknown; routine?: unknown };
+  return typeof e.code === 'string' && /^[0-9A-Z]{5}$/.test(e.code) && (e.severity !== undefined || e.routine !== undefined);
+}
+
+/**
+ * Error to a loggable/storable string, truncated. Never includes `cause` or stack.
+ *
+ * Raw database error messages can echo submitted values (`invalid input syntax for type uuid: "<value>"`,
+ * unique-violation details), so for pg errors only the class, SQLSTATE and constraint name are kept
+ * (`DatabaseError sqlstate=23505 constraint=users_email_lower_uq`). Our own errors (PermanentJobError,
+ * the typed errors of @hqms/db, handler timeouts) and plain Errors thrown by handlers keep their message,
+ * which is written by us and carries ids and types only.
+ */
 export function errorSummary(err: unknown, max = 500): string {
-  const text = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+  let text: string;
+  if (isPgError(err)) text = `DatabaseError sqlstate=${err.code} constraint=${err.constraint ?? '-'}`;
+  else text = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }

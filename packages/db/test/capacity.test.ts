@@ -106,6 +106,7 @@ describe('allocation state machine', () => {
     const f = await makeFixture(pool, { booked: 2, patients: 1 });
     const { allocationId } = await bookOne(pool, f, nth(f.patientIds, 0));
     const out = await withTransaction(pool, async (tx) => {
+      await lockDoctor(tx, f.doctorId);
       await lockSession(tx, f.sessionId);
       await lockCapacity(tx, f.sessionId);
       const first = await releaseAllocation(tx, allocationId);
@@ -120,11 +121,13 @@ describe('allocation state machine', () => {
     const f = await makeFixture(pool, { booked: 2, patients: 1 });
     const { allocationId } = await bookOne(pool, f, nth(f.patientIds, 0));
     await withTransaction(pool, async (tx) => {
+      await lockDoctor(tx, f.doctorId);
       await lockSession(tx, f.sessionId);
       await lockCapacity(tx, f.sessionId);
       await consumeAllocation(tx, allocationId);
     });
     const err = await withTransaction(pool, async (tx) => {
+      await lockDoctor(tx, f.doctorId);
       await lockSession(tx, f.sessionId);
       await lockCapacity(tx, f.sessionId);
       await releaseAllocation(tx, allocationId);
@@ -136,6 +139,7 @@ describe('allocation state machine', () => {
     expect(await capacityInvariant(pool, f.sessionId)).toMatchObject({ ok: true, counters: { bookedReserved: 1 } });
     // and a consumed allocation cannot be consumed twice
     const again = await withTransaction(pool, async (tx) => {
+      await lockDoctor(tx, f.doctorId);
       await lockSession(tx, f.sessionId);
       await lockCapacity(tx, f.sessionId);
       await consumeAllocation(tx, allocationId);
@@ -147,6 +151,7 @@ describe('allocation state machine', () => {
     const f = await makeFixture(pool, { booked: 2, patients: 1 });
     const { allocationId } = await bookOne(pool, f, nth(f.patientIds, 0));
     const err = await withTransaction(pool, async (tx) => {
+      await lockDoctor(tx, f.doctorId);
       await lockSession(tx, f.sessionId);
       await lockCapacity(tx, f.sessionId);
       await releaseAllocation(tx, allocationId);
@@ -164,12 +169,14 @@ describe('updateCapacity', () => {
     const f = await makeFixture(pool, { booked: 5, walkin: 2, patients: 3 });
     for (const p of f.patientIds) await bookOne(pool, f, p);
     await withTransaction(pool, async (tx) => {
+      await lockDoctor(tx, f.doctorId);
       await lockSession(tx, f.sessionId);
       await lockCapacity(tx, f.sessionId);
       await admitWalkin(tx, f.sessionId);
     });
 
     const lock = async (tx: Tx) => {
+      await lockDoctor(tx, f.doctorId);
       await lockSession(tx, f.sessionId);
       await lockCapacity(tx, f.sessionId);
     };
@@ -202,6 +209,7 @@ describe('updateCapacity', () => {
   it('expectedVersion is a compare-and-set on the session version', async () => {
     const f = await makeFixture(pool);
     const err = await withTransaction(pool, async (tx) => {
+      await lockDoctor(tx, f.doctorId);
       await lockSession(tx, f.sessionId);
       await lockCapacity(tx, f.sessionId);
       await updateCapacity(tx, f.sessionId, 6, 2, { expectedVersion: 99 });
