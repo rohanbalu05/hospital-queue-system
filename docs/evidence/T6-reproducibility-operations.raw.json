@@ -1,0 +1,270 @@
+{
+  "t6AuditTrail": {
+    "trailRows": 18,
+    "trailOperations": [
+      "admin:session.create:session",
+      "admin:session.create:session",
+      "patient:appointment.book:appointment",
+      "reception:visit.check_in:visit",
+      "reception:visit.walk_in:visit",
+      "doctor:queue.priority:queue_entry",
+      "doctor:session.open:session",
+      "doctor:queue.call_next:queue_entry",
+      "doctor:consultation.start:visit",
+      "doctor:consultation.complete:visit",
+      "doctor:queue.call_next:queue_entry",
+      "doctor:consultation.start:visit",
+      "doctor:consultation.complete:visit",
+      "doctor:follow_up.create:follow_up_task",
+      "followup:follow_up.acknowledge:follow_up_task",
+      "followup:appointment.book:appointment",
+      "followup:follow_up.return_booking:follow_up_task",
+      "followup:follow_up.resolve:follow_up_task"
+    ],
+    "trailTable": [
+      {
+        "operation": "session.create",
+        "actorRole": "admin",
+        "entityType": "session",
+        "hasActorId": true,
+        "policyVersion": null,
+        "reason": null
+      },
+      {
+        "operation": "session.create",
+        "actorRole": "admin",
+        "entityType": "session",
+        "hasActorId": true,
+        "policyVersion": null,
+        "reason": null
+      },
+      {
+        "operation": "appointment.book",
+        "actorRole": "patient",
+        "entityType": "appointment",
+        "hasActorId": true,
+        "policyVersion": 1,
+        "reason": null
+      },
+      {
+        "operation": "visit.check_in",
+        "actorRole": "reception",
+        "entityType": "visit",
+        "hasActorId": true,
+        "policyVersion": 1,
+        "reason": null
+      },
+      {
+        "operation": "visit.walk_in",
+        "actorRole": "reception",
+        "entityType": "visit",
+        "hasActorId": true,
+        "policyVersion": 1,
+        "reason": null
+      },
+      {
+        "operation": "queue.priority",
+        "actorRole": "doctor",
+        "entityType": "queue_entry",
+        "hasActorId": true,
+        "policyVersion": 1,
+        "reason": "Chest pain on arrival"
+      },
+      {
+        "operation": "session.open",
+        "actorRole": "doctor",
+        "entityType": "session",
+        "hasActorId": true,
+        "policyVersion": 1,
+        "reason": "Opened by the first call"
+      },
+      {
+        "operation": "queue.call_next",
+        "actorRole": "doctor",
+        "entityType": "queue_entry",
+        "hasActorId": true,
+        "policyVersion": 1,
+        "reason": "Clinical priority (class 1)"
+      },
+      {
+        "operation": "consultation.start",
+        "actorRole": "doctor",
+        "entityType": "visit",
+        "hasActorId": true,
+        "policyVersion": 1,
+        "reason": null
+      },
+      {
+        "operation": "consultation.complete",
+        "actorRole": "doctor",
+        "entityType": "visit",
+        "hasActorId": true,
+        "policyVersion": 1,
+        "reason": null
+      },
+      {
+        "operation": "queue.call_next",
+        "actorRole": "doctor",
+        "entityType": "queue_entry",
+        "hasActorId": true,
+        "policyVersion": 1,
+        "reason": "Called by rotation: 1st appointment of A, A, W"
+      },
+      {
+        "operation": "consultation.start",
+        "actorRole": "doctor",
+        "entityType": "visit",
+        "hasActorId": true,
+        "policyVersion": 1,
+        "reason": null
+      },
+      {
+        "operation": "consultation.complete",
+        "actorRole": "doctor",
+        "entityType": "visit",
+        "hasActorId": true,
+        "policyVersion": 1,
+        "reason": null
+      },
+      {
+        "operation": "follow_up.create",
+        "actorRole": "doctor",
+        "entityType": "follow_up_task",
+        "hasActorId": true,
+        "policyVersion": null,
+        "reason": null
+      },
+      {
+        "operation": "follow_up.acknowledge",
+        "actorRole": "followup",
+        "entityType": "follow_up_task",
+        "hasActorId": true,
+        "policyVersion": null,
+        "reason": null
+      },
+      {
+        "operation": "appointment.book",
+        "actorRole": "followup",
+        "entityType": "appointment",
+        "hasActorId": true,
+        "policyVersion": 1,
+        "reason": null
+      },
+      {
+        "operation": "follow_up.return_booking",
+        "actorRole": "followup",
+        "entityType": "follow_up_task",
+        "hasActorId": true,
+        "policyVersion": null,
+        "reason": null
+      },
+      {
+        "operation": "follow_up.resolve",
+        "actorRole": "followup",
+        "entityType": "follow_up_task",
+        "hasActorId": true,
+        "policyVersion": null,
+        "reason": "Return visit booked."
+      }
+    ],
+    "actors": {
+      "patient": "patient",
+      "reception": "reception",
+      "doctor": "doctor",
+      "followup": "followup"
+    },
+    "queueOperationsChecked": 10,
+    "rowsWithPolicyVersion": {
+      "withPolicy": 12,
+      "total": 18,
+      "policyVersion": 1
+    },
+    "override": {
+      "operation": "queue.priority",
+      "actor": "doctor",
+      "reason": "Chest pain on arrival",
+      "policyVersion": 1,
+      "occurredAt": "2026-11-11T13:13:25.441Z",
+      "nextDecision": "CLINICAL_PRIORITY"
+    },
+    "auditTableTriggers": 0,
+    "report": {
+      "completedVisits": 2,
+      "targetRows": 8,
+      "measuredRows": 8,
+      "targetNames": [
+        "API latency p95, ordinary load (100 req/s for 30 min) = 500 ms",
+        "API latency p95, burst (200 req/s for 60 s) = 1000 ms",
+        "Queue-update freshness p95 (200 connected clients) = 5000 ms",
+        "Unexpected server errors (upper bound) = 1 %",
+        "Capacity oversubscriptions, duplicate active entries, concurrent doctor allocations = 0 count",
+        "Availability during declared outpatient hours = 99.5 %",
+        "Recovery point objective (RPO) = 15 min",
+        "Recovery time objective (RTO) = 60 min"
+      ],
+      "measuredNames": [
+        "Median wait, eligible to called (all groups) = 0 min (n=2)",
+        "p95 wait, eligible to called (all groups) = 0 min (n=2)",
+        "Mean consultation duration = 0 min (n=2)",
+        "No-show rate (missed / admitted or missed bookings) = 0 % (n=1)",
+        "Follow-up tasks closed on time = 100 % (n=1)",
+        "Follow-up tasks open and overdue now = 0 count (n=0)",
+        "Assistant questions escalated to staff = null % (n=0)",
+        "Documents whose OCR failed = null % (n=0)"
+      ],
+      "waitsByGroup": [
+        {
+          "group": "A",
+          "medianMinutes": 0,
+          "p95Minutes": 0,
+          "n": 1
+        },
+        {
+          "group": "W",
+          "medianMinutes": null,
+          "p95Minutes": null,
+          "n": 0
+        },
+        {
+          "group": "P",
+          "medianMinutes": 0,
+          "p95Minutes": 0,
+          "n": 1
+        },
+        {
+          "group": "all",
+          "medianMinutes": 0,
+          "p95Minutes": 0,
+          "n": 2
+        }
+      ]
+    },
+    "release": {
+      "migrations": [
+        "0001_init",
+        "0002_patient_mrn_sequence",
+        "0003_active_appointment_uq",
+        "0004_ownership_and_email",
+        "0005_instruction_version_title"
+      ],
+      "policy": {
+        "version": 1,
+        "rotation": [
+          "A",
+          "A",
+          "W"
+        ],
+        "early_eligibility_min": 10,
+        "late_grace_min": 15,
+        "aging_trigger_min": 45,
+        "called_timeout_sec": 120,
+        "ewma_alpha": 0.2,
+        "initial_estimate_min": 12,
+        "default_booked_capacity": 10,
+        "default_walkin_capacity": 5
+      },
+      "doctor": "ca89c017-eeb6-5cc9-b578-c2b41259daef"
+    },
+    "globalInvariantViolations": []
+  }
+}
