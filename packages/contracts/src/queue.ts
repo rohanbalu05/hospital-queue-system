@@ -138,6 +138,8 @@ export const Eta = z.object({
   computedAt: Instant,
   estimatorMeanMinutes: z.number().positive(),
   estimatorSamples: z.number().int().nonnegative(),
+  /** Machine-readable uncertainty status (FR-10): cold_start (<5 samples, ±50%), warm (±30%), widened_overrun (active consultation exceeded the mean). Null when not ok. */
+  uncertainty: z.enum(['cold_start', 'warm', 'widened_overrun']).nullable(),
 });
 export type Eta = z.infer<typeof Eta>;
 
