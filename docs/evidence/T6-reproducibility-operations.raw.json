@@ -1,5 +1,9 @@
 {
   "t6AuditTrail": {
+    "defaultOwner": {
+      "role": "followup",
+      "assignedToDoctor": true
+    },
     "trailRows": 18,
     "trailOperations": [
       "admin:session.create:session",
@@ -184,10 +188,15 @@
       "actor": "doctor",
       "reason": "Chest pain on arrival",
       "policyVersion": 1,
-      "occurredAt": "2026-11-11T13:13:25.441Z",
+      "occurredAt": "2026-11-11T13:40:33.692Z",
       "nextDecision": "CLINICAL_PRIORITY"
     },
-    "auditTableTriggers": 0,
+    "auditTableTriggers": 1,
+    "auditAppendOnly": {
+      "update reason": "audit_events is append-only (UPDATE is not allowed)",
+      "update actor": "audit_events is append-only (UPDATE is not allowed)",
+      "delete row": "audit_events is append-only (DELETE is not allowed)"
+    },
     "report": {
       "completedVisits": 2,
       "targetRows": 8,
@@ -207,10 +216,10 @@
         "p95 wait, eligible to called (all groups) = 0 min (n=2)",
         "Mean consultation duration = 0 min (n=2)",
         "No-show rate (missed / admitted or missed bookings) = 0 % (n=1)",
-        "Follow-up tasks closed on time = 100 % (n=1)",
-        "Follow-up tasks open and overdue now = 0 count (n=0)",
-        "Assistant questions escalated to staff = null % (n=0)",
-        "Documents whose OCR failed = null % (n=0)"
+        "Follow-up tasks closed on time = 75 % (n=4)",
+        "Follow-up tasks open and overdue now = 2 count (n=2)",
+        "Assistant questions escalated to staff = 81.8 % (n=22)",
+        "Documents whose OCR failed = 0 % (n=1)"
       ],
       "waitsByGroup": [
         {
@@ -245,7 +254,8 @@
         "0002_patient_mrn_sequence",
         "0003_active_appointment_uq",
         "0004_ownership_and_email",
-        "0005_instruction_version_title"
+        "0005_instruction_version_title",
+        "0006_audit_append_only"
       ],
       "policy": {
         "version": 1,
