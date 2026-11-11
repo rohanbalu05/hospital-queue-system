@@ -39,6 +39,7 @@ services:
       # Applies db/migrations and seeds demo data on boot (idempotent) so the demo works from a blank volume.
       RUN_MIGRATIONS_ON_START: 'true'
       SEED_ON_START: 'true'
+      ALLOW_DEMO_SEED: 'true'   # demo stack only; seed refuses production otherwise (D-022)
     depends_on:
       postgres:
         condition: service_healthy
