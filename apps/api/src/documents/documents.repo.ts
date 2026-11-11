@@ -135,13 +135,13 @@ export async function listVersions(db: Queryable, patientId: string, currentOnly
 export async function currentContextOf(
   db: Queryable,
   patientId: string,
-): Promise<Array<{ instructionVersionId: string; title: string; version: number; body: string }>> {
+): Promise<Array<{ instructionVersionId: string; title: string; version: number; body: string; verifiedAt: string }>> {
   const res = await db.query(
-    `SELECT iv.id, COALESCE(iv.title, i.title) AS title, iv.version, iv.body
+    `SELECT iv.id, COALESCE(iv.title, i.title) AS title, iv.version, iv.body, iv.verified_at
        FROM instruction_versions iv JOIN instructions i ON i.id = iv.instruction_id
       WHERE iv.patient_id = $1 AND i.patient_id = $1 AND iv.status = 'current'
       ORDER BY iv.verified_at, iv.id`,
     [patientId],
   );
-  return res.rows.map((r) => ({ instructionVersionId: r.id, title: r.title, version: r.version, body: r.body }));
+  return res.rows.map((r) => ({ instructionVersionId: r.id, title: r.title, version: r.version, body: r.body, verifiedAt: new Date(r.verified_at).toISOString() }));
 }

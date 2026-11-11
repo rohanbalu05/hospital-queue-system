@@ -6,6 +6,8 @@ export const AuditEvent = z.object({
   id: z.number().int(),
   occurredAt: Instant,
   actorId: Id.nullable(),
+  /** Display name of the acting user; null for the system. */
+  actorName: z.string().nullable(),
   actorRole: z.string(),
   operation: z.string(),
   entityType: z.string(),

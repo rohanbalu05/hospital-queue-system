@@ -11,12 +11,23 @@ export const Disposition = z.enum(['advice_given', 'return_booked', 'referred', 
 export type FollowUpStatus = z.infer<typeof FollowUpStatus>;
 export type Disposition = z.infer<typeof Disposition>;
 
+/** The visit a task came from, for display (when and with whom). */
+export const FollowUpSourceVisit = z.object({
+  sessionDate: z.string(),
+  doctorId: Id,
+  doctorName: z.string(),
+  department: z.string(),
+});
+export type FollowUpSourceVisit = z.infer<typeof FollowUpSourceVisit>;
+
 export const FollowUpTask = z.object({
   id: Id,
   patientId: Id,
   patientName: z.string(),
   sourceVisitId: Id.nullable(),
   sourceMessageId: Id.nullable(),
+  /** Filled on staff reads when the task has a source visit; null otherwise. */
+  sourceVisit: FollowUpSourceVisit.nullable().optional(),
   kind: FollowUpKind,
   title: z.string(),
   detail: z.string().nullable(),
@@ -185,6 +196,15 @@ export const AskAssistantRequest = z.object({
 });
 export type AskAssistantRequest = z.infer<typeof AskAssistantRequest>;
 
+/** A verified instruction version an answer cites. */
+export const AssistantCitation = z.object({
+  instructionVersionId: Id,
+  title: z.string(),
+  version: z.number().int().positive(),
+  verifiedAt: Instant,
+});
+export type AssistantCitation = z.infer<typeof AssistantCitation>;
+
 export const AssistantOutcome = z.enum(['answered', 'escalated', 'refused']);
 export const AssistantAnswer = z.object({
   conversationId: Id,
@@ -192,7 +212,7 @@ export const AssistantAnswer = z.object({
   outcome: AssistantOutcome,
   answer: z.string(),
   /** Instruction versions the answer relies on (answered => at least one). */
-  citations: z.array(z.object({ instructionVersionId: Id, title: z.string(), version: z.number().int().positive() })),
+  citations: z.array(AssistantCitation),
   /** Present when escalated: the owned staff task and when the patient will hear back. */
   escalation: z.object({ taskId: Id, dueAt: Instant }).nullable(),
   createdAt: Instant,
@@ -212,8 +232,10 @@ export const ConversationMessage = z.object({
   role: z.enum(['patient', 'assistant']),
   body: z.string(),
   outcome: AssistantOutcome.nullable(),
-  citations: z.array(z.object({ instructionVersionId: Id, title: z.string(), version: z.number().int().positive() })),
+  citations: z.array(AssistantCitation),
   escalationTaskId: Id.nullable(),
+  /** When the care team will have followed up (the escalation task's due time); null when not escalated. */
+  escalationDueAt: Instant.nullable(),
   createdAt: Instant,
 });
 export type ConversationMessage = z.infer<typeof ConversationMessage>;

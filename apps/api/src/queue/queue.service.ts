@@ -28,9 +28,9 @@ import { assertVersion, runCommand } from './command.js';
 import type {
   QueueCommandResultDto,
   QueueEntryActionRequestDto,
-  ReEnterRequest,
   SetPriorityRequestDto,
 } from './dto.js';
+import type { ReEnterRequest } from '@hqms/contracts';
 import {
   cancelCallTimeoutJob,
   insertDecision,

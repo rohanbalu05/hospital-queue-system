@@ -29,6 +29,7 @@ import { optionalIdempotencyKey, sendResult } from '../common/http.js';
 import type { RequestCtx } from '../common/request-context.js';
 import { UuidPipe, ZodPipe } from '../common/zod.pipe.js';
 import { ALL_ROLES, Ctx, Roles } from '../identity/auth.decorators.js';
+import { UploadLimiter } from './upload-limiter.js';
 import { DocumentsService, type UploadedFile as UploadedFileDto } from './documents.service.js';
 
 const UploadFields = z.object({ patientId: Id.optional(), visitId: Id.optional() });
@@ -48,7 +49,7 @@ export class DocumentsController {
 
   @Roles(...ALL_ROLES)
   @Post()
-  @UseInterceptors(uploadInterceptor)
+  @UseInterceptors(UploadLimiter, uploadInterceptor)
   upload(
     @Ctx() ctx: RequestCtx,
     @UploadedFile() file: UploadedFileDto | undefined,

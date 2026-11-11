@@ -93,8 +93,10 @@ export class AssistantService {
     const denied = deniedIntent(question);
     if (denied) return { kind: 'escalate', code: 'denied_intent' };
 
-    const context = await currentContextOf(this.pool, patientId);
-    if (context.length === 0) return { kind: 'escalate', code: 'no_context' };
+    const full = await currentContextOf(this.pool, patientId);
+    if (full.length === 0) return { kind: 'escalate', code: 'no_context' };
+    // The provider sees the instruction text and ids only; verifiedAt is for the patient-facing citation.
+    const context: LlmContextItem[] = full.map(({ instructionVersionId, title, version, body }) => ({ instructionVersionId, title, version, body }));
 
     if (this.inFlight >= this.config.assistantMaxConcurrency) return { kind: 'escalate', code: 'busy' };
     this.inFlight += 1;
@@ -109,13 +111,13 @@ export class AssistantService {
       const byReason = result.reason === 'timeout' ? 'timeout' : result.reason === 'provider error' ? 'provider_error' : 'unsupported';
       return { kind: 'escalate', code: result.code ?? byReason };
     }
-    const known = new Map(context.map((c) => [c.instructionVersionId, c]));
+    const known = new Map(full.map((c) => [c.instructionVersionId, c]));
     const ids = [...new Set(result.citedVersionIds)];
     const cited = ids.map((id) => known.get(id));
     if (result.text.trim().length === 0 || ids.length === 0 || !cited.every((c) => c !== undefined)) {
       return { kind: 'escalate', code: 'not_cited' };
     }
-    return { kind: 'answer', text: result.text.trim(), cited: cited as LlmContextItem[] };
+    return { kind: 'answer', text: result.text.trim(), cited: cited as CitedVersion[] };
   }
 
   /** The write transaction: messages, and for an escalation the task (new or joined), audit and outbox. */
@@ -165,7 +167,7 @@ export class AssistantService {
         messageId: r.id,
         outcome: 'answered' as const,
         answer: decision.text,
-        citations: decision.cited.map((c) => ({ instructionVersionId: c.instructionVersionId, title: c.title, version: c.version })),
+        citations: decision.cited.map((c) => ({ instructionVersionId: c.instructionVersionId, title: c.title, version: c.version, verifiedAt: c.verifiedAt })),
         escalation: null,
         createdAt: r.created_at,
       };
@@ -273,7 +275,8 @@ export class AssistantService {
     await this.assertOwnConversation(ctx.user.patientId, conversationId);
     const res = await this.pool.query(
       `SELECT m.id, m.role, m.body, m.outcome, m.escalation_task_id, m.created_at,
-              COALESCE((SELECT json_agg(json_build_object('instructionVersionId', iv.id, 'title', COALESCE(iv.title, i.title), 'version', iv.version)
+              (SELECT t.due_at FROM follow_up_tasks t WHERE t.id = m.escalation_task_id AND t.patient_id = m.patient_id) AS escalation_due_at,
+              COALESCE((SELECT json_agg(json_build_object('instructionVersionId', iv.id, 'title', COALESCE(iv.title, i.title), 'version', iv.version, 'verifiedAt', iv.verified_at)
                                         ORDER BY iv.version, iv.id)
                           FROM instruction_versions iv JOIN instructions i ON i.id = iv.instruction_id
                          WHERE iv.id = ANY(m.source_version_ids) AND iv.patient_id = m.patient_id), '[]'::json) AS citations
@@ -287,6 +290,7 @@ export class AssistantService {
       outcome: r.outcome,
       citations: r.citations,
       escalationTaskId: r.escalation_task_id,
+      escalationDueAt: r.escalation_due_at ? new Date(r.escalation_due_at).toISOString() : null,
       createdAt: r.created_at,
     }));
   }
@@ -323,6 +327,8 @@ export class AssistantService {
   }
 }
 
+type CitedVersion = LlmContextItem & { verifiedAt: string };
+
 type Decision =
-  | { kind: 'answer'; text: string; cited: LlmContextItem[] }
+  | { kind: 'answer'; text: string; cited: CitedVersion[] }
   | { kind: 'escalate'; code: string };

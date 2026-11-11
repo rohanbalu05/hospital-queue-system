@@ -16,23 +16,43 @@ export function sniffMime(bytes: Buffer): AllowedMime | null {
 }
 
 /**
- * Pages of a PDF without a parser: the number of page objects (`/Type /Page`, not `/Type /Pages`).
- * PDFs that keep their page objects inside compressed object streams show none; for those the `/Count` of the
- * page-tree root is used. If neither is found the file is refused (we cannot enforce the limit on what we
- * cannot count), which is the safe side of FR-12.
+ * Pages of a PDF without a parser, in ONE pass over the bytes (no per-match slices):
+ *  - the number of page objects (`/Type /Page`, not `/Type /Pages`), and
+ *  - the largest `/Count` that sits in a page-tree node (within 300 characters of a `/Type /Pages` token, either
+ *    side: it must not be mistaken for an outline's `/Count`).
+ * The answer is the larger of the two, because compressed object streams hide page objects but never the tree's
+ * `/Count`, and a hostile file can only raise the number (refused above the limit), not lower it. A file with
+ * object streams and no determinable `/Count`, or with neither, returns 0 and is refused: a limit that cannot be
+ * enforced is not accepted (FR-12).
  */
 export function countPdfPages(bytes: Buffer): number {
   const text = bytes.toString('latin1');
-  const pageObjects = text.match(/\/Type\s*\/Page(?![A-Za-z])/g)?.length ?? 0;
-  if (pageObjects > 0) return pageObjects;
+  const re = /\/Type\s*\/Page(?![A-Za-z])|\/Type\s*\/Pages(?![A-Za-z])|\/Count\s+(\d{1,9})|\/ObjStm(?![A-Za-z])/g;
+  const NEAR = 300;
+  let pageObjects = 0;
+  let objStm = false;
   let best = 0;
-  const treeRe = /\/Type\s*\/Pages(?![A-Za-z])/g;
-  for (let m = treeRe.exec(text); m !== null; m = treeRe.exec(text)) {
-    const window = text.slice(Math.max(0, m.index - 300), m.index + 300);
-    const count = /\/Count\s+(\d+)/.exec(window);
-    if (count?.[1]) best = Math.max(best, Number(count[1]));
+  let lastTreeAt = -Infinity;
+  let lastCountAt = -Infinity;
+  let lastCount = 0;
+  for (let m = re.exec(text); m !== null; m = re.exec(text)) {
+    const tok = m[0];
+    if (m[1] !== undefined) {
+      const n = Number(m[1]);
+      if (m.index - lastTreeAt <= NEAR) best = Math.max(best, n);
+      lastCountAt = m.index;
+      lastCount = n;
+    } else if (tok.endsWith('Pages')) {
+      if (m.index - lastCountAt <= NEAR) best = Math.max(best, lastCount);
+      lastTreeAt = m.index;
+    } else if (tok.endsWith('ObjStm')) {
+      objStm = true;
+    } else {
+      pageObjects += 1;
+    }
   }
-  return best;
+  if (objStm && best === 0) return 0;
+  return Math.max(pageObjects, best);
 }
 
 export interface InspectedUpload {
