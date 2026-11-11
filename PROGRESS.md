@@ -42,3 +42,4 @@ Read this first on resume, then `git log --oneline -30`.
 - Last runs: `pnpm verify` green (725 tests), `pnpm test:concurrency` 17/17, `pnpm e2e` green ×2, evidence regenerated (coverage/static/unit).
 - Late fixes: F1/F2 DB connection loss (D-027.. see T5 update), display cache staleness (D-030), two API test flakes.
 - Next (HQ): review G4 + DECISIONS (start with D-001, D-002/023, D-025/028, D-026/028, D-029); PR to main + Codex review; run UAT checklist; second-teammate deploy; optional hosted T5.
+- wave-4 tag (local) = 8ec1fef
