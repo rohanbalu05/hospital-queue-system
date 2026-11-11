@@ -47,7 +47,7 @@ test.describe('doctor review inbox at 1280', () => {
     await setupW3(page, 'doctor');
     await page.goto(`/doctor/review/${D_ANANYA_READY}`);
     const draft = page.getByRole('region', { name: 'OCR draft' });
-    await expect(draft).toContainText("Draft — not visible to the patient's assistant");
+    await expect(draft).toContainText("Draft, not visible to the patient's assistant");
     await expect(draft.getByLabel('OCR draft text, read only')).toContainText('Tab. Cefixime 200 mg');
     // Prefilled from the draft; editable.
     await expect(page.getByLabel('Title')).toHaveValue('Fever and throat infection: home care');

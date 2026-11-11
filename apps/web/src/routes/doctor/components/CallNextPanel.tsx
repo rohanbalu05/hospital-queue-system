@@ -72,9 +72,9 @@ export function CallNextPanel({ snapshot, decision, blockedReason, calling, butt
         )}
       </div>
 
-      <p className="mt-4 border-t border-rule pt-3 text-sm text-muted-foreground tabular-nums">
-        Rotation {rotation.join(', ')}.
-      </p>
+      {decision?.reason === 'ROTATION' ? null : (
+        <p className="mt-4 border-t border-rule pt-3 text-sm text-muted-foreground tabular-nums">Rotation {rotation.join(', ')}.</p>
+      )}
     </section>
   );
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { CapacityBar, DecisionReason, GroupTag, QueueRow, StaleBanner, deriveLiveStatus } from './index';
+import { CapacityBar, DecisionReason, GroupTag, PressureNote, QueueRow, StaleBanner, deriveLiveStatus } from './index';
 
 describe('GroupTag', () => {
   it.each([
@@ -55,10 +55,38 @@ describe('CapacityBar', () => {
 });
 
 describe('DecisionReason', () => {
-  it('names the reason in words and shows the explanation', () => {
-    render(<DecisionReason reason="AGING" explanation="Aging: waited 47 min" />);
-    expect(screen.getByText('Aging', { selector: 'p' })).toHaveClass('text-aging');
-    expect(screen.getByText('Aging: waited 47 min')).toBeInTheDocument();
+  it('shows the explanation in the reason colour, without a second label repeating it', () => {
+    const { container } = render(<DecisionReason reason="AGING" explanation="Aging: waited 47 min" />);
+    expect(screen.getByText('Aging: waited 47 min')).toHaveClass('text-aging');
+    expect(container.querySelectorAll('p')).toHaveLength(1);
+    expect(container.querySelector('[data-reason="AGING"]')).toHaveClass('border-l-aging');
+  });
+});
+
+describe('PressureNote', () => {
+  it('renders nothing when the workload is normal', () => {
+    const { container } = render(<PressureNote pressure={{ level: 'normal', reasons: [] }} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it.each([
+    ['high', 'Workload: High'],
+    ['overloaded', 'Workload: Overloaded'],
+  ] as const)('%s: bold ink words, the reasons as a list, an ink edge and no red', (level, words) => {
+    render(<PressureNote pressure={{ level, reasons: ['9 patients are waiting for 5 hours of sessions', 'A-014 has waited 52 min'] }} />);
+    const note = screen.getByTestId('pressure-note');
+    expect(note).toHaveAttribute('data-level', level);
+    expect(note).toHaveClass('border-l-ink');
+    expect(note.className).not.toContain('priority');
+    const heading = screen.getByText(words);
+    expect(heading).toHaveClass('font-bold', 'text-ink');
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+  });
+
+  it('shows just the level when the server gives no reasons', () => {
+    render(<PressureNote pressure={{ level: 'high', reasons: [] }} />);
+    expect(screen.getByText('Workload: High')).toBeInTheDocument();
+    expect(screen.queryByRole('list')).toBeNull();
   });
 });
 

@@ -30,7 +30,7 @@ export function TaskTable({ tasks, now }: { tasks: FollowUpTaskView[]; now: numb
         <TableHeader className="bg-paper">
           <TableRow className="hover:bg-transparent">
             <TableHead className="pl-3">Due</TableHead>
-            <TableHead>Overdue</TableHead>
+            <TableHead>Time left</TableHead>
             <TableHead>Patient</TableHead>
             <TableHead>Task</TableHead>
             <TableHead>Source visit</TableHead>
@@ -49,7 +49,7 @@ export function TaskTable({ tasks, now }: { tasks: FollowUpTaskView[]; now: numb
                 className={cn('h-10 cursor-pointer', isClosed(t.status) && 'text-muted-foreground')}
                 onClick={() => void navigate(`/follow-up/tasks/${t.id}`)}
               >
-                <TableCell className={cn('border-l-[3px] pl-3 tabular-nums', overdue ? 'border-l-priority' : 'border-l-transparent')}>
+                <TableCell className={cn('border-l-[3px] pl-3 tabular-nums', overdue ? 'border-l-ink' : 'border-l-transparent')}>
                   {formatIST(t.dueAt, 'date-time')}
                 </TableCell>
                 <TableCell>
@@ -64,9 +64,11 @@ export function TaskTable({ tasks, now }: { tasks: FollowUpTaskView[]; now: numb
                     {t.patientName}
                   </Link>
                 </TableCell>
-                <TableCell className="max-w-72 truncate" title={t.title}>
-                  <span className="text-muted-foreground">{KIND_WORD[t.kind] ?? t.kind}: </span>
-                  {t.title}
+                <TableCell className="max-w-72 whitespace-normal" title={t.title}>
+                  <span className="line-clamp-2">
+                    <span className="text-muted-foreground">{KIND_WORD[t.kind] ?? t.kind}: </span>
+                    {t.title}
+                  </span>
                 </TableCell>
                 <TableCell>{sourceVisitWord(t, (d) => formatLocalDate(d))}</TableCell>
                 <TableCell>{t.ownerName ?? <span className="text-muted-foreground">Unassigned</span>}</TableCell>

@@ -143,6 +143,8 @@ export interface QueueMockOptions {
   failQueue?: boolean;
   /** Delay the queue response in ms (loading state). */
   queueDelayMs?: number;
+  /** Workload pressure the staff snapshot reports. Default: normal. */
+  pressure?: { level: 'normal' | 'high' | 'overloaded'; reasons: string[] };
 }
 
 export interface QueueMock {
@@ -286,6 +288,7 @@ export async function mockQueue(page: Page, options: QueueMockOptions = {}): Pro
     completedCount: world.completed,
     lastDecision: world.lastDecision,
     capacity: { bookedCapacity: 10, walkinCapacity: 5, bookedReserved: 8, walkinUsed: 2 },
+    pressure: options.pressure ?? { level: 'normal' as const, reasons: [] },
   });
 
   const calledToken = () => (world.active?.state === 'called' ? world.active.token : null);

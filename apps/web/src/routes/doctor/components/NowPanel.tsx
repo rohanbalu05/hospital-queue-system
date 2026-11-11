@@ -44,7 +44,6 @@ export function NowPanel({ active, fromOtherSession, completedCount, startRef, c
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <GroupTag group={active.group} showName />
-              {active.priorityClass !== null ? <span className="text-sm font-bold text-priority">Priority class {active.priorityClass}</span> : null}
             </div>
             <p className="mt-1 truncate text-lg font-bold">{active.patientName}</p>
           </div>

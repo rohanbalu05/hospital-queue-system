@@ -48,7 +48,6 @@ test.describe('doctor console at 1280', () => {
     // The reason is shown in words with the policy version, and focus moves to Start.
     const decision = page.getByTestId('decision');
     await expect(decision).toContainText('Called by rotation: 2nd appointment of A, A, W');
-    await expect(decision).toContainText('Rotation');
     await expect(decision).toContainText('Policy v1');
     await expect(start(page)).toBeFocused();
     await expect(page.getByTestId('now-active')).toContainText('A-014');
@@ -289,6 +288,9 @@ test.describe('waiting-room display at 1920', () => {
     await expect(first.getByTestId('now-calling')).toHaveClass(/animate-token-called/);
     await expect(first.getByTestId('next-tokens')).toContainText('W-005');
     await expect(first.getByTestId('next-tokens').getByRole('listitem')).toHaveCount(3);
+    // The highlight runs for 300 ms: wait it out so the screenshot shows the settled screen, not a frame mid-animation.
+    await page.waitForTimeout(400);
+    await shot(page, 'display-called-1920');
 
     // Never names or other patient detail.
     const text = await page.locator('body').innerText();

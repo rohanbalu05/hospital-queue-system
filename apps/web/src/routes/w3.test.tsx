@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import type { Appointment, ConversationMessage, InstructionVersion, QueuePolicy } from '@hqms/contracts';
+import type { Appointment, ConversationMessage, QueuePolicy } from '@hqms/contracts';
 import { Field } from '@/components/layout/Field';
 import { plainErrorMessage } from '@/components/queue';
 import { TaskStatusWord, TimingWord } from '@/components/followup/words';
@@ -52,10 +52,11 @@ describe('Field', () => {
 });
 
 describe('task words', () => {
-  it('prints Overdue as a word in the priority colour, never colour only', () => {
+  it('prints Overdue as a bold ink word, never red and never colour only', () => {
     const { container } = render(<TimingWord task={{ status: 'open', dueAt: '2026-11-10T17:00:00+05:30', overdue: true }} now={NOW} />);
     expect(screen.getByText('Overdue 17 h')).toBeVisible();
-    expect(container.querySelector('.text-priority')).not.toBeNull();
+    expect(screen.getByText('Overdue 17 h')).toHaveClass('font-bold', 'text-ink');
+    expect(container.querySelector('.text-priority')).toBeNull();
   });
   it('shows a dash for a closed task and the status as a word', () => {
     render(
@@ -74,25 +75,6 @@ describe('task words', () => {
 });
 
 describe('assistant messages', () => {
-  const versions = new Map<string, InstructionVersion>([
-    [
-      uuid(1),
-      {
-        id: uuid(1),
-        instructionId: uuid(9),
-        patientId: uuid(2),
-        version: 2,
-        title: 'Care after viral fever',
-        body: 'x',
-        status: 'current',
-        verifiedBy: uuid(3),
-        verifiedByName: 'Dr. Meenakshi Rao',
-        verifiedAt: '2026-11-09T12:40:00+05:30',
-        supersedesId: null,
-        sourceDraftId: null,
-      },
-    ],
-  ]);
   const base: ConversationMessage = { id: uuid(5), role: 'assistant', body: '', outcome: 'answered', citations: [], escalationTaskId: null, escalationDueAt: null, createdAt: '2026-11-11T09:12:00+05:30' };
 
   it('cites the verified instruction version with its verified date', () => {
@@ -100,7 +82,7 @@ describe('assistant messages', () => {
     expect(citationLine({ title: 'Care after viral fever', version: 2 }, undefined)).toBe('From: Care after viral fever (version 2)');
     render(
       <ul>
-        <MessageView message={{ ...base, body: 'Rest for 3 days.', citations: [{ instructionVersionId: uuid(1), title: 'Care after viral fever', version: 2, verifiedAt: '2026-11-09T12:40:00+05:30' }] }} versions={versions} dueByTask={new Map()} />
+        <MessageView message={{ ...base, body: 'Rest for 3 days.', citations: [{ instructionVersionId: uuid(1), title: 'Care after viral fever', version: 2, verifiedAt: '2026-11-09T12:40:00+05:30' }] }} />
       </ul>,
     );
     expect(screen.getByText('Rest for 3 days.')).toBeVisible();
@@ -110,11 +92,7 @@ describe('assistant messages', () => {
   it('says an unsupported question was sent to the team and when to expect a reply', () => {
     render(
       <ul>
-        <MessageView
-          message={{ ...base, outcome: 'escalated', body: 'ignored', escalationTaskId: uuid(7) }}
-          versions={versions}
-          dueByTask={new Map([[uuid(7), '2026-11-11T14:00:00+05:30']])}
-        />
+        <MessageView message={{ ...base, outcome: 'escalated', body: 'ignored', escalationTaskId: uuid(7), escalationDueAt: '2026-11-11T14:00:00+05:30' }} />
       </ul>,
     );
     expect(screen.getByText(/Sent to the follow-up team\./)).toBeVisible();
@@ -125,7 +103,7 @@ describe('assistant messages', () => {
   it('has no icon on assistant rows', () => {
     const { container } = render(
       <ul>
-        <MessageView message={{ ...base, body: 'Rest.' }} versions={versions} dueByTask={new Map()} />
+        <MessageView message={{ ...base, body: 'Rest.' }} />
       </ul>,
     );
     expect(container.querySelector('svg')).toBeNull();

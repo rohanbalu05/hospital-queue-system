@@ -138,7 +138,7 @@ export default function DocumentsPage() {
                 ref={inputRef}
                 type="file"
                 accept="application/pdf,image/png,image/jpeg"
-                className="h-12 py-2"
+                className="h-12 cursor-pointer py-1.5 text-sm"
                 onChange={(e) => choose(e.target.files?.[0] ?? null)}
               />
             </Field>

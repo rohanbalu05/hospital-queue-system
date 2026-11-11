@@ -160,7 +160,7 @@ export default function TaskDetailPage() {
                     Reload task
                   </Button>
                 ) : null}
-                <Button variant="outline" size="lg" className="ml-auto text-priority" onClick={() => setCancelOpen(true)}>
+                <Button variant="outline" size="lg" className="text-priority" onClick={() => setCancelOpen(true)}>
                   Cancel task
                 </Button>
               </div>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { ROLE_LABEL } from '@/lib/auth';
-import { useDoctorsQuery, useSetAssignments, useStaffDirectory, type StaffMember } from '@/api';
+import type { StaffMember } from '@hqms/contracts';
+import { useDoctorsQuery, useSetAssignments, useStaffDirectory } from '@/api';
 import { EmptyState, ErrorState, SkeletonRows } from '@/components/queue';
 import { InlineAlert } from '@/components/scheduling/status';
 import { Button } from '@/components/ui/button';
