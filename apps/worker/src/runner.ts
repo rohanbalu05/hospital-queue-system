@@ -13,7 +13,8 @@ import {
  * Postgres-backed job runner (report §6.2: durable, at-least-once, stable job ids).
  *
  *  - Claim: one UPDATE ... WHERE id IN (SELECT ... FOR UPDATE SKIP LOCKED LIMIT n) RETURNING. Ready jobs are
- *    pending/failed with run_at <= now, or running with an expired lease (a crashed worker). Claiming sets a
+ *    pending/failed with run_at <= now, or running with an expired lease (a crashed worker) that still has
+ *    attempts left (an exhausted one is never re-claimed; buryExhausted turns it 'dead'). Claiming sets a
  *    lease and increments attempts. Two runners never receive the same job id from one claim round.
  *  - Handlers are idempotent and do their own short transactions; the runner holds NO database lock while
  *    a handler runs (the claim transaction is a single autocommit statement).
@@ -156,7 +157,7 @@ export class JobRunner {
           SELECT id FROM jobs
            WHERE ($5::text[] IS NULL OR job_type = ANY($5))
              AND ((state IN ('pending', 'failed') AND run_at <= $1::timestamptz)
-               OR (state = 'running' AND lease_expires_at < $1::timestamptz))
+               OR (state = 'running' AND lease_expires_at < $1::timestamptz AND attempts < max_attempts))
            ORDER BY run_at, created_at, id
            LIMIT $4
            FOR UPDATE SKIP LOCKED)
