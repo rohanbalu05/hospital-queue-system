@@ -12,9 +12,9 @@ import {
   MigrationChecksumError,
   MIGRATIONS_DIR,
 } from '../src/index.js';
-import { createDatabase, dropDatabase, testUrl } from './helpers.js';
+import { TEST_DB_PREFIX, createDatabase, dropDatabase, testUrl } from './helpers.js';
 
-const DB = 'hqms_test_db_engineer_mig';
+const DB = `${TEST_DB_PREFIX}_mig`;
 let pool: Pool;
 let tmp: string;
 
@@ -63,7 +63,7 @@ describe('migration runner', () => {
     await writeFile(path.join(tmp, '0001_a.sql'), 'CREATE TABLE mig_a (id int);\n');
     await writeFile(path.join(tmp, '0002_b.sql'), 'CREATE TABLE mig_b (id int);\n');
     // a separate schema_migrations lineage: use a fresh DB so the repo migrations do not interfere
-    const scratch = 'hqms_test_db_engineer_mig2';
+    const scratch = `${TEST_DB_PREFIX}_mig2`;
     await createDatabase(scratch);
     const p2 = createPool(testUrl(scratch), { max: 2 });
     try {
@@ -84,7 +84,7 @@ describe('migration runner', () => {
 
   it('a failing migration rolls back entirely and is not recorded', async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), 'hqms-mig-bad-'));
-    const scratch = 'hqms_test_db_engineer_mig3';
+    const scratch = `${TEST_DB_PREFIX}_mig3`;
     await createDatabase(scratch);
     const p3 = createPool(testUrl(scratch), { max: 2 });
     try {
@@ -117,7 +117,7 @@ describe('database helpers', () => {
   });
 
   it('ensureDatabase creates a missing database once', async () => {
-    const name = 'hqms_test_db_engineer_ensure';
+    const name = `${TEST_DB_PREFIX}_ensure`;
     await dropDatabase(name);
     try {
       expect(await ensureDatabase(testUrl(name))).toBe(true);

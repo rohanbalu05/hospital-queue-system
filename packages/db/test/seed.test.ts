@@ -24,9 +24,9 @@ import {
   withTransaction,
 } from '../src/index.js';
 import { istDate, seed, SeedRefusedError } from '../../../db/seed/seed.js';
-import { createDatabase, dropDatabase, must, nth, testUrl } from './helpers.js';
+import { TEST_DB_PREFIX, createDatabase, dropDatabase, must, nth, testUrl } from './helpers.js';
 
-const DB = 'hqms_test_db_engineer_seed';
+const DB = `${TEST_DB_PREFIX}_seed`;
 let pool: Pool;
 let first: Awaited<ReturnType<typeof seed>>;
 
