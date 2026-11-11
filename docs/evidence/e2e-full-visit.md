@@ -82,10 +82,19 @@ These include Playwright's polling and the snapshot refetch, and are n = 3 singl
 `e2e-03-patient-booked-390.png`, `e2e-04-reception-checked-in-1440.png` (token A-001 shown), `e2e-05-display-waiting-1920.png`,
 `e2e-06-patient-waiting-390.png`, `e2e-07-doctor-called-1440.png` (decision reason in words), `e2e-08-display-now-calling-1920.png`,
 `e2e-09-patient-called-390.png`, `e2e-10-doctor-in-service-1440.png`, `e2e-11-patient-in-service-390.png`,
-`e2e-12-doctor-completed-1440.png`, `e2e-13-patient-completed-390.png`, `e2e-14-display-after-1920.png`, and
-`e2e-finding-display-with-seeded-sessions-1920.png` (finding 1).
+`e2e-12-doctor-completed-1440.png`, `e2e-13-patient-completed-390.png` and `e2e-14-display-after-1920.png`
+(regenerated on the final tree; the finding-1 screenshot was removed once the display was fixed).
 
-## Findings (not fixed here; app code is out of scope for this task)
+## Findings (status on the final tree)
+
+All three findings below were fixed after this file was first written; the spec now asserts the fixed behaviour.
+- Finding 1: fixed in the review fix pass (D-028): the public display lists only in-window sessions and pages through at
+  most 6 columns; the spec asserts ≤ 6 columns. The rerun also caught a regression from the display's new 1 s cache
+  ("Now calling" stayed on a completed patient), fixed by validating the cache against session versions (D-030).
+- Finding 2: fixed in the W3 web merge: the "Today" tab lists today's appointments with a link to "My visit".
+- Finding 3: fixed (authz public set includes the tokens-only display routes).
+
+Original text:
 
 1. **Display with the demo seed is unreadable.** The seed leaves about 20 morning and afternoon sessions `open` for today,
    including morning sessions whose end time has passed, and the display draws one column per open session. With 21 columns
