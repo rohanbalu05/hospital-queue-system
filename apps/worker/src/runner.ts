@@ -332,6 +332,11 @@ export class JobRunner {
   }
 
   private async complete(job: JobRow, result: HandlerResult, log: Logger): Promise<void> {
+    if (result && 'superseded' in result) {
+      // The handler verified, inside its own transaction, that a newer attempt owns the job: no outcome to write.
+      log.warn('job.superseded');
+      return;
+    }
     const now = this.clock().toISOString();
     let sql: string;
     let params: unknown[];
