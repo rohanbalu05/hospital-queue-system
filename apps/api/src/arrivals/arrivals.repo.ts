@@ -108,17 +108,6 @@ export async function findArrivalByAppointment(
   };
 }
 
-/** Does this patient already hold a live place (waiting, called or in service) in the session? */
-export async function hasActiveEntry(db: Queryable, sessionId: string, patientId: string): Promise<boolean> {
-  const res = await db.query(
-    `SELECT 1 FROM queue_entries qe JOIN visits v ON v.id = qe.visit_id
-      WHERE qe.session_id = $1 AND v.patient_id = $2 AND qe.state IN ('waiting','called','in_service')
-      LIMIT 1`,
-    [sessionId, patientId],
-  );
-  return (res.rowCount ?? 0) > 0;
-}
-
 /** Does this patient hold a booked or checked-in appointment in the session (they should check in, not walk in)? */
 export async function hasActiveAppointment(db: Queryable, sessionId: string, patientId: string): Promise<boolean> {
   const res = await db.query(

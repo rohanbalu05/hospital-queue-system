@@ -26,6 +26,7 @@ import { APP_CONFIG, CLOCK, DB_POOL } from '../common/tokens.js';
 import type { AppConfig } from '../common/config.js';
 import type { Clock } from '../common/clock.js';
 import { conflict, notFound } from '../common/errors.js';
+import { hasLivePlace } from '../common/live-place.js';
 import { localDate } from '../common/http.js';
 import type { RequestCtx } from '../common/request-context.js';
 import { AccessPolicy } from '../access/access-policy.service.js';
@@ -33,7 +34,6 @@ import { cancelReservationReleaseJob, toDomainPolicy } from '../scheduling/share
 import {
   findArrivalByAppointment,
   hasActiveAppointment,
-  hasActiveEntry,
   insertQueueEntry,
   insertVisit,
   takeQueuePosition,
@@ -78,7 +78,7 @@ export class ArrivalsService {
         assertTransition('appointment', appt.status, 'checked_in'); // booked, or missed (late admission only, below)
         const now = this.clock.now();
         this.assertSessionAcceptsArrivals(session, now);
-        if (await hasActiveEntry(tx, session.id, appt.patientId)) {
+        if (await hasLivePlace(tx, session.id, appt.patientId)) {
           throw conflict('CONFLICT', 'This patient already has an active place in this session');
         }
 
@@ -211,7 +211,7 @@ export class ArrivalsService {
         await lockCapacity(tx, sessionId);
         const now = this.clock.now();
         this.assertSessionAcceptsArrivals(session, now);
-        if (await hasActiveEntry(tx, sessionId, body.patientId)) {
+        if (await hasLivePlace(tx, sessionId, body.patientId)) {
           throw conflict('CONFLICT', 'This patient already has an active place in this session');
         }
         if (await hasActiveAppointment(tx, sessionId, body.patientId)) {
