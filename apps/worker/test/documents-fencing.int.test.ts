@@ -202,7 +202,7 @@ for (const [label, workerA, workerB] of [
       expect((await getJob(pool, jobId)).state).toBe('succeeded');
     });
 
-    it('A succeeds late WHILE B is still in its provider call: A writes nothing, the draft is B\'s', async () => {
+    it("A succeeds late WHILE B is still in its provider call: A writes nothing, the draft is B's", async () => {
       const a = gated('prov-a');
       const { d, jobId, runA } = await startAttemptA(workerA, a);
 
@@ -249,7 +249,8 @@ describe('superseded OCR attempt: the start transaction is fenced too', () => {
       name: 'never-called',
       extract: () => Promise.reject(new TransientProviderError('a superseded attempt must not reach the provider')),
     };
-    const handler = defaultHandlers(documentDeps({}, { storage, ocr: neverCalled }))['ocr_document']!;
+    const handler = defaultHandlers(documentDeps({}, { storage, ocr: neverCalled }))['ocr_document'];
+    if (!handler) throw new Error('ocr_document handler missing');
     const abort = new AbortController();
     await handler(stale, { pool, now: () => new Date(), log: testLog, signal: abort.signal });
 

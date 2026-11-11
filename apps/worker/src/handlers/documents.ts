@@ -30,6 +30,17 @@ import { PermanentJobError, type HandlerResult, type JobContext, type JobHandler
  *          visible for manual review or a controlled retry) or PermanentJobError.
  *
  *  The draft is only a draft: nothing here creates or touches an instruction (FR-13).
+ *
+ *  Attempt fencing: the runner only logs a lost lease, so an attempt that lost its lease (a newer attempt
+ *  re-claimed the job) can still reach its writes. Every document write above (tx1, tx2, failure) therefore
+ *  first re-verifies, INSIDE the same transaction, that this attempt still owns the job:
+ *    SELECT 1 FROM jobs WHERE id = $job AND state = 'running' AND lease_owner = $owner AND attempts = $attempt
+ *      FOR NO KEY UPDATE
+ *  No match = superseded: write nothing, log `ocr.superseded`, return { superseded: true } (the runner writes no
+ *  outcome either). The check keys on the job lease, so it also holds when the same document is re-enqueued under
+ *  a different job. Lock order in every OCR tx is job row, then document row; the runner's own statements are
+ *  single autocommit UPDATEs on the job row that never touch a document, so there is no cycle. A claim racing the
+ *  fenced tx skips the locked job row (SKIP LOCKED), so the attempt either wrote before the new claim or not at all.
  */
 
 export interface DocumentDeps {
@@ -106,6 +117,18 @@ async function setStatus(
   return version;
 }
 
+/**
+ * Lock the job row if (and only if) `job`'s attempt still owns it. Must be the FIRST statement of an OCR
+ * transaction (lock order: job, then document). Handlers get `leaseOwner`/`attempts` from the claim.
+ */
+async function ownsJob(tx: Tx, job: JobRow): Promise<boolean> {
+  const res = await tx.query(
+    `SELECT 1 FROM jobs WHERE id = $1 AND state = 'running' AND lease_owner = $2 AND attempts = $3 FOR NO KEY UPDATE`,
+    [job.id, job.leaseOwner, job.attempts],
+  );
+  return (res.rowCount ?? 0) > 0;
+}
+
 const lockDocument = async (tx: Tx, id: string): Promise<DocRow | undefined> =>
   (await tx.query<DocRow>(`SELECT ${DOC_COLUMNS} FROM documents WHERE id = $1 FOR NO KEY UPDATE`, [id])).rows[0];
 
@@ -135,6 +158,8 @@ function raceAbort<T>(p: Promise<T>, signal: AbortSignal, what: string): Promise
 /** What tx1 decided. */
 type Claimed = { skip: HandlerResult | 'noop' } | { doc: DocRow };
 
+const SUPERSEDED = { superseded: true } as const;
+
 export function createOcrDocumentHandler(deps: DocumentDeps): JobHandler {
   return async (job: JobRow, ctx: JobContext): Promise<HandlerResult> => {
     const documentId = requireDocumentId(job.payload);
@@ -143,6 +168,7 @@ export function createOcrDocumentHandler(deps: DocumentDeps): JobHandler {
     // tx1 ---------------------------------------------------------------------------------------------------
     const claimed: Claimed = await withTransaction(ctx.pool, async (tx): Promise<Claimed> => {
       const now = ctx.now();
+      if (!(await ownsJob(tx, job))) return { skip: SUPERSEDED };
       const doc = await lockDocument(tx, documentId);
       if (!doc) return { skip: { cancelled: true, reason: 'document not found' } };
       switch (doc.status) {
@@ -189,7 +215,10 @@ export function createOcrDocumentHandler(deps: DocumentDeps): JobHandler {
       });
       return { doc };
     });
-    if ('skip' in claimed) return claimed.skip === 'noop' ? undefined : claimed.skip;
+    if ('skip' in claimed) {
+      if (claimed.skip === SUPERSEDED) log.warn('ocr.superseded', { phase: 'start', attempt: job.attempts });
+      return claimed.skip === 'noop' ? undefined : claimed.skip;
+    }
     const doc = claimed.doc;
 
     // No transaction, no lock: storage and the OCR provider -------------------------------------------------
@@ -222,17 +251,18 @@ export function createOcrDocumentHandler(deps: DocumentDeps): JobHandler {
         ctx.signal.removeEventListener('abort', onParentAbort);
       }
     } catch (err) {
-      await recordFailure(ctx, doc, job, err, log);
+      if (!(await recordFailure(ctx, doc, job, err, log))) return SUPERSEDED;
       if (err instanceof PermanentJobError) throw err;
       if (isTransient(err)) throw err;
       throw new PermanentJobError(errorSummary(err, 300));
     }
 
     // tx2 ---------------------------------------------------------------------------------------------------
-    await withTransaction(ctx.pool, async (tx) => {
+    const written = await withTransaction(ctx.pool, async (tx): Promise<'done' | 'superseded' | 'unchanged'> => {
       const now = ctx.now();
+      if (!(await ownsJob(tx, job))) return 'superseded';
       const cur = await lockDocument(tx, documentId);
-      if (!cur || cur.status !== 'processing') return; // someone else finished or changed it: never a second draft
+      if (!cur || cur.status !== 'processing') return 'unchanged'; // already finished or changed: never a second draft
       await tx.query(
         `INSERT INTO ocr_drafts (document_id, provider, text, blocks, created_at) VALUES ($1, $2, $3, $4::jsonb, $5::timestamptz)`,
         [documentId, result.provider, result.text, JSON.stringify(result.blocks), now.toISOString()],
@@ -249,19 +279,29 @@ export function createOcrDocumentHandler(deps: DocumentDeps): JobHandler {
         patientId: cur.patient_id,
         payload: { provider: result.provider, blocks: result.blocks.length },
       });
+      return 'done';
     });
-    log.info('ocr.completed', { provider: result.provider, blocks: result.blocks.length });
+    if (written === 'superseded') {
+      log.warn('ocr.superseded', { phase: 'complete', attempt: job.attempts });
+      return SUPERSEDED;
+    }
+    if (written === 'unchanged') log.warn('ocr.document_not_processing', { attempt: job.attempts });
+    else log.info('ocr.completed', { provider: result.provider, blocks: result.blocks.length });
     return undefined;
   };
 }
 
-/** Short tx after a provider failure: 'ocr_failed' + text-free last_error + DocumentOCRFailed. */
-async function recordFailure(ctx: JobContext, doc: DocRow, job: JobRow, err: unknown, log: Logger): Promise<void> {
+/**
+ * Short tx after a provider failure: 'ocr_failed' + text-free last_error + DocumentOCRFailed. Returns false when
+ * this attempt was superseded (nothing written; the caller must not report a failure for the replacement's job).
+ */
+async function recordFailure(ctx: JobContext, doc: DocRow, job: JobRow, err: unknown, log: Logger): Promise<boolean> {
   const summary = errorSummary(err, 300);
   const final = !isTransient(err) || err instanceof PermanentJobError || job.attempts >= job.maxAttempts;
-  await withTransaction(ctx.pool, async (tx) => {
+  const owned = await withTransaction(ctx.pool, async (tx): Promise<boolean> => {
+    if (!(await ownsJob(tx, job))) return false;
     const cur = await lockDocument(tx, doc.id);
-    if (!cur || cur.status !== 'processing') return;
+    if (!cur || cur.status !== 'processing') return true;
     const version = await setStatus(tx, cur, { status: 'ocr_failed', lastError: summary }, ctx.now(), {
       operation: 'document.ocr_failed',
       reason: summary,
@@ -274,8 +314,14 @@ async function recordFailure(ctx: JobContext, doc: DocRow, job: JobRow, err: unk
       patientId: cur.patient_id,
       payload: { attempt: job.attempts, final },
     });
+    return true;
   });
+  if (!owned) {
+    log.warn('ocr.superseded', { phase: 'failure', attempt: job.attempts });
+    return false;
+  }
   log.warn('ocr.failed', { error: summary, attempt: job.attempts, final });
+  return true;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
