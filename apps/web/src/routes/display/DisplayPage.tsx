@@ -15,7 +15,11 @@ export default function DisplayPage() {
   const { query, snapshot, status, lastUpdated } = useLiveDisplay(date);
   const reconnecting = status === 'reconnecting';
   const columns = snapshot?.columns ?? [];
-  const dense = columns.length > 4;
+  // Up to 3 doctors: one tall column each. 4 or more: landscape cards in two rows, so tokens stay at 140 px
+  // (96 px from 5 doctors, the one place the 120-160 px display size is given up).
+  const wide = columns.length >= 4;
+  const dense = columns.length >= 5;
+  const perRow = wide ? Math.ceil(columns.length / 2) : columns.length;
 
   return (
     <div className="flex h-dvh min-h-[640px] flex-col overflow-hidden bg-paper">
@@ -25,7 +29,7 @@ export default function DisplayPage() {
       </header>
 
       <main className="min-h-0 flex-1 overflow-hidden p-8">
-        {query.isPending ? (
+        {query.isPending && query.failureCount === 0 ? (
           <div className="grid h-full grid-cols-3 gap-8" aria-busy="true" aria-label="Loading the queue">
             {[0, 1, 2].map((i) => (
               <Skeleton key={i} className="h-full rounded-xl" />
@@ -50,11 +54,11 @@ export default function DisplayPage() {
           </div>
         ) : (
           <div
-            className={cn('grid h-full gap-8', dense ? 'auto-rows-fr' : '')}
-            style={{ gridTemplateColumns: `repeat(${Math.min(columns.length, 4)}, minmax(0, 1fr))` }}
+            className={cn('grid h-full gap-8', wide && 'grid-rows-2')}
+            style={{ gridTemplateColumns: `repeat(${perRow}, minmax(0, 1fr))` }}
           >
             {columns.map((c) => (
-              <DisplayColumn key={c.sessionId} column={c} dense={dense} />
+              <DisplayColumn key={c.sessionId} column={c} variant={wide ? 'wide' : 'tall'} dense={dense} />
             ))}
           </div>
         )}

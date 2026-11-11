@@ -31,7 +31,6 @@ function Field({ id, label, hint, error, children }: { id: string; label: string
 function useResetOnOpen(open: boolean, reset: () => void) {
   useEffect(() => {
     if (open) reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 }
 

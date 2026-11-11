@@ -57,7 +57,7 @@ describe('connectStream', () => {
     expect(FakeEventSource.instances).toHaveLength(4);
 
     FakeEventSource.last.open();
-    expect(opens).toEqual([true]);
+    expect(opens).toEqual([false, true]);
 
     // Backoff resets after a successful open.
     FakeEventSource.last.fail();

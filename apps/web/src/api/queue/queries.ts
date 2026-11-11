@@ -36,12 +36,13 @@ export function fetchDisplaySnapshot(date: string, signal?: AbortSignal): Promis
 }
 
 /** The list endpoint may answer with a bare array or a { items } page; both are accepted. */
-const SessionList = z.union([z.array(Session), Page(Session)]).transform((v): SessionT[] => (Array.isArray(v) ? v : v.items));
+const SessionList = z.union([z.array(Session), Page(Session)]);
 
-export function fetchDoctorSessions(date: string, doctorId: string | null, signal?: AbortSignal): Promise<SessionT[]> {
+export async function fetchDoctorSessions(date: string, doctorId: string | null, signal?: AbortSignal): Promise<SessionT[]> {
   const params = new URLSearchParams({ date });
   if (doctorId) params.set('doctorId', doctorId);
-  return apiFetch(`/sessions?${params.toString()}`, { schema: SessionList, ...(signal ? { signal } : {}) });
+  const body = await apiFetch(`/sessions?${params.toString()}`, { schema: SessionList, ...(signal ? { signal } : {}) });
+  return Array.isArray(body) ? body : body.items;
 }
 
 /** The signed-in doctor's sessions for one IST date, earliest first. */
