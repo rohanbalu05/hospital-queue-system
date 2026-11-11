@@ -2,13 +2,36 @@
   "name": "hqms",
   "private": true,
   "packageManager": "pnpm@10.28.0",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "scripts": {
     "typecheck": "pnpm -r --if-present typecheck",
-    "test": "pnpm -r --if-present test"
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "depcruise": "node scripts/run-on-existing.mjs \"apps packages tests\" -- depcruise --config .dependency-cruiser.cjs",
+    "test": "pnpm -r --if-present test",
+    "semgrep": "node scripts/run-on-existing.mjs \"apps packages\" -- semgrep scan --config p/typescript --config p/owasp-top-ten --error --metrics=off --quiet --exclude node_modules --exclude dist --exclude coverage --exclude fixtures",
+    "verify": "pnpm typecheck && pnpm lint && pnpm depcruise && pnpm test && pnpm semgrep",
+    "verify:fast": "pnpm --filter \"...[${HQMS_BASE_REF:-origin/claude/wonderful-galileo-2es87v}]\" --if-present typecheck && pnpm --filter \"...[${HQMS_BASE_REF:-origin/claude/wonderful-galileo-2es87v}]\" --if-present test",
+    "test:concurrency": "pnpm --filter @hqms/tests test:concurrency",
+    "e2e": "pnpm --filter @hqms/tests e2e",
+    "db:migrate": "pnpm --filter @hqms/db migrate",
+    "db:seed": "pnpm --filter @hqms/db seed",
+    "db:reset": "pnpm --filter @hqms/db reset",
+    "dev": "pnpm --parallel --filter @hqms/api --filter @hqms/worker --filter @hqms/web dev"
   },
   "devDependencies": {
-    "typescript": "^5.6.3"
+    "@eslint/js": "^9.39.5",
+    "dependency-cruiser": "^18.7.2",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.72.2"
   }
 }
