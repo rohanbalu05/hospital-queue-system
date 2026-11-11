@@ -12,6 +12,7 @@
     "e2e": "playwright test --trace off"
   },
   "devDependencies": {
+    "@hqms/db": "workspace:*",
     "@hqms/domain": "workspace:*",
     "@playwright/test": "1.63.0",
     "@types/node": "^22.10.0",
