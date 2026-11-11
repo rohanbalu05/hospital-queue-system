@@ -91,8 +91,9 @@ export interface MessageRow extends Json {
   role: 'patient' | 'assistant';
   body: string;
   outcome: 'answered' | 'escalated' | 'refused' | null;
-  citations: Array<{ instructionVersionId: string; title: string; version: number }>;
+  citations: Array<{ instructionVersionId: string; title: string; version: number; verifiedAt: string }>;
   escalationTaskId: string | null;
+  escalationDueAt: string | null;
   createdAt: string;
 }
 
@@ -308,19 +309,19 @@ export async function mockWave3(page: Page, sched: SchedulingMock, _role: 'follo
       sourceDraftId: null,
     },
   ];
-  const cite = [{ instructionVersionId: INSTRUCTION_V2, title: 'Care after viral fever', version: 2 }];
+  const cite = [{ instructionVersionId: INSTRUCTION_V2, title: 'Care after viral fever', version: 2, verifiedAt: ist('2026-11-09', '12:40') }];
   const messages: MessageRow[] = [
-    { id: uuid(0x7b01), role: 'patient', body: 'How many paracetamol tablets can I take in a day?', outcome: null, citations: [], escalationTaskId: null, createdAt: ist('2026-11-11', '09:12') },
+    { id: uuid(0x7b01), role: 'patient', body: 'How many paracetamol tablets can I take in a day?', outcome: null, citations: [], escalationTaskId: null, escalationDueAt: null, createdAt: ist('2026-11-11', '09:12') },
     {
       id: uuid(0x7b02),
       role: 'assistant',
       body: 'You can take 1 tablet of Paracetamol 650 mg when your temperature is above 100 F, and no more than 3 tablets in a day.',
       outcome: 'answered',
       citations: cite,
-      escalationTaskId: null,
+      escalationTaskId: null, escalationDueAt: null,
       createdAt: ist('2026-11-11', '09:12'),
     },
-    { id: uuid(0x7b03), role: 'patient', body: 'Can I take ibuprofen along with the paracetamol?', outcome: null, citations: [], escalationTaskId: null, createdAt: ist('2026-11-11', '09:14') },
+    { id: uuid(0x7b03), role: 'patient', body: 'Can I take ibuprofen along with the paracetamol?', outcome: null, citations: [], escalationTaskId: null, escalationDueAt: null, createdAt: ist('2026-11-11', '09:14') },
     {
       id: uuid(0x7b04),
       role: 'assistant',
@@ -328,6 +329,7 @@ export async function mockWave3(page: Page, sched: SchedulingMock, _role: 'follo
       outcome: 'escalated',
       citations: [],
       escalationTaskId: uuid(0x7a02),
+      escalationDueAt: ist('2026-11-11', '14:00'),
       createdAt: ist('2026-11-11', '09:14'),
     },
   ];
@@ -346,26 +348,28 @@ export async function mockWave3(page: Page, sched: SchedulingMock, _role: 'follo
 
   // ---- admin fixtures -------------------------------------------------------------------------------------
   const staff = [
-    { userId: uuid(2), displayName: 'Deepa Nair', role: 'reception', doctorIds: [D1.id, DOCTORS[1]!.id] },
-    { userId: FOLLOWUP_USER.id, displayName: FOLLOWUP_USER.name, role: 'followup', doctorIds: [D1.id, D3.id, D4.id] },
-    { userId: OTHER_STAFF.id, displayName: OTHER_STAFF.name, role: 'followup', doctorIds: [D1.id] },
-    { userId: uuid(0x45), displayName: 'Lata Menon', role: 'reception', doctorIds: [D4.id, DOCTORS[4]!.id] },
+    { userId: uuid(2), displayName: 'Deepa Nair', email: 'deepa.nair@hospital.example', role: 'reception', doctorIds: [D1.id, DOCTORS[1]!.id] },
+    { userId: FOLLOWUP_USER.id, displayName: FOLLOWUP_USER.name, email: 'sunita.hegde@hospital.example', role: 'followup', doctorIds: [D1.id, D3.id, D4.id] },
+    { userId: OTHER_STAFF.id, displayName: OTHER_STAFF.name, email: 'rakesh.pai@hospital.example', role: 'followup', doctorIds: [D1.id] },
+    { userId: uuid(0x45), displayName: 'Lata Menon', email: 'lata.menon@hospital.example', role: 'reception', doctorIds: [D4.id, DOCTORS[4]!.id] },
   ];
+  const ACTOR_NAMES: Record<number, string> = { 1: 'Anil Shetty', 2: 'Deepa Nair', 3: 'Dr. Meenakshi Rao', 4: 'Sunita Hegde', 5: 'Ananya Iyer' };
   const audit = [
     ['09:58:14', 'queue.call_next', 'queue_entry', 0xe014, 'doctor', 3, 'Called by rotation: 2nd appointment of A, A, W', 1],
-    ['09:57:02', 'arrival.check_in', 'visit', 0xf014, 'reception', 2, null, 1],
+    ['09:57:02', 'visit.check_in', 'visit', 0xf014, 'reception', 2, null, 1],
     ['09:41:37', 'queue.call_next', 'queue_entry', 0xe013, 'doctor', 3, 'Aging: waited 47 min', 1],
-    ['09:36:20', 'queue.priority_set', 'queue_entry', 0xe015, 'doctor', 3, 'Breathlessness at triage', 1],
-    ['09:30:05', 'followup.acknowledge', 'follow_up_task', 0x7a01, 'followup', 4, null, null],
+    ['09:36:20', 'queue.priority', 'queue_entry', 0xe015, 'doctor', 3, 'Breathlessness at triage', 1],
+    ['09:30:05', 'follow_up.acknowledge', 'follow_up_task', 0x7a01, 'followup', 4, null, null],
     ['09:12:44', 'assistant.escalate', 'follow_up_task', 0x7a02, 'patient', 5, 'No verified instruction covers this', null],
-    ['09:02:10', 'session.capacity_update', 'session', 0x10000, 'admin', 1, 'Raised walk-in places from 4 to 5', 1],
-    ['08:55:31', 'instruction.verify', 'instruction', 0x7e01, 'doctor', 3, 'Version 2 supersedes version 1', null],
+    ['09:02:10', 'session.capacity.update', 'session', 0x10000, 'admin', 1, 'Raised walk-in places from 4 to 5', 1],
+    ['08:55:31', 'instruction.verify', 'instruction_version', 0x7e01, 'doctor', 3, 'Version 2 supersedes version 1', null],
     ['08:40:18', 'appointment.book', 'appointment', 0xb014, 'patient', 5, null, 1],
     ['08:12:03', 'policy.activate', 'policy', 0x70, 'admin', 1, 'Initial policy', 1],
   ].map(([t, op, type, id, actorRole, actor, reason, pv], i) => ({
     id: 100 - i,
     occurredAt: ist('2026-11-11', String(t).slice(0, 5)).replace(':00+', `:${String(t).slice(6, 8)}+`),
     actorId: uuid(actor as number),
+    actorName: ACTOR_NAMES[actor as number] ?? null,
     actorRole,
     operation: op,
     entityType: type,
@@ -639,7 +643,7 @@ export async function mockWave3(page: Page, sched: SchedulingMock, _role: 'follo
           messages.length = 0;
           m.hasConversation = true;
         }
-        messages.push({ id: uuid(0x7b20 + messages.length), role: 'patient', body: b.question, outcome: null, citations: [], escalationTaskId: null, createdAt: now });
+        messages.push({ id: uuid(0x7b20 + messages.length), role: 'patient', body: b.question, outcome: null, citations: [], escalationTaskId: null, escalationDueAt: null, createdAt: now });
         const lower = b.question.toLowerCase();
         let answer: MessageRow;
         let escalation: { taskId: string; dueAt: string } | null = null;
@@ -650,7 +654,7 @@ export async function mockWave3(page: Page, sched: SchedulingMock, _role: 'follo
             body: 'I cannot change your treatment or your doses. Please speak to your doctor about this.',
             outcome: 'refused',
             citations: [],
-            escalationTaskId: null,
+            escalationTaskId: null, escalationDueAt: null,
             createdAt: now,
           };
         } else if (/(paracetamol|fever|water|rest|dose)/.test(lower)) {
@@ -660,7 +664,7 @@ export async function mockWave3(page: Page, sched: SchedulingMock, _role: 'follo
             body: 'Rest for 3 days and drink plenty of water. Come back if the fever lasts more than 48 hours.',
             outcome: 'answered',
             citations: cite,
-            escalationTaskId: null,
+            escalationTaskId: null, escalationDueAt: null,
             createdAt: now,
           };
         } else {
@@ -681,6 +685,7 @@ export async function mockWave3(page: Page, sched: SchedulingMock, _role: 'follo
             outcome: 'escalated',
             citations: [],
             escalationTaskId: task.id,
+            escalationDueAt: task.dueAt,
             createdAt: now,
           };
         }

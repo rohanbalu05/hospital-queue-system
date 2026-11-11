@@ -67,7 +67,7 @@ export const PATIENT_DOCUMENT_STATUS: Record<DocumentStatus, { word: string; hin
   accepted: { word: 'Uploaded', hint: 'We have your file and will start reading it shortly.' },
   processing: { word: 'Processing', hint: 'We are reading your document.' },
   ocr_ready: { word: 'Ready for review', hint: 'A doctor will check it before it is used.' },
-  ocr_failed: { word: "Couldn't read — staff will review", hint: 'You do not need to upload it again.' },
+  ocr_failed: { word: "Couldn't read. Staff will review", hint: 'You do not need to upload it again.' },
   verified: { word: 'Verified', hint: 'Your doctor has checked this instruction.' },
   rejected: { word: 'Not accepted', hint: 'Ask reception if you need to send it again.' },
 };

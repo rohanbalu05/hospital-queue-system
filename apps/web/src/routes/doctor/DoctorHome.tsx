@@ -1,6 +1,7 @@
 import { NavLink, Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
 import { StaffShell } from '@/components/layout/Shells';
 import { EmptyState, ErrorState, SkeletonRows } from '@/components/queue';
+import { useReviewInbox } from '@/api';
 import { useDoctorSessions } from '@/api/queue';
 import { useAuth } from '@/lib/auth';
 import { formatIST } from '@/lib/format';
@@ -11,6 +12,8 @@ import { SessionPicker } from './components/SessionPicker';
 import ReviewPage from './review/ReviewPage';
 
 function DoctorNav() {
+  const inbox = useReviewInbox();
+  const pending = inbox.data ? inbox.data.length : null;
   const link = ({ isActive }: { isActive: boolean }) =>
     cn(
       'inline-flex h-10 items-center border-b-2 px-1 font-bold',
@@ -23,6 +26,13 @@ function DoctorNav() {
       </NavLink>
       <NavLink to="/doctor/review" className={link}>
         Review inbox
+        {pending !== null && pending > 0 ? (
+          <span data-testid="review-count" className="ml-2 rounded-xs bg-ink/10 px-1.5 py-0.5 text-xs tabular-nums">
+            <span className="sr-only">, </span>
+            {pending}
+            <span className="sr-only"> awaiting verification</span>
+          </span>
+        ) : null}
       </NavLink>
     </nav>
   );

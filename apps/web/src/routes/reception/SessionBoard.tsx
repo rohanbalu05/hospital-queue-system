@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import type { ArrivalResult, Doctor, Session, SessionStatus } from '@hqms/contracts';
-import { CapacityBar, EmptyState, ErrorState, GroupTag, Lane, SkeletonRows, StaleBanner, TokenText } from '@/components/queue';
+import { CapacityBar, EmptyState, ErrorState, GroupTag, Lane, PressureNote, SkeletonRows, StaleBanner, TokenText } from '@/components/queue';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useQueueSnapshot } from '@/live/useQueue';
 import { sessionLabelWord, sessionTimes } from '@/components/scheduling/sessions';
 import { StatusWord } from '@/components/scheduling/status';
 import type { StaffAppointment } from '@/api/schemas';
@@ -83,13 +85,8 @@ export function SessionBoard(p: SessionBoardProps) {
             </p>
           </div>
         </div>
-        <CapacityBar
-          className="mt-4"
-          booked={s.capacity.bookedReserved}
-          bookedCapacity={s.capacity.bookedCapacity}
-          walkin={s.capacity.walkinUsed}
-          walkinCapacity={s.capacity.walkinCapacity}
-        />
+        <BoardCapacity session={s} />
+        <BoardPressure sessionId={s.id} />
         {/* The live board below carries the "Last updated" line; this one speaks up only when the arrivals list went stale. */}
         {p.stale ? <StaleBanner className="mt-3" status="reconnecting" lastUpdated={p.lastUpdated} /> : null}
       </div>
@@ -129,6 +126,40 @@ export function SessionBoard(p: SessionBoardProps) {
       ) : null}
     </section>
   );
+}
+
+/**
+ * The capacity bar holds its place as a skeleton until the live board has its first snapshot, so the header and the lanes
+ * appear together instead of the bar showing counts while the board below is still loading. The figures are the
+ * session's own capacity, which the check-in and walk-in commands keep fresh.
+ */
+function BoardCapacity({ session }: { session: Session }) {
+  const { isPending } = useQueueSnapshot(session.id);
+  if (isPending) {
+    return (
+      <div className="mt-4 grid gap-3 sm:grid-cols-[2fr_1fr]" aria-busy="true" aria-label="Loading capacity" data-testid="capacity-skeleton">
+        <Skeleton className="h-9" />
+        <Skeleton className="h-9" />
+      </div>
+    );
+  }
+  const c = session.capacity;
+  return (
+    <CapacityBar
+      className="mt-4"
+      booked={c.bookedReserved}
+      bookedCapacity={c.bookedCapacity}
+      walkin={c.walkinUsed}
+      walkinCapacity={c.walkinCapacity}
+    />
+  );
+}
+
+/** Workload pressure from the same snapshot the live board below reads (one cached query, no second connection). */
+function BoardPressure({ sessionId }: { sessionId: string }) {
+  const { data } = useQueueSnapshot(sessionId);
+  if (!data || data.view !== 'staff') return null;
+  return <PressureNote pressure={data.pressure} className="mt-3" />;
 }
 
 function AppointmentRow({ a, tag, muted, token }: { a: StaffAppointment; tag?: boolean; muted?: boolean; token?: ArrivalResult | undefined }): ReactNode {

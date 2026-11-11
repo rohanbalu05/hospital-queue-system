@@ -14,9 +14,9 @@ export function TaskStatusWord({ status, className }: { status: FollowUpStatus; 
   return <span className={cn('font-bold', TONE[status], className)}>{TASK_STATUS_WORD[status]}</span>;
 }
 
-/** "Overdue 26 h" in the priority colour, or "Due in 3 h". Never colour-only: the word Overdue is always printed. */
+/** "Overdue 26 h" in bold ink, or "Due in 3 h" in muted text. Red is kept for P and destructive actions; the word Overdue carries the meaning. */
 export function TimingWord({ task, now, className }: { task: { status: FollowUpStatus; dueAt: string; overdue: boolean }; now: number; className?: string }) {
   const t = taskTiming(task, now);
   if (!t.label) return <span className={cn('text-muted-foreground', className)}>-</span>;
-  return <span className={cn(t.overdue ? 'font-bold text-priority' : 'text-muted-foreground', className)}>{t.label}</span>;
+  return <span className={cn(t.overdue ? 'font-bold text-ink' : 'text-muted-foreground', className)}>{t.label}</span>;
 }

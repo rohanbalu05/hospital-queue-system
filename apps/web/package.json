@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "screenshots": "playwright test --trace off",
+    "e2e:real": "playwright test --trace off -c playwright.real.config.ts",
     "test:coverage": "vitest run --coverage --coverage.include=src/** --coverage.exclude=src/components/ui/** --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reporter=lcov --coverage.reportsDirectory=coverage"
   },
   "dependencies": {

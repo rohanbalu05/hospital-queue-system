@@ -20,7 +20,7 @@ const SHOTS = path.resolve(import.meta.dirname, '../../../docs/evidence/screensh
 const shot = (page: Page, name: string) => page.screenshot({ path: path.join(SHOTS, `w0-${name}.png`), fullPage: true, animations: 'disabled' });
 
 const ROLE_HOMES: Array<{ role: DemoRole; url: string; heading: string; slug: string }> = [
-  { role: 'patient', url: '/patient', heading: 'My visit', slug: 'patient-home' },
+  { role: 'patient', url: '/patient', heading: 'Today', slug: 'patient-home' },
   { role: 'reception', url: '/reception', heading: 'Reception desk', slug: 'reception-home' },
   { role: 'doctor', url: '/doctor', heading: 'Doctor console', slug: 'doctor-home' },
   { role: 'followup', url: '/follow-up', heading: 'Follow-up tasks', slug: 'followup-home' },
@@ -151,7 +151,7 @@ test.describe('patient home at 390', () => {
   test('screenshot', async ({ page }) => {
     await mockRoleHome(page, 'patient');
     await page.goto('/patient');
-    await expect(page.getByRole('heading', { name: 'My visit', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Today', level: 1 })).toBeVisible();
     await shot(page, 'patient-home-390');
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);

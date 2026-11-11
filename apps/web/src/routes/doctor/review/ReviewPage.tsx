@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { VerifyInstructionRequest } from '@hqms/contracts';
@@ -15,13 +15,18 @@ import { StaffShell } from '@/components/layout/Shells';
 import { EmptyState, ErrorState, SkeletonRows } from '@/components/queue';
 import { InlineAlert } from '@/components/scheduling/status';
 import { Button } from '@/components/ui/button';
-import { fileSizeWord, STAFF_DOCUMENT_STATUS } from '@/lib/followup';
+import { durationWord, fileSizeWord, STAFF_DOCUMENT_STATUS } from '@/lib/followup';
+import { useNow } from '@/lib/useNow';
 import { formatIST } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { InstructionForm, titleFromDraft } from './InstructionForm';
 import { InstructionHistory } from './InstructionHistory';
 
+/** Oldest upload first: the document that has waited longest is the one to verify next. */
+const oldestFirst = (a: ReviewItem, b: ReviewItem) => a.createdAt.localeCompare(b.createdAt);
+
 function InboxList({ items, selectedId }: { items: ReviewItem[]; selectedId: string | null }) {
+  const now = useNow();
   return (
     <section aria-labelledby="inbox-h" className="overflow-hidden rounded-xl border border-rule bg-surface">
       <header className="flex h-10 items-center gap-2 border-b border-rule px-3">
@@ -51,6 +56,9 @@ function InboxList({ items, selectedId }: { items: ReviewItem[]; selectedId: str
                 <span className="mt-0.5 block truncate text-muted-foreground">{d.originalName}</span>
                 <span className="block text-xs text-muted-foreground tabular-nums">
                   Uploaded {formatIST(d.createdAt, 'date-time')}, {d.pageCount} {d.pageCount === 1 ? 'page' : 'pages'}
+                </span>
+                <span className="block text-xs font-bold tabular-nums" data-testid="inbox-age">
+                  Waiting {durationWord((now - new Date(d.createdAt).getTime()) / 60_000)}
                 </span>
               </Link>
             </li>
@@ -135,7 +143,7 @@ function ReviewDetail({ item, onDone }: { item: ReviewItem; onDone: () => void }
           title="OCR draft"
           label={
             <span className="rounded-xs bg-muted px-1.5 py-0.5 text-xs font-bold text-muted-foreground">
-              Draft — not visible to the patient&apos;s assistant
+              Draft, not visible to the patient&apos;s assistant
             </span>
           }
         >
@@ -238,7 +246,7 @@ export default function ReviewPage({ nav }: { nav: ReactNode }) {
   const { documentId } = useParams();
   const navigate = useNavigate();
   const inbox = useReviewInbox();
-  const items = inbox.data ?? [];
+  const items = useMemo(() => [...(inbox.data ?? [])].sort(oldestFirst), [inbox.data]);
   const selected = items.find((d) => d.id === documentId) ?? items[0] ?? null;
 
   const next = (current: ReviewItem) => {

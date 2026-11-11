@@ -102,7 +102,7 @@ describe('documents', () => {
     expect(PATIENT_DOCUMENT_STATUS.processing.word).toBe('Processing');
     expect(PATIENT_DOCUMENT_STATUS.ocr_ready.word).toBe('Ready for review');
     expect(PATIENT_DOCUMENT_STATUS.verified.word).toBe('Verified');
-    expect(PATIENT_DOCUMENT_STATUS.ocr_failed.word).toBe("Couldn't read — staff will review");
+    expect(PATIENT_DOCUMENT_STATUS.ocr_failed.word).toBe("Couldn't read. Staff will review");
   });
   it('treats uploaded, accepted and processing as still being read', () => {
     expect(['uploaded', 'accepted', 'processing'].every((s) => isInFlight(s as never))).toBe(true);

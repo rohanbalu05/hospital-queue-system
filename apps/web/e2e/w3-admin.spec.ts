@@ -117,7 +117,8 @@ test.describe('admin at 1440', () => {
     await expect(page.locator('tr[data-kind="measured"]').filter({ hasText: 'Not enough data' }).first()).toBeVisible();
     await expect(page.getByRole('row', { name: /Rotation/ })).toContainText('168');
     await expect(page.getByRole('row', { name: /Appointment/ }).first()).toContainText('14.0 min');
-    await shot(page, 'w3-admin-reports-1440');
+    // No screenshot here: these figures are a test fixture. The report screenshot comes from e2e-real/reports.spec.ts,
+    // which runs against the real seeded API.
   });
 
   test('reports: empty period and error', async ({ page }) => {
@@ -136,8 +137,10 @@ test.describe('admin at 1440', () => {
     await page.goto('/admin/audit');
     const rows = page.getByTestId('audit-row');
     await expect(rows).toHaveCount(10);
-    await expect(rows.first()).toContainText('queue.call_next');
-    await expect(rows.first()).toContainText('doctor');
+    await expect(rows.first()).toContainText('Called next patient');
+    await expect(rows.first()).toContainText('Dr. Meenakshi Rao');
+    await expect(rows.first()).toContainText('Queue entry');
+    await expect(rows.first().getByTitle('queue.call_next')).toBeVisible();
     await expect(rows.first()).toContainText('9:58:14 am');
     await expect(rows.first()).toContainText('v1');
     await expect(rows.first()).toContainText('Called by rotation: 2nd appointment of A, A, W');
@@ -147,7 +150,7 @@ test.describe('admin at 1440', () => {
     await page.getByRole('option', { name: 'Sessions' }).click();
     await page.getByRole('button', { name: 'Apply filter' }).click();
     await expect(rows).toHaveCount(1);
-    await expect(rows.first()).toContainText('session.capacity_update');
+    await expect(rows.first()).toContainText('Changed session capacity');
 
     await page.getByLabel('Entity id (optional)').fill('not-an-id');
     await page.getByRole('button', { name: 'Apply filter' }).click();

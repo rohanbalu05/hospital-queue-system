@@ -1,19 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { z } from 'zod';
 import {
   Appointment,
   AssistantAnswer,
+  AssistantConversation,
   ConversationMessage,
-  Disposition,
   DocumentMeta,
-  FollowUpKind,
-  FollowUpStatus,
   FollowUpTask,
-  Id,
   InstructionVersion,
-  Instant,
-  LocalDate,
   OcrDraft,
+  PatientFollowUp,
+  ReviewInboxItem,
   type AskAssistantRequest,
   type Id as IdT,
   type ResolveTaskRequest,
@@ -23,43 +19,10 @@ import { apiFetch, useIdempotentMutation, type ApiRequestError } from '@/lib/api
 import { get } from './queries';
 import { listOf } from './schemas';
 
-/**
- * Wave 3 screens are built against the contracts with mocks. Where a screen needs a field the contract does not
- * carry yet, the schema below adds it as optional (see the W3 report, "contract gaps"). The screens degrade
- * gracefully when the field is missing.
- */
-
-/** FollowUpTask plus a readable source visit. Gap: the contract has only sourceVisitId. */
-export const SourceVisit = z.object({
-  sessionDate: LocalDate,
-  doctorId: Id,
-  doctorName: z.string(),
-  department: z.string(),
-});
-export const FollowUpTaskView = FollowUpTask.extend({ sourceVisit: SourceVisit.nullable().optional() });
-export type FollowUpTaskView = z.infer<typeof FollowUpTaskView>;
-
-/** GET /review-inbox rows: DocumentMeta plus the patient's name. Gap: not in the contract. */
-export const ReviewItem = DocumentMeta.extend({ patientName: z.string() });
-export type ReviewItem = z.infer<typeof ReviewItem>;
-
-/** GET /me/follow-ups: what a patient sees of a staff task. Status and timing only; the summary is fixed wording per kind. */
-export const PatientFollowUp = z.object({
-  id: Id,
-  kind: FollowUpKind,
-  summary: z.string(),
-  status: FollowUpStatus,
-  dueAt: Instant,
-  disposition: Disposition.nullable(),
-  returnAppointmentId: Id.nullable(),
-  createdAt: Instant,
-  resolvedAt: Instant.nullable(),
-});
-export type PatientFollowUp = z.infer<typeof PatientFollowUp>;
-
-/** GET /assistant/conversations: the patient's conversations, newest first. */
-export const ConversationSummary = z.object({ id: Id, createdAt: Instant, lastMessageAt: Instant.nullable() });
-export type ConversationSummary = z.infer<typeof ConversationSummary>;
+/** Aliases for the contract types the screens already import under these names. */
+export type FollowUpTaskView = FollowUpTask;
+export type ReviewItem = ReviewInboxItem;
+export type ConversationSummary = AssistantConversation;
 
 export const followKeys = {
   mine: ['followups', 'mine'] as const,
@@ -98,7 +61,7 @@ export function useFollowUpTasks(filter: TaskFilter, options: { enabled?: boolea
           ...(filter.overdue !== undefined ? { overdue: String(filter.overdue) } : {}),
           ...(filter.patientId ? { patientId: filter.patientId } : {}),
         },
-        listOf(FollowUpTaskView),
+        listOf(FollowUpTask),
         signal,
       ),
     enabled: options.enabled ?? true,
@@ -120,7 +83,7 @@ export function useMyFollowUps(enabled = true) {
 export function useConversations(enabled = true) {
   return useQuery<ConversationSummary[], ApiRequestError>({
     queryKey: followKeys.conversations,
-    queryFn: ({ signal }) => get('/assistant/conversations', {}, listOf(ConversationSummary), signal),
+    queryFn: ({ signal }) => get('/assistant/conversations', {}, listOf(AssistantConversation), signal),
     enabled,
   });
 }
@@ -129,7 +92,7 @@ export function useConversations(enabled = true) {
 export function useFollowUpTask(id: IdT | undefined) {
   return useQuery<FollowUpTaskView, ApiRequestError>({
     queryKey: followKeys.task(id ?? 'none'),
-    queryFn: ({ signal }) => apiFetch(`/follow-up-tasks/${id}`, { schema: FollowUpTaskView, signal }),
+    queryFn: ({ signal }) => apiFetch(`/follow-up-tasks/${id}`, { schema: FollowUpTask, signal }),
     enabled: id !== undefined,
   });
 }
@@ -137,7 +100,7 @@ export function useFollowUpTask(id: IdT | undefined) {
 function useTaskCommand<V extends { taskId: IdT }>(path: 'acknowledge' | 'resolve' | 'cancel', body: (v: V) => unknown) {
   const qc = useQueryClient();
   return useMutation<FollowUpTaskView, ApiRequestError, V>({
-    mutationFn: (v) => apiFetch(`/follow-up-tasks/${v.taskId}/${path}`, { method: 'POST', body: body(v), schema: FollowUpTaskView }),
+    mutationFn: (v) => apiFetch(`/follow-up-tasks/${v.taskId}/${path}`, { method: 'POST', body: body(v), schema: FollowUpTask }),
     onSuccess: (task) => {
       qc.setQueryData(followKeys.task(task.id), task);
     },
@@ -217,7 +180,7 @@ export function useUploadDocument() {
 export function useReviewInbox() {
   return useQuery<ReviewItem[], ApiRequestError>({
     queryKey: followKeys.inbox,
-    queryFn: ({ signal }) => get('/review-inbox', {}, listOf(ReviewItem), signal),
+    queryFn: ({ signal }) => get('/review-inbox', {}, listOf(ReviewInboxItem), signal),
     refetchInterval: 30_000,
   });
 }

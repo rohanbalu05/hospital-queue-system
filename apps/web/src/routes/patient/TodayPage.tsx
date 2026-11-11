@@ -34,7 +34,7 @@ export default function TodayPage() {
   const todays = todaysAppointments(q.data ?? [], today);
 
   return (
-    <PatientPage title="My visit" {...(me ? { description: `Signed in as ${me.displayName}.` } : {})}>
+    <PatientPage title="Today" {...(me ? { description: `Signed in as ${me.displayName}.` } : {})}>
       {q.isPending && patientId ? (
         <SkeletonRows count={2} />
       ) : q.isError ? (
@@ -53,7 +53,7 @@ export default function TodayPage() {
       ) : (
         <section aria-labelledby="today-h" className="grid gap-4">
           <h2 id="today-h" className="text-lg font-bold">
-            Today
+            Your appointments
           </h2>
           <ul className="grid gap-4">
             {todays.map((a) => (
