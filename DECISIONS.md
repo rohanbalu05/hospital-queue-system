@@ -37,3 +37,11 @@ EWMA state (`service_estimates`) is keyed by doctor, carried across that doctor'
 
 ## D-012 Auth on state-changing POSTs
 Every state-changing POST that creates something (book, check-in, walk-in, call-next, follow-up task, return booking, verify) accepts an `Idempotency-Key` header; book/check-in/walk-in/call-next/return-booking require it. Idempotency is scoped to (actor, operation, key) with a SHA-256 of the canonical request body.
+
+## D-013 Routes at the API root; web proxies `/api`
+The API serves Table 10 paths unprefixed on :3000 (`POST /appointments`). The web app calls `/api/...`; Vite dev server (and the nginx container in Compose) proxies `/api/*` → `http://api:3000/*` stripping the prefix, so the session cookie is same-origin (`httpOnly; SameSite=Lax; Path=/`).
+
+## D-014 Shared library choices
+- Password hashing: `@node-rs/argon2` (argon2id, prebuilt binaries, no node-gyp) in both seed and API.
+- Playwright: `@playwright/test@1.63.0` to match the pre-installed Chromium in cloud sessions.
+- Domain property tests: `fast-check`. Tests: Vitest 2.
