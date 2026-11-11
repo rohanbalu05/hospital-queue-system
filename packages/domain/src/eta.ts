@@ -53,7 +53,11 @@ export interface Eta {
   computedAt: string;
   estimatorMeanMinutes: number;
   estimatorSamples: number;
+  /** Machine-readable uncertainty (FR-10); null unless status is ok. */
+  uncertainty: EtaUncertainty | null;
 }
+
+export type EtaUncertainty = 'cold_start' | 'warm' | 'widened_overrun';
 
 export interface EtaInput {
   targetEntryId: string;
@@ -77,7 +81,13 @@ const MODEL_NOTE = 'Model estimate from queue order and average consultation tim
 export function projectEta(input: EtaInput): Eta {
   const nowMs = toMs(input.now);
   const m = input.estimator.meanMinutes;
-  const make = (status: EtaStatus, low: number | null, high: number | null, note: string | null): Eta => ({
+  const make = (
+    status: EtaStatus,
+    low: number | null,
+    high: number | null,
+    note: string | null,
+    uncertainty: EtaUncertainty | null = null,
+  ): Eta => ({
     status,
     lowMinutes: low,
     highMinutes: high,
@@ -85,6 +95,7 @@ export function projectEta(input: EtaInput): Eta {
     computedAt: new Date(nowMs).toISOString(),
     estimatorMeanMinutes: m,
     estimatorSamples: input.estimator.samples,
+    uncertainty,
   });
 
   if (!(m > 0) || !Number.isFinite(m)) return make('unsupported', null, null, 'Estimator is not available');
@@ -148,5 +159,6 @@ export function projectEta(input: EtaInput): Eta {
   if (coldStart) notes.push(`Few completed consultations so far (${input.estimator.samples}), so the range is wider.`);
   if (overrun) notes.push('The current consultation has run longer than average, so the upper bound is widened.');
   if (pauseMs !== null) notes.push('Includes a known pause.');
-  return make('ok', low, high, notes.join(' '));
+  const uncertainty: EtaUncertainty = overrun ? 'widened_overrun' : coldStart ? 'cold_start' : 'warm';
+  return make('ok', low, high, notes.join(' '), uncertainty);
 }

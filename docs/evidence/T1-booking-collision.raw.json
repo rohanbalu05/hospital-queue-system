@@ -16,9 +16,9 @@
         "bookedAllocationsAfter": 1,
         "appointmentsInSession": 1,
         "latencyMs": {
-          "p50": 280.5,
-          "p95": 361.3,
-          "max": 366.1
+          "p50": 184.6,
+          "p95": 257.6,
+          "max": 262.9
         }
       },
       {
@@ -35,9 +35,9 @@
         "bookedAllocationsAfter": 10,
         "appointmentsInSession": 10,
         "latencyMs": {
-          "p50": 160.8,
-          "p95": 237.7,
-          "max": 242.1
+          "p50": 104.7,
+          "p95": 156.6,
+          "max": 160.1
         }
       },
       {
@@ -54,9 +54,9 @@
         "bookedAllocationsAfter": 1,
         "appointmentsInSession": 1,
         "latencyMs": {
-          "p50": 106.9,
-          "p95": 157.4,
-          "max": 164.5
+          "p50": 108.6,
+          "p95": 181.2,
+          "max": 188.6
         }
       },
       {
@@ -73,9 +73,9 @@
         "bookedAllocationsAfter": 10,
         "appointmentsInSession": 10,
         "latencyMs": {
-          "p50": 110,
-          "p95": 187.6,
-          "max": 193.8
+          "p50": 148.6,
+          "p95": 230.7,
+          "max": 233.2
         }
       },
       {
@@ -92,9 +92,9 @@
         "bookedAllocationsAfter": 1,
         "appointmentsInSession": 1,
         "latencyMs": {
-          "p50": 100.3,
-          "p95": 179.2,
-          "max": 181.8
+          "p50": 106.7,
+          "p95": 178.8,
+          "max": 182.7
         }
       },
       {
@@ -111,9 +111,9 @@
         "bookedAllocationsAfter": 10,
         "appointmentsInSession": 10,
         "latencyMs": {
-          "p50": 100,
-          "p95": 148.2,
-          "max": 151.4
+          "p50": 145.7,
+          "p95": 224.7,
+          "max": 229.6
         }
       },
       {
@@ -130,9 +130,9 @@
         "bookedAllocationsAfter": 1,
         "appointmentsInSession": 1,
         "latencyMs": {
-          "p50": 102.6,
-          "p95": 149.8,
-          "max": 154.9
+          "p50": 104.1,
+          "p95": 156.8,
+          "max": 164.9
         }
       },
       {
@@ -149,9 +149,9 @@
         "bookedAllocationsAfter": 10,
         "appointmentsInSession": 10,
         "latencyMs": {
-          "p50": 123.1,
-          "p95": 212.8,
-          "max": 219.5
+          "p50": 94.8,
+          "p95": 187.3,
+          "max": 194.3
         }
       },
       {
@@ -168,9 +168,9 @@
         "bookedAllocationsAfter": 1,
         "appointmentsInSession": 1,
         "latencyMs": {
-          "p50": 132.9,
-          "p95": 200.5,
-          "max": 202.6
+          "p50": 133.6,
+          "p95": 183,
+          "max": 185.5
         }
       },
       {
@@ -187,9 +187,9 @@
         "bookedAllocationsAfter": 10,
         "appointmentsInSession": 10,
         "latencyMs": {
-          "p50": 179.1,
-          "p95": 254.6,
-          "max": 257.8
+          "p50": 99.9,
+          "p95": 152.5,
+          "max": 157
         }
       },
       {
@@ -206,9 +206,9 @@
         "bookedAllocationsAfter": 1,
         "appointmentsInSession": 1,
         "latencyMs": {
-          "p50": 105.2,
-          "p95": 147.3,
-          "max": 148.2
+          "p50": 105.8,
+          "p95": 159.7,
+          "max": 162.2
         }
       },
       {
@@ -225,9 +225,9 @@
         "bookedAllocationsAfter": 10,
         "appointmentsInSession": 10,
         "latencyMs": {
-          "p50": 112.5,
-          "p95": 167.4,
-          "max": 172.3
+          "p50": 110.6,
+          "p95": 205.3,
+          "max": 214
         }
       },
       {
@@ -244,9 +244,9 @@
         "bookedAllocationsAfter": 1,
         "appointmentsInSession": 1,
         "latencyMs": {
-          "p50": 106.9,
-          "p95": 192.8,
-          "max": 195.6
+          "p50": 171.7,
+          "p95": 265.6,
+          "max": 274.1
         }
       },
       {
@@ -263,9 +263,9 @@
         "bookedAllocationsAfter": 10,
         "appointmentsInSession": 10,
         "latencyMs": {
-          "p50": 119.9,
-          "p95": 195.6,
-          "max": 198.9
+          "p50": 128,
+          "p95": 197.8,
+          "max": 204
         }
       },
       {
@@ -282,9 +282,9 @@
         "bookedAllocationsAfter": 1,
         "appointmentsInSession": 1,
         "latencyMs": {
-          "p50": 98.2,
-          "p95": 149.3,
-          "max": 152.8
+          "p50": 130.3,
+          "p95": 199,
+          "max": 206.3
         }
       },
       {
@@ -301,9 +301,9 @@
         "bookedAllocationsAfter": 10,
         "appointmentsInSession": 10,
         "latencyMs": {
-          "p50": 95.6,
-          "p95": 143.5,
-          "max": 146
+          "p50": 102.5,
+          "p95": 159.9,
+          "max": 163.3
         }
       },
       {
@@ -320,9 +320,9 @@
         "bookedAllocationsAfter": 1,
         "appointmentsInSession": 1,
         "latencyMs": {
-          "p50": 86.7,
-          "p95": 136.2,
-          "max": 141.3
+          "p50": 120.9,
+          "p95": 195.7,
+          "max": 202.9
         }
       },
       {
@@ -339,9 +339,9 @@
         "bookedAllocationsAfter": 10,
         "appointmentsInSession": 10,
         "latencyMs": {
-          "p50": 131,
-          "p95": 213.7,
-          "max": 221.8
+          "p50": 126.5,
+          "p95": 211.5,
+          "max": 215.6
         }
       },
       {
@@ -358,9 +358,9 @@
         "bookedAllocationsAfter": 1,
         "appointmentsInSession": 1,
         "latencyMs": {
-          "p50": 145.5,
-          "p95": 202.2,
-          "max": 206.2
+          "p50": 129.6,
+          "p95": 197.3,
+          "max": 204.4
         }
       },
       {
@@ -377,9 +377,9 @@
         "bookedAllocationsAfter": 10,
         "appointmentsInSession": 10,
         "latencyMs": {
-          "p50": 115.7,
-          "p95": 184.4,
-          "max": 189.4
+          "p50": 79.8,
+          "p95": 129.4,
+          "max": 134.1
         }
       }
     ],
@@ -389,9 +389,9 @@
       "capacityFull409": 980,
       "serverErrors": 0,
       "latencyMs": {
-        "p50": 121.2,
-        "p95": 228.9,
-        "max": 366.1
+        "p50": 120.9,
+        "p95": 212.2,
+        "max": 274.1
       }
     },
     "globalInvariantViolations": []
@@ -449,8 +449,8 @@
     },
     "rescheduleVsCancel": {
       "trials": 20,
-      "rescheduleWon": 9,
-      "cancelWon": 11,
+      "rescheduleWon": 7,
+      "cancelWon": 13,
       "serverErrors": 0,
       "bothAppliedOrNeither": 0
     },
@@ -516,21 +516,39 @@
           "requests": 20,
           "created201": 5,
           "capacityFull409": 15,
-          "tokens": ["W-001", "W-002", "W-003", "W-004", "W-005"]
+          "tokens": [
+            "W-001",
+            "W-002",
+            "W-003",
+            "W-004",
+            "W-005"
+          ]
         },
         {
           "round": 2,
           "requests": 20,
           "created201": 5,
           "capacityFull409": 15,
-          "tokens": ["W-001", "W-002", "W-003", "W-004", "W-005"]
+          "tokens": [
+            "W-001",
+            "W-002",
+            "W-003",
+            "W-004",
+            "W-005"
+          ]
         },
         {
           "round": 3,
           "requests": 20,
           "created201": 5,
           "capacityFull409": 15,
-          "tokens": ["W-001", "W-002", "W-003", "W-004", "W-005"]
+          "tokens": [
+            "W-001",
+            "W-002",
+            "W-003",
+            "W-004",
+            "W-005"
+          ]
         }
       ]
     },
@@ -657,7 +675,10 @@
       }
     },
     "keyScopedToActor": {
-      "statuses": [201, 201]
+      "statuses": [
+        201,
+        201
+      ]
     },
     "businessFailureNotStored": {
       "firstStatus": 409,

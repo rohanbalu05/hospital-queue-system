@@ -362,10 +362,16 @@ describe('NFR-06 role matrix (derived from the Nest controllers)', () => {
     ['admin', admin],
   ];
 
-  it('the route table was derived and the public set is exactly login, logout and health', () => {
+  it('the route table was derived and the public set is exactly login, logout, health and the tokens-only display (FR-09)', () => {
     expect(routes.length).toBeGreaterThanOrEqual(18);
     const publicRoutes = routes.filter((r) => r.roles === null).map((r) => `${r.method} ${r.path}`);
-    expect(publicRoutes.sort()).toEqual(['GET /health', 'POST /auth/login', 'POST /auth/logout']);
+    expect(publicRoutes.sort()).toEqual([
+      'GET /display/events',
+      'GET /display/sessions',
+      'GET /health',
+      'POST /auth/login',
+      'POST /auth/logout',
+    ]);
     for (const needed of [
       'POST /sessions/:id/walk-ins',
       'POST /appointments/:id/check-in',
