@@ -210,7 +210,7 @@ export const handleReservationRelease: JobHandler = async (job: JobRow, ctx: Job
       entityVersion: newVersion,
       sessionId: guards.session_id,
       patientId: a.patient_id,
-      payload: {},
+      payload: { reason: 'timer' },
     });
     ctx.log.info('reservation_release.released', { appointmentId });
   });

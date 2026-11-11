@@ -23,7 +23,7 @@ import {
   verifyPassword,
   withTransaction,
 } from '../src/index.js';
-import { istDate, seed } from '../../../db/seed/seed.js';
+import { istDate, seed, SeedRefusedError } from '../../../db/seed/seed.js';
 import { createDatabase, dropDatabase, must, nth, testUrl } from './helpers.js';
 
 const DB = 'hqms_test_db_engineer_seed';
@@ -51,6 +51,26 @@ beforeAll(async () => {
 afterAll(async () => {
   await pool.end();
   await dropDatabase(DB);
+});
+
+describe('seed production guard', () => {
+  it('refuses with NODE_ENV=production unless ALLOW_DEMO_SEED=true, and changes nothing when refused', async () => {
+    const before = await counts();
+    await expect(seed(pool, { env: { NODE_ENV: 'production' } })).rejects.toBeInstanceOf(SeedRefusedError);
+    await expect(seed(pool, { env: { NODE_ENV: 'production', ALLOW_DEMO_SEED: 'yes' } })).rejects.toBeInstanceOf(
+      SeedRefusedError,
+    );
+    await expect(seed(pool, { env: { NODE_ENV: 'production', ALLOW_DEMO_SEED: 'false' } })).rejects.toThrow(/ALLOW_DEMO_SEED/);
+    expect(await counts()).toEqual(before);
+  });
+
+  it('runs in other environments and with the explicit production override (idempotent re-run)', async () => {
+    await expect(seed(pool, { env: { NODE_ENV: 'development' } })).resolves.toMatchObject({ sessionsCreated: 0 });
+    await expect(seed(pool, { env: {} })).resolves.toMatchObject({ sessionsCreated: 0 });
+    await expect(seed(pool, { env: { NODE_ENV: 'production', ALLOW_DEMO_SEED: 'true' } })).resolves.toMatchObject({
+      sessionsCreated: 0,
+    });
+  });
 });
 
 describe('seed', () => {

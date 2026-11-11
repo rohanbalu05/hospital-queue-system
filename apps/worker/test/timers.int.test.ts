@@ -314,6 +314,7 @@ describe('reservation_release (missed reservation after the 15-minute grace)', (
       event_type: 'ReservationReleased',
       patient_id: a.patientId,
       session_id: w.sessionId,
+      payload: { reason: 'timer' },
     });
   });
 

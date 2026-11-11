@@ -234,6 +234,10 @@ describe('NFR-07 failure injection', () => {
   });
 
   it('a notification fan-out that fails for every event does not affect booking, and events stay pending', async () => {
+    // Notifications from earlier runs/files are still within the window; count relative to a baseline.
+    const countBooked = async () =>
+      (await api.query(`SELECT count(*)::int AS n FROM notifications WHERE kind = 'AppointmentBooked'`)).rows[0].n as number;
+    const baseline = await countBooked();
     const dispatcher = new OutboxDispatcher({
       pool: worker,
       pollMs: 20,
@@ -251,10 +255,7 @@ describe('NFR-07 failure injection', () => {
     } finally {
       await dispatcher.stop();
     }
-    const n = await api.query(
-      `SELECT count(*)::int AS n FROM notifications WHERE kind = 'AppointmentBooked' AND created_at > now() - interval '1 minute'`,
-    );
-    expect(n.rows[0].n).toBe(0);
+    expect(await countBooked()).toBe(baseline);
     const inv = await withTransaction(api, (tx) => capacityInvariant(tx, w.sessionId));
     expect(inv.ok).toBe(true);
     expect(inv.counters.bookedReserved).toBe(10);

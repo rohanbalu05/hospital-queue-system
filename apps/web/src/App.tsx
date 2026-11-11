@@ -14,8 +14,10 @@ import DoctorHome from '@/routes/doctor/DoctorHome';
 import FollowUpHome from '@/routes/follow-up/FollowUpHome';
 import AdminHome from '@/routes/admin/AdminHome';
 import DisplayPage from '@/routes/display/DisplayPage';
+import MyVisitPage from '@/routes/patient/visit/MyVisitPage';
 
 const PrimitivesGallery = DEV_ROUTES ? lazy(() => import('@/routes/dev/Primitives')) : null;
+const BoardDevPage = DEV_ROUTES ? lazy(() => import('@/live/BoardDevPage')) : null;
 
 export function createQueryClient() {
   return new QueryClient({
@@ -48,6 +50,7 @@ export default function App() {
                 }
               />
               <Route element={<RequireRole roles={['patient']} />}>
+                <Route path="/patient/visit/:sessionId" element={<MyVisitPage />} />
                 <Route path="/patient/*" element={<PatientHome />} />
               </Route>
               <Route element={<RequireRole roles={['reception']} />}>
@@ -70,6 +73,16 @@ export default function App() {
                   element={
                     <Suspense fallback={null}>
                       <PrimitivesGallery />
+                    </Suspense>
+                  }
+                />
+              ) : null}
+              {BoardDevPage ? (
+                <Route
+                  path="/_dev/board"
+                  element={
+                    <Suspense fallback={null}>
+                      <BoardDevPage />
                     </Suspense>
                   }
                 />

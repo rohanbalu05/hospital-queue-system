@@ -37,14 +37,65 @@ describe('lock order doctor -> session -> capacity', () => {
     });
   });
 
-  it('throws LockOrderError for session -> doctor', async () => {
+  it('throws LockOrderError for session -> doctor (a second doctor after a session)', async () => {
     const f = await makeFixture(pool);
+    const other = await pool.query<{ id: string }>(
+      `INSERT INTO doctors (hospital_id, full_name, department, room) VALUES ($1, 'Dr Other', 'ENT', 'OPD 9') RETURNING id`,
+      [f.hospitalId],
+    );
     const err = await withTransaction(pool, async (tx) => {
-      await lockSession(tx, f.sessionId);
       await lockDoctor(tx, f.doctorId);
+      await lockSession(tx, f.sessionId);
+      await lockDoctor(tx, nth(other.rows, 0).id);
     }).catch((e) => e);
     expect(err).toBeInstanceOf(LockOrderError);
     expect(err.message).toMatch(/doctor lock requested after session/);
+  });
+
+  it('lockSession without the doctor lock throws LockOrderError and takes no session lock', async () => {
+    const f = await makeFixture(pool);
+    const err = await withTransaction(pool, async (tx) => {
+      await lockSession(tx, f.sessionId);
+    }).catch((e) => e);
+    expect(err).toBeInstanceOf(LockOrderError);
+    expect(err.message).toMatch(/requires the doctor lock/);
+    // a holder of a different doctor does not satisfy the assertion either
+    const other = await pool.query<{ id: string }>(
+      `INSERT INTO doctors (hospital_id, full_name, department, room) VALUES ($1, 'Dr Other', 'ENT', 'OPD 9') RETURNING id`,
+      [f.hospitalId],
+    );
+    const wrong = await withTransaction(pool, async (tx) => {
+      await lockDoctor(tx, nth(other.rows, 0).id);
+      await lockSessions(tx, [f.sessionId]);
+    }).catch((e) => e);
+    expect(wrong).toBeInstanceOf(LockOrderError);
+  });
+
+  it('lockSessions asserts the doctor of every session in the batch', async () => {
+    const f = await makeFixture(pool);
+    const g = await makeFixture(pool);
+    const err = await withTransaction(pool, async (tx) => {
+      await lockDoctor(tx, f.doctorId);
+      await lockSessions(tx, [f.sessionId, g.sessionId]); // g's doctor is not held
+    }).catch((e) => e);
+    expect(err).toBeInstanceOf(LockOrderError);
+  });
+
+  it('lockCapacity / lockCapacities without the session lock throw LockOrderError', async () => {
+    const f = await makeFixture(pool);
+    const one = await withTransaction(pool, async (tx) => {
+      await lockDoctor(tx, f.doctorId);
+      await lockCapacity(tx, f.sessionId);
+    }).catch((e) => e);
+    expect(one).toBeInstanceOf(LockOrderError);
+    expect(one.message).toMatch(/requires the session lock/);
+    const s2 = await addSession(pool, f);
+    const many = await withTransaction(pool, async (tx) => {
+      await lockDoctor(tx, f.doctorId);
+      await lockSession(tx, f.sessionId);
+      await lockCapacities(tx, [f.sessionId, s2]); // s2's session is not locked
+    }).catch((e) => e);
+    expect(many).toBeInstanceOf(LockOrderError);
   });
 
   it('throws LockOrderError for capacity -> session and capacity -> doctor', async () => {
@@ -107,6 +158,7 @@ describe('lock order doctor -> session -> capacity', () => {
     const noSession = await withTransaction(pool, (tx) => bumpQueueVersion(tx, f.sessionId)).catch((e) => e);
     expect(noSession).toBeInstanceOf(LockOrderError);
     const v = await withTransaction(pool, async (tx) => {
+      await lockDoctor(tx, f.doctorId);
       await lockSession(tx, f.sessionId);
       return bumpQueueVersion(tx, f.sessionId);
     });
@@ -131,33 +183,25 @@ describe('lock order doctor -> session -> capacity', () => {
     expect(Math.max(...attempts)).toBe(1); // no deadlock retries were needed
   });
 
-  it('a booking holding the capacity lock does not deadlock with a call-next holding the doctor lock (FK key-share vs NO KEY UPDATE)', async () => {
-    const f = await makeFixture(pool, { patients: 1 });
-    const { insertAppointment } = await import('../src/index.js');
-    const attempts: number[] = [];
-    const booking = withTransaction(pool, async (tx) => {
-      attempts.push(tx.attempt);
-      const s = await lockSession(tx, f.sessionId);
-      await lockCapacity(tx, f.sessionId);
-      await new Promise((r) => setTimeout(r, 100));
-      const allocationId = await reserveBooked(tx, f.sessionId);
-      // FK check on doctors/sessions takes FOR KEY SHARE; must not wait for a doctor FOR NO KEY UPDATE holder
-      await insertAppointment(tx, {
-        patientId: nth(f.patientIds, 0),
-        sessionId: f.sessionId,
-        doctorId: f.doctorId,
-        scheduledAt: s.startsAt,
-        allocationId,
-        bookedBy: f.userId,
-      });
-    });
-    await new Promise((r) => setTimeout(r, 20));
-    const callNext = withTransaction(pool, async (tx) => {
-      attempts.push(tx.attempt);
+  it('a held doctor lock does not block FK key-share inserts (why guards use FOR NO KEY UPDATE, D-017)', async () => {
+    const f = await makeFixture(pool);
+    let holderDone = false;
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    let locked: () => void = () => {};
+    const hasLock = new Promise<void>((r) => (locked = r));
+    const holder = withTransaction(pool, async (tx) => {
       await lockDoctor(tx, f.doctorId);
-      await lockSession(tx, f.sessionId); // waits for the booking to finish
+      locked();
+      await gate;
+      holderDone = true;
     });
-    await Promise.all([booking, callNext]);
-    expect(Math.max(...attempts)).toBe(1);
+    await hasLock;
+    // Inserting a session row takes FOR KEY SHARE on the doctor; with FOR UPDATE guards this would wait
+    // for the holder (and deadlock against a booking that holds a later guard). It must go straight through.
+    await addSession(pool, f);
+    expect(holderDone).toBe(false);
+    release();
+    await holder;
   });
 });
