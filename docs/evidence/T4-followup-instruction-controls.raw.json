@@ -1,6 +1,6 @@
 {
   "t4InstructionControls": {
-    "ocrLatencyMs": 139,
+    "ocrLatencyMs": 148,
     "preVerificationQuestions": 3,
     "verifiedAnswerCitesV1": true,
     "supersede": {
@@ -15,10 +15,26 @@
       "change verifier": "instruction_versions rows are immutable (only current -> superseded allowed)",
       "delete v1": "instruction_versions rows are immutable (only current -> superseded allowed)"
     },
-    "weakOverlapOutcome": "answered",
+    "sharedTaskDetailListsQuestions": 5,
+    "denyListWithVerifiedContext": {
+      "questions": 3,
+      "auditReason": "denied_intent"
+    },
+    "weakOverlapOutcome": "escalated",
     "escalationTasks": {
-      "total": 9,
+      "distinct": 3,
       "ownedByFollowupUser": true
+    },
+    "escalationCap": {
+      "cap": 3,
+      "escalationsAskedByP1": 13,
+      "openTasksCreated": 3,
+      "auditRows": 13
+    },
+    "escalationCapCleanPatient": {
+      "questions": 5,
+      "distinctTasks": 3,
+      "joinedQuestions": 2
     },
     "crossPatientProbes": {
       "count": 12,
@@ -86,9 +102,17 @@
       "status": "open",
       "overdue": true
     },
+    "defaultOwner": {
+      "followUpCreator": "self",
+      "doctorCreator": "assigned follow-up user"
+    },
     "acknowledge": {
       "ownerAfter": "caller",
       "status": "acknowledged"
+    },
+    "resolveCancelOwnerRule": {
+      "nonOwnerStatus": 403,
+      "adminStatus": 200
     },
     "returnIntoFullSession": {
       "status": 409,
@@ -106,7 +130,7 @@
     "globalInvariantViolations": []
   },
   "t4OcrFailureIsolation": {
-    "ocrFailureWallMs": 4171,
+    "ocrFailureWallMs": 4372,
     "failedDocument": {
       "finalStatus": "ocr_failed",
       "attempts": 5,
@@ -136,9 +160,9 @@
       },
       "serverErrors": 0,
       "latencyMs": {
-        "p50": 11,
-        "p95": 17,
-        "max": 26
+        "p50": 13,
+        "p95": 19,
+        "max": 35
       }
     },
     "workerErrorLogs": {
