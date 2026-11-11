@@ -372,8 +372,8 @@
     "requirement": "NFR-07",
     "acceptance": "Committed operations survive restarts; OCR/AI provider failure does not block booking or queue.",
     "test": "tests/failure/run-failure.ts + tests/integration/t4-ocr-failure-isolation.test.ts + apps/worker/test/isolation.int.test.ts",
-    "passes": false,
-    "note": "api-kill, worker-kill, OCR failure all pass (0 lost commits, jobs exactly once, booking unaffected). BUG F1: API crashes when Postgres terminates a checked-out connection; fix in progress."
+    "passes": true,
+    "verified": "api-kill 0 lost commits; worker-kill jobs exactly once; OCR failure: 1,200/1,200 bookings, p95 unchanged; db connection loss (after F1/F2 fix): API survives, 503 + Retry-After, 102/102 idempotent retries succeed, invariants clean"
   },
   {
     "id": "NFR-08-a",
