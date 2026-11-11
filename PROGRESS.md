@@ -48,3 +48,5 @@ Read this first on resume, then `git log --oneline -30`.
 - Pulled HQ's .devcontainer commits (9173014, 911db0a).
 - Codex P1s: (1) deny-list misses "Should I stop metformin?"; (2) duplicate walk-in for absent/skipped entries + reEnter coexisting with another live entry; (3) OCR writes not fenced against superseded attempts.
 - Three builders running in parallel (providers, api, worker), each test-first.
+- Codex P1 fixes merged (test-first): deny-list (3787d9a), duplicate admission + migration 0007 (bdacda5), OCR attempt fencing (f6fb3c9). verify 775 tests, concurrency 17/17, e2e green. D-031. Evidence T1/T4/T5 updated; reports regenerated.
+- "@codex review" posted once on PR #1. docs/gates/G4-fixes.md written. STOPPED for HQ.
