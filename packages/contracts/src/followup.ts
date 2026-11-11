@@ -72,6 +72,23 @@ export const CancelTaskRequest = ExpectedVersion.extend({ reason: z.string().min
 /** POST /follow-up-tasks/{id}/return-booking: books via normal capacity, links appointment to task. Idempotency-Key. */
 export const ReturnBookingRequest = z.object({ sessionId: Id });
 
+/**
+ * GET /me/follow-ups: what a patient sees of a staff task (status and timing only). Staff titles, details,
+ * outcome notes and owner names stay on the staff side; the summary is fixed wording per kind.
+ */
+export const PatientFollowUp = z.object({
+  id: Id,
+  kind: FollowUpKind,
+  summary: z.string(),
+  status: FollowUpStatus,
+  dueAt: Instant,
+  disposition: Disposition.nullable(),
+  returnAppointmentId: Id.nullable(),
+  createdAt: Instant,
+  resolvedAt: Instant.nullable(),
+});
+export type PatientFollowUp = z.infer<typeof PatientFollowUp>;
+
 // ---------------------------------------------------------------------------
 // Documents, OCR drafts, instruction verification (FR-12, FR-13)
 // ---------------------------------------------------------------------------
@@ -104,6 +121,10 @@ export type DocumentMeta = z.infer<typeof DocumentMeta>;
  * Bytes go to ObjectStorage (private); OCR runs in the worker after commit.
  */
 export const UploadDocumentFields = z.object({ patientId: Id, visitId: Id.optional() });
+
+/** GET /review-inbox item: a document waiting for clinical review or manual transcription. */
+export const ReviewInboxItem = DocumentMeta.extend({ patientName: z.string() });
+export type ReviewInboxItem = z.infer<typeof ReviewInboxItem>;
 
 /** POST /documents/{id}/retry-ocr (staff): controlled retry after ocr_failed. */
 export const RetryOcrRequest = ExpectedVersion;
@@ -142,6 +163,11 @@ export type InstructionVersion = z.infer<typeof InstructionVersion>;
  */
 export const VerifyInstructionRequest = z.object({
   instructionId: Id.optional(),
+  /**
+   * Compare-and-set: the instruction_versions id the clinician was looking at as "current". Required when
+   * instructionId is given (the API answers 400 without it); a mismatch is 409 CONFLICT.
+   */
+  expectedCurrentVersionId: Id.optional(),
   title: z.string().min(3).max(160),
   body: z.string().min(3).max(5000),
   sourceDraftId: Id.optional(),
@@ -172,6 +198,14 @@ export const AssistantAnswer = z.object({
   createdAt: Instant,
 });
 export type AssistantAnswer = z.infer<typeof AssistantAnswer>;
+
+/** GET /assistant/conversations item. */
+export const AssistantConversation = z.object({
+  id: Id,
+  createdAt: Instant,
+  lastMessageAt: Instant.nullable(),
+});
+export type AssistantConversation = z.infer<typeof AssistantConversation>;
 
 export const ConversationMessage = z.object({
   id: Id,

@@ -69,6 +69,15 @@ const DENIED_INTENTS: ReadonlyArray<{ intent: string; patterns: RegExp[] }> = [
     ],
   },
   {
+    intent: 'booking or cancelling an appointment',
+    patterns: [
+      /\b(book|rebook|reschedul(e|ing)|cancel(l?ing)?|postpone|prepone|re-?arrange)\b[^.?!]{0,40}\b(appointment|appointments|visit|slot|consultation|booking|session|token|me)\b/,
+      /\b(make|schedule|arrange|get|fix|set up|need|want) (me )?(an? |another |my )?(new )?(appointment|booking|slot)\b/,
+      /\b(book|cancel)\b[^.?!]{0,20}\b(me|my)\b/,
+      /\bmove (my|the) (appointment|visit|slot|booking)\b/,
+    ],
+  },
+  {
     intent: 'queue priority or urgency',
     patterns: [
       /\b(priority|prioriti[sz]e|urgent|urgency|emergency|triage|jump the queue|skip the queue|cut the queue|move me up|move up the queue|front of the queue)\b/,
@@ -111,7 +120,13 @@ function sentences(body: string): string[] {
     .filter((s) => s.length > 0);
 }
 
-function deniedIntent(question: string): string | null {
+/**
+ * The provider-independent deny-list (FR-14): the intent the question asks for that the assistant must never
+ * handle (diagnosis, dose change, stopping or starting a medicine, priority or urgency, booking or cancelling),
+ * or null. Pure; the API runs it BEFORE any provider call so a different or compromised provider cannot widen
+ * what the assistant answers.
+ */
+export function deniedIntent(question: string): string | null {
   const q = question.toLowerCase().replace(/[‘’]/g, "'");
   for (const d of DENIED_INTENTS) if (d.patterns.some((p) => p.test(q))) return d.intent;
   return null;
