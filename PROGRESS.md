@@ -27,3 +27,4 @@ Read this first on resume, then `git log --oneline -30`.
 - W0–W1 reviews done: no P0 invariant breaks. Spec P0s were over-flipped criteria → FR-01-a, FR-04-c, FR-05-b set back to false (16/50). P1 fixes folded into the W2 api task (D-022). Hardening items queued for a db/worker fix pass.
 - Contracts: `Eta.uncertainty` added.
 - Merged: db/worker hardening (0004 migration, lock asserts), W2 web (doctor console, display, my visit; 53 unit + 62 Playwright). verify green 364 tests.
+- Gate 1 met; wave-1 tag (local) = 027a758
