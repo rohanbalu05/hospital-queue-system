@@ -32,11 +32,11 @@ module.exports = {
       comment: 'apps/web may import @hqms/contracts among workspaces; never api, worker, db or domain.',
       severity: 'error',
       from: { path: '^apps/web/' },
-      to: { path: '^(packages/(db|domain)/|apps/(api|worker)/)' },
+      to: { path: '^(packages/(db|domain|providers)/|apps/(api|worker)/)' },
     },
     {
       name: 'packages-never-import-apps',
-      comment: 'packages/db, packages/contracts and packages/domain never import apps/*.',
+      comment: 'packages/db, contracts, domain and providers never import apps/*.',
       severity: 'error',
       from: { path: '^packages/' },
       to: { path: '^apps/' },
@@ -54,6 +54,21 @@ module.exports = {
       severity: 'error',
       from: { path: '^packages/db/' },
       to: { path: '^packages/domain/' },
+    },
+    {
+      name: 'providers-is-a-leaf',
+      comment:
+        'providers (storage, OCR and LLM adapters, D-023) must not import apps/*, packages/db or packages/domain; it may use contracts types only.',
+      severity: 'error',
+      from: { path: '^packages/providers/' },
+      to: { path: '^(apps/|packages/(db|domain)/)' },
+    },
+    {
+      name: 'domain-and-db-never-import-providers',
+      comment: 'Adapters are wired by apps; the pure domain and the persistence layer never depend on them.',
+      severity: 'error',
+      from: { path: '^packages/(domain|db|contracts)/' },
+      to: { path: '^packages/providers/' },
     },
     {
       name: 'no-circular',
