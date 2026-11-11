@@ -27,10 +27,13 @@ export interface JobRow {
  *  - nothing: success.
  *  - { retryAt }: not due yet; put the job back as pending at that time WITHOUT consuming an attempt.
  *  - { cancelled: true }: nothing to do and never will be (entity gone / superseded); terminal 'cancelled'.
+ *  - { superseded: true }: this attempt lost its lease to a newer one and wrote nothing; the runner writes no outcome
+ *    (the replacement attempt owns the job).
  * Throwing means failure: backoff retry, then 'dead' after max_attempts. Throw PermanentJobError to skip retries.
  */
-// eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- `async () => {}` handlers must be assignable
-export type HandlerResult = void | { retryAt: Date } | { cancelled: true; reason?: string };
+export type HandlerResult =
+  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- `async () => {}` handlers must be assignable
+  void | { retryAt: Date } | { cancelled: true; reason?: string } | { superseded: true };
 
 export interface JobContext {
   pool: Pool;
