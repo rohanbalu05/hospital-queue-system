@@ -57,3 +57,10 @@ The API serves Table 10 paths unprefixed on :3000 (`POST /appointments`). The we
 
 ## D-016 Web stack versions
 React 19, Tailwind 4, react-router 7, Vite 5.4 (Vitest 2 bundles Vite 5), shadcn new-york style restyled to the hospital-ui tokens. Hospital display name "BMSIT Teaching Hospital, Yelahanka" (matches seed).
+
+## D-017 Guard locks use `FOR NO KEY UPDATE` (db-engineer, W0)
+FK inserts take `FOR KEY SHARE` on `doctors`/`sessions`; with `FOR UPDATE` guards a booking (holding capacity, inserting an appointment → KEY SHARE on doctor) and a call-next (holding doctor, waiting for session) deadlock. `FOR NO KEY UPDATE` still makes guard lockers exclude each other and doesn't conflict with KEY SHARE. A regression test in `packages/db/test/locks.test.ts` reproduces the deadlock with `FOR UPDATE`.
+Also: idempotency advisory lock is rank 0 (taken before the doctor); ids within one rank must ascend in a transaction (lock multi-row sets in one batch call); writers assert the lock they need. MRNs come from sequence `patient_mrn_seq` (migration 0002) so registration takes no guard lock.
+
+## D-018 Wave 1 composition
+W1 = api-engineer (bootstrap, identity, authz, scheduling, arrivals), ui-engineer (patient booking, reception desk), worker-engineer (job runner + call_timeout / reservation_release timers + outbox dispatcher, pulled forward from W2 because it only needs `@hqms/db`). test-engineer joins after the API merges (T1 over HTTP) and meanwhile builds the seeded FCFS-vs-policy simulation (only needs `@hqms/domain`).
