@@ -23,8 +23,8 @@ default (see `.env.example`). Check a running api with `pnpm smoke`.
 
 ### GitHub Codespaces
 
-Create a codespace on this branch (Code → Codespaces). `.devcontainer/` installs Node 22, pnpm, PostgreSQL 16 and
-Playwright Chromium on first start (a few minutes), and starts Postgres on every start. Then:
+Create a codespace on this branch (Code → Codespaces). `.devcontainer/` builds a Node 22 + pnpm + psql image and runs
+PostgreSQL 16 as a sidecar container at `localhost:5432` (no sudo needed). First build takes a few minutes. Then:
 
 ```bash
 ./init.sh

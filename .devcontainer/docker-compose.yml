@@ -1,0 +1,22 @@
+# Codespaces / dev container: app container shares the network of a PostgreSQL 16 container,
+# so the database is reachable at localhost:5432 (user postgres, password postgres).
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../..:/workspaces:cached
+    command: sleep infinity
+    network_mode: service:db
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hqms
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

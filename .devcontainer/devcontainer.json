@@ -1,8 +1,9 @@
 {
   "name": "HQMS (Node 22 + PostgreSQL 16)",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
-  "postCreateCommand": "bash .devcontainer/post-create.sh",
-  "postStartCommand": "bash .devcontainer/post-start.sh",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "postCreateCommand": "CI=true pnpm install",
   "containerEnv": {
     "__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS": ".app.github.dev"
   },
