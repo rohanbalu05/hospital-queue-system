@@ -67,3 +67,25 @@ W1 = api-engineer (bootstrap, identity, authz, scheduling, arrivals), ui-enginee
 
 ## D-019 Wave tags are local only
 The session's git proxy only accepts pushes to the session branch, so `wave-N` tags exist in the local clone and are recorded with their commit hashes in PROGRESS.md. HQ can recreate them (`git tag wave-N <hash>`) after merging. wave-0 = the G0 build-state commit.
+
+## D-020 API implementation choices (api-engineer, W1)
+- No emitted decorator metadata: every Nest constructor param uses explicit `@Inject(TOKEN)`, so esbuild (tsx dev, tsup build, Vitest) is enough; no SWC.
+- Check-in / walk-in accept `scheduled|open|paused` sessions on the session's own IST date (patients arrive before the doctor opens); `unavailable|closed` → 409 SESSION_NOT_CALLABLE. Booking needs `scheduled|open` and a session that hasn't ended.
+- Staff patient lookup is hospital-wide for staff roles (reception must find anyone to register/book); appointments, sessions and arrivals are scoped by assigned doctor (403 outside scope); patients get 404 for anything not their own (no existence disclosure).
+- Booking assigns the first free slot; repeat check-in returns the existing arrival (200) with no new audit/outbox/version bump.
+- Cancel/reschedule/check-in mark the pending `reservation_release` job `cancelled`; the worker also re-checks state.
+- Login rate limit in memory, 10 failures / 60 s per IP+email → 429; responses `Cache-Control: no-store`; error filter never logs bodies or SQL values.
+- Open (W2): an appointment already marked `missed` by the worker cannot be checked in; per report §6.2 ("a late return does not retain guaranteed admission") it should be admissible only as a late admission (walk-in capacity + order). W2 adds the `missed → checked_in` edge restricted to the late-admission path.
+
+## D-021 List responses are plain JSON arrays; staff appointment reads carry patient fields
+All list endpoints return a JSON array (no `{items}` envelope) until pagination is needed. `Appointment` gains optional `patientName`, `patientMrn`, `patientPhone` (staff reads only, never on patient reads) and `queueEntryId`/`token` once checked in, so the reception desk can render today's list and tokens after reload.
+
+## D-022 Wave 0–1 review dispositions
+Spec reviewer and concurrency-security reviewer ran on W0–W1 (no P0 invariant breaks found by either).
+- **feature_list corrections (spec P0):** FR-01-a (document half), FR-04-c (completed-visit case) and FR-05-b (late admission after the worker marks `missed`) flipped back to `passes:false` until their tests exist.
+- **Fix in W2 (api):** past-slot booking (first free slot must be ≥ now − late grace… chosen rule: `slot + lateGrace > now`, else CAPACITY_FULL); one active appointment per patient per session (migration 0003 partial unique index + reschedule updates the old row first) and walk-in refused when the patient holds an active appointment there; `missed → checked_in` only via late admission; `ReservationReleased` emitted on late admission; patient-facing notification wording distinguishes cancel/reschedule from timer release; staff 404-for-missing vs 403-for-out-of-scope kept, but patient search restricted to reception/admin with q ≥ 3 chars and audited; doctor/followup read a patient only when linked by appointment/visit/task in their scope.
+- **Late admission releases the booked place (spec P1-6):** kept. The booked reservation is by definition missed after grace (report §6.2: "A missed reservation may be released after the grace rule"); the patient consumes a walk-in place instead, so one person never holds two places.
+- **ETA uncertainty:** `Eta.uncertainty` enum added to contracts (cold_start / warm / widened_overrun), domain to populate it.
+- **Event list extension (spec P2-7):** QueueEntryReentered, QueuePriorityChanged, SessionPaused/Resumed/Unavailable, DocumentOCRFailed, FollowUpAcknowledged are additions beyond §6.7 for the operations the FRs require; same envelope rules.
+- **Hardening queued (db/worker fix pass):** lockSession asserts doctor held, lockCapacity asserts session held; job claim excludes exhausted running jobs; `UNIQUE (lower(email))`; worker logs SQLSTATE/constraint not raw messages; per-IP login limiter; seed refuses NODE_ENV=production; composite ownership FKs for instruction_versions/messages before W3.
+- **Accepted:** business errors don't store idempotency records (a retry re-executes; documented). Outbox `position` is not commit order — SSE uses `sessions.queue_version` + snapshot, never position.
