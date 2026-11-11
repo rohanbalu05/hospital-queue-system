@@ -21,6 +21,18 @@ pnpm dev    # api :3000, worker, web :5173
 Open http://localhost:5173. No API keys are needed: login, storage, OCR and the assistant use local or fake adapters by
 default (see `.env.example`). Check a running api with `pnpm smoke`.
 
+### GitHub Codespaces
+
+Create a codespace on this branch (Code → Codespaces). `.devcontainer/` installs Node 22, pnpm, PostgreSQL 16 and
+Playwright Chromium on first start (a few minutes), and starts Postgres on every start. Then:
+
+```bash
+./init.sh
+pnpm dev
+```
+
+Open the forwarded port 5173 (Ports tab → globe icon). The web app calls the api through its same-origin `/api` proxy.
+
 ### Container demo
 
 ```bash
