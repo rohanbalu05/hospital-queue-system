@@ -24,7 +24,7 @@ import {
   doctorId,
   dropDb,
   evidenceDir,
-  Http,
+  type Http,
   istDate,
   login,
   machineInfo,
@@ -237,7 +237,6 @@ async function main(): Promise<void> {
   let completedCycles = 0;
   const doctorBusy = new Array<boolean>(10).fill(false);
   const doctorPending: Array<Map<string, number>> = Array.from({ length: 10 }, () => new Map());
-  const sessionDoctor = new Map<string, number>(walkinSessions.map((s) => [s.id, s.doctor]));
   const rnd = (n: number): number => Math.floor(Math.random() * n);
 
   const record = (cls: Cls, r: { status: number; ms: number; code?: string; error?: string }): void => {
@@ -432,7 +431,7 @@ async function main(): Promise<void> {
       });
     }, 60_000);
     phaseT0 = performance.now();
-    for (const k of Object.keys(errTimeline)) delete errTimeline[k];
+    for (const k of Object.keys(errTimeline)) Reflect.deleteProperty(errTimeline, k);
     log(`phase ${phase.name}: ${phase.rps} req/s for ${phase.sec} s`);
     const startedAt = new Date().toISOString();
     const run = await runLoad(phase.name, phase.rps, phase.sec, true);

@@ -284,7 +284,7 @@ export class Http {
       return { status: res.status, body: parsed, ms, ...(parsed?.error?.code ? { code: String(parsed.error.code) } : {}) };
     } catch (err) {
       const cause = err instanceof Error ? (err.cause as { code?: string; message?: string } | undefined) : undefined;
-      return { status: 0, body: null, ms: performance.now() - t0, error: err instanceof Error ? `${err.name}: ${err.message}${cause ? ` (${cause.code ?? cause.message ?? 'cause'})` : ''}` : String(err) };
+      return { status: 0, body: null as T, ms: performance.now() - t0, error: err instanceof Error ? `${err.name}: ${err.message}${cause ? ` (${cause.code ?? cause.message ?? 'cause'})` : ''}` : String(err) };
     }
   }
   get<T = any>(path: string) {
@@ -475,6 +475,8 @@ export interface Sample {
   otherDbTxPerSec: number;
 }
 
+const opt = (key: string, v: number | undefined): Record<string, number> => (v === undefined ? {} : { [key]: round1(v) });
+
 export class Sampler {
   readonly samples: Sample[] = [];
   private timer: NodeJS.Timeout | undefined;
@@ -532,10 +534,10 @@ export class Sampler {
         for (const [pid, t] of pgPids) pgDelta += t - (this.prev.pg.get(pid) ?? t);
         const sample: Sample = {
           tSec: round1((at - this.t0) / 1000),
-          ...(pct(apiT, this.prev.api) !== undefined ? { apiCpuPct: round1(pct(apiT, this.prev.api)!) } : {}),
-          ...(apiPid && procRssMb(apiPid) !== undefined ? { apiRssMb: round1(procRssMb(apiPid)!) } : {}),
-          ...(pct(workerT, this.prev.worker) !== undefined ? { workerCpuPct: round1(pct(workerT, this.prev.worker)!) } : {}),
-          ...(workerPid && procRssMb(workerPid) !== undefined ? { workerRssMb: round1(procRssMb(workerPid)!) } : {}),
+          ...opt('apiCpuPct', pct(apiT, this.prev.api)),
+          ...opt('apiRssMb', apiPid ? procRssMb(apiPid) : undefined),
+          ...opt('workerCpuPct', pct(workerT, this.prev.worker)),
+          ...opt('workerRssMb', workerPid ? procRssMb(workerPid) : undefined),
           pgCpuPct: round1((pgDelta / CLK_TCK / dt) * 100),
           pgRssMb: round1(pgRss),
           pgBackends: mine.length,
