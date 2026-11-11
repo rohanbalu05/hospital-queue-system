@@ -154,7 +154,8 @@ test('book -> check in -> call -> start -> complete, keyboard only, real stack',
   // ------------------------------------------------------------------ 1. patient books (keyboard only, 390 px)
   await loginByKeyboard(patient, 'patient@hqms.test');
   await expect(patient).toHaveURL(/\/patient/);
-  const bookLink = patient.getByRole('link', { name: 'Book appointment' }).first();
+  // The patient nav tab is "Book" (earlier builds also had a "Book appointment" link on Today).
+  const bookLink = patient.getByRole('link', { name: /^Book( appointment)?$/ }).first();
   await tabTo(patient, bookLink);
   await patient.keyboard.press('Enter');
 
@@ -227,10 +228,9 @@ test('book -> check in -> call -> start -> complete, keyboard only, real stack',
     await display.goto('/display');
     const column = display.getByRole('region', { name: new RegExp(`${fx.roomLabel}, `) });
     await expect(column).toBeVisible();
-    // FINDING (not asserted): the seed leaves 20 morning and afternoon sessions "open" at once, and the display draws
-    // one column per open session. Screenshot of that state; the rest of the flow then shows only this doctor's room.
-    await expect(display.getByTestId('display-column')).not.toHaveCount(1);
-    await shot(display, 'finding-display-with-seeded-sessions-1920');
+    // Earlier finding (fixed, D-028): the seed leaves ~20 sessions "open"; the public display now lists only sessions
+    // in their time window (or with waiting/called patients), and pages through at most 6 columns.
+    expect(await display.getByTestId('display-column').count()).toBeLessThanOrEqual(6);
     await pool.query(
       `UPDATE sessions SET status = 'closed' WHERE session_date = $1 AND id <> $2 AND status IN ('open', 'paused')`,
       [istDate(new Date(fx.startsAt)), fx.sessionId],

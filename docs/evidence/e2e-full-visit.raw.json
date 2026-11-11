@@ -1,21 +1,21 @@
 {
   "fixture": {
-    "sessionId": "8d035f0c-13c4-4865-8bf2-da70883d7602",
-    "startsAt": "2026-11-11T12:22:00.000Z",
+    "sessionId": "66a7f9d8-dc1a-4b2f-b2bf-5e54db78b270",
+    "startsAt": "2026-11-11T14:56:00.000Z",
     "roomLabel": "OPD 1"
   },
   "timingsMs": {
-    "callToDisplayMs": 361,
-    "callToPatientMs": 430,
-    "completeToPatientMs": 402
+    "callToDisplayMs": 490,
+    "callToPatientMs": 564,
+    "completeToPatientMs": 357
   },
   "databaseAfter": {
     "visit": {
-      "id": "c8972e3f-85d1-4421-8c67-93d26af4b611",
+      "id": "c6e84294-ac76-4ddc-9491-bd1899f35352",
       "status": "completed",
       "kind": "appointment",
-      "started_at": "2026-11-11T12:38:50.545Z",
-      "completed_at": "2026-11-11T12:38:51.078Z",
+      "started_at": "2026-11-11T15:12:54.602Z",
+      "completed_at": "2026-11-11T15:12:55.091Z",
       "entry_state": "completed",
       "token": "A-001",
       "call_count": 1,
