@@ -235,11 +235,21 @@ export class SnapshotService {
     this.displayLimiter.recordFailure(ip, wall); // counts every request in the window
 
     const ttl = this.config.displayCacheMs;
-    if (ttl > 0 && this.displayCache && wall - this.displayCache.at < ttl) return this.displayCache.value;
+    // The cache is only reused while today's session versions are unchanged: an SSE notice makes every screen
+    // refetch at once, and a time-only cache could hand them the pre-change snapshot with no later notice to fix it.
+    const fingerprint = ttl > 0 ? await this.displayFingerprint() : '';
+    if (
+      ttl > 0 &&
+      this.displayCache &&
+      wall - this.displayCache.at < ttl &&
+      this.displayCache.fingerprint === fingerprint
+    ) {
+      return this.displayCache.value;
+    }
     if (this.displayInflight) return this.displayInflight;
     const run = this.computeDisplay()
       .then((value) => {
-        if (ttl > 0) this.displayCache = { at: Date.now(), value };
+        if (ttl > 0) this.displayCache = { at: Date.now(), value, fingerprint };
         return value;
       })
       .finally(() => {
@@ -249,7 +259,18 @@ export class SnapshotService {
     return run;
   }
 
-  private displayCache: { at: number; value: DisplaySnapshot } | null = null;
+  private displayCache: { at: number; value: DisplaySnapshot; fingerprint: string } | null = null;
+
+  /** One cheap query: today's session ids with their queue version and status. */
+  private async displayFingerprint(): Promise<string> {
+    const day = localDate(this.clock.now(), this.config.hospitalTz);
+    const r = await this.pool.query<{ fp: string | null }>(
+      `SELECT string_agg(id::text || ':' || queue_version || ':' || status, ',' ORDER BY id) AS fp
+         FROM sessions WHERE session_date = $1`,
+      [day],
+    );
+    return r.rows[0]?.fp ?? '';
+  }
   private displayInflight: Promise<DisplaySnapshot> | null = null;
   private readonly displayLimiter: LoginRateLimiter;
 
