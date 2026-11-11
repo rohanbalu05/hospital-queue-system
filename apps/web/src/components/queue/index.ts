@@ -6,4 +6,4 @@ export { Lane } from './Lane';
 export { CapacityBar } from './CapacityBar';
 export { DecisionReason } from './DecisionReason';
 export { StaleBanner, deriveLiveStatus, RECONNECT_AFTER_MS, type LiveStatus } from './StaleBanner';
-export { EmptyState, ErrorState, SkeletonRows } from './states';
+export { EmptyState, ErrorState, SkeletonRows, plainErrorMessage } from './states';

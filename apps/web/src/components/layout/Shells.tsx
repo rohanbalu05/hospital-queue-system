@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ROLE_LABEL, useAuth } from '@/lib/auth';
-import { HOSPITAL_NAME } from '@/lib/config';
+import { HOSPITAL_NAME, HOSPITAL_SHORT_NAME } from '@/lib/config';
 import { cn } from '@/lib/utils';
 
 function SkipLink() {
@@ -22,7 +22,10 @@ function TopBar({ compact }: { compact: boolean }) {
   return (
     <header className={cn('bg-ink text-white', compact ? 'h-12' : 'h-14')}>
       <div className={cn('mx-auto flex h-full items-center gap-3 px-4', compact ? 'max-w-none' : 'max-w-2xl')}>
-        <span className={cn('min-w-0 truncate font-bold', compact ? 'text-base' : 'text-base sm:text-lg')}>{HOSPITAL_NAME}</span>
+        <span className={cn('min-w-0 truncate font-bold', compact ? 'text-base' : 'text-base sm:text-lg')}>
+          <span className="sm:hidden">{HOSPITAL_SHORT_NAME}</span>
+          <span className="hidden sm:inline">{HOSPITAL_NAME}</span>
+        </span>
         <div className="ml-auto flex items-center gap-3">
           {me ? (
             <p className="hidden min-w-0 truncate text-sm sm:block">
@@ -34,7 +37,7 @@ function TopBar({ compact }: { compact: boolean }) {
             variant="outline"
             size={compact ? 'default' : 'lg'}
             onClick={() => void logout()}
-            className="border-white/50 bg-transparent text-white hover:bg-white hover:text-ink focus-visible:ring-white focus-visible:ring-offset-ink"
+            className="border-white/50 bg-transparent text-white hover:bg-white hover:text-ink focus-visible:outline-white"
           >
             <LogOut aria-hidden="true" />
             Sign out

@@ -81,14 +81,17 @@ export interface EntryActionVars {
   action: EntryAction;
   reason?: string | undefined;
   expectedVersion?: number | undefined;
+  /** Re-enter only: reception confirms a late return (the API accepts it; the contract does not list it yet). */
+  admitLate?: boolean | undefined;
 }
 
 /** POST /queue-entries/{id}/skip | re-enter | absent. */
 export function useEntryAction(sessionId: string) {
   const refresh = useRefreshSnapshot(sessionId);
   return useMutation<unknown, ApiRequestError, EntryActionVars>({
-    mutationFn: ({ entryId, action, reason, expectedVersion }) => {
+    mutationFn: ({ entryId, action, reason, expectedVersion, admitLate }) => {
       const body: Record<string, unknown> = {};
+      if (admitLate) body.admitLate = true;
       if (reason) body.reason = reason;
       if (expectedVersion !== undefined) body.expectedVersion = expectedVersion;
       return apiFetch(`/queue-entries/${encodeURIComponent(entryId)}/${action}`, { method: 'POST', body });

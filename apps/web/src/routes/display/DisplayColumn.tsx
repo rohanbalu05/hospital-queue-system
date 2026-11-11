@@ -45,14 +45,14 @@ export type DisplayVariant = 'tall' | 'wide';
 
 interface DisplayColumnProps {
   column: Column;
-  /** tall: one column per doctor (up to 3 doctors). wide: a landscape card, for 4 or more doctors. */
+  /** tall: one column per doctor (up to 3 doctors). wide: a landscape card, for 4 to 6 doctors. */
   variant: DisplayVariant;
-  /** Smaller token when five or more doctors share the screen. */
-  dense?: boolean;
+  /** 140 px token. Off only for a page of 5 or 6 doctors, where wide cards use 120 px. */
+  large?: boolean;
 }
 
 /** One doctor's column. Tokens only: no names, no patient detail, ever. */
-export function DisplayColumn({ column, variant, dense = false }: DisplayColumnProps) {
+export function DisplayColumn({ column, variant, large = true }: DisplayColumnProps) {
   const highlight = useJustChanged(column.nowCalling);
   const showToken = column.nowCalling !== null && column.status !== 'unavailable' && column.status !== 'closed';
   const showNext = column.next.length > 0 && column.status !== 'unavailable' && column.status !== 'closed';
@@ -61,14 +61,15 @@ export function DisplayColumn({ column, variant, dense = false }: DisplayColumnP
   const now = (
     <div
       className={cn(
-        'flex min-w-0 flex-1 flex-col justify-center border-l-[10px] px-8',
+        'flex min-w-0 flex-1 flex-col justify-center border-l-[10px]',
+        wide ? 'px-6' : 'px-8',
         wide ? 'py-4' : 'py-6',
         showToken ? edgeFor(column.nowCalling) : 'border-l-rule',
       )}
     >
       <p className="text-2xl font-bold text-muted-foreground">Now calling</p>
       {/* A live region so screen readers announce a new call; the highlight is the 300 ms motion moment. */}
-      <div aria-live="polite" className={cn('mt-1', wide ? 'min-h-[7rem]' : 'min-h-[9rem]')}>
+      <div aria-live="polite" className={cn('mt-1', 'min-h-[9rem]')}>
         {showToken ? (
           <p
             key={column.nowCalling}
@@ -76,7 +77,8 @@ export function DisplayColumn({ column, variant, dense = false }: DisplayColumnP
             data-token={column.nowCalling}
             className={cn(
               '-mx-3 inline-block rounded-md px-3 font-bold tracking-tighter whitespace-nowrap tabular-nums',
-              dense ? 'text-[96px] leading-[1.15]' : 'text-[140px] leading-[1.1]',
+              // 140 px in a tall column, 120 px in a wide card: never smaller (a page holds at most 6 doctors).
+              !large ? 'text-[120px] leading-[1.15]' : 'text-[140px] leading-[1.1]',
               highlight && 'animate-token-called',
             )}
           >
@@ -93,12 +95,12 @@ export function DisplayColumn({ column, variant, dense = false }: DisplayColumnP
   );
 
   const next = (
-    <div className={cn(wide ? 'w-56 shrink-0 border-l border-rule px-6 py-4' : 'border-t border-rule px-8 py-5')}>
+    <div className={cn(wide ? 'w-44 shrink-0 border-l border-rule px-3 py-4' : 'border-t border-rule px-8 py-5')}>
       <p className="text-2xl font-bold text-muted-foreground">Next</p>
       {showNext ? (
         <ol className={cn('mt-2 flex gap-x-8 gap-y-1', wide ? 'flex-col' : 'flex-wrap')} data-testid="next-tokens">
           {column.next.slice(0, 3).map((t) => (
-            <li key={t} className={cn('list-none border-l-[6px] pl-3 text-4xl font-bold tabular-nums', edgeFor(t))}>
+            <li key={t} className={cn('list-none border-l-[6px] pl-3 text-4xl font-bold whitespace-nowrap tabular-nums', edgeFor(t))}>
               {t}
             </li>
           ))}

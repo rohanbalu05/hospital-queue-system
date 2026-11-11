@@ -7,7 +7,7 @@ const WORDS: Record<AppointmentStatus, { word: string; className: string }> = {
   checked_in: { word: 'Checked in', className: 'text-ink' },
   completed: { word: 'Completed', className: 'text-done' },
   cancelled: { word: 'Cancelled', className: 'text-muted-foreground' },
-  missed: { word: 'Missed', className: 'text-priority' },
+  missed: { word: 'Missed', className: 'text-ink' },
   rescheduled: { word: 'Rescheduled', className: 'text-muted-foreground' },
 };
 
@@ -34,7 +34,7 @@ export function InlineAlert({
       role={tone === 'error' ? 'alert' : 'status'}
       className={cn(
         'rounded-md border border-l-[3px] border-rule bg-surface px-3 py-2.5',
-        tone === 'error' ? 'border-l-priority' : 'border-l-ink',
+        tone === 'error' ? 'border-l-ink' : 'border-l-rule',
         className,
       )}
     >
