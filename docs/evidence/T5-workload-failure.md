@@ -164,3 +164,16 @@ count a probe as down when it fails or exceeds 5 s; record scheduled maintenance
 * Fake OCR/LLM: provider latency is not measured. The OCR failure is a deterministic fixture, not a provider outage with timeouts.
 * The worker-kill scenario shortens timers (declared) and the api-kill window for a "committed but unanswered" request is narrow (2 observed in 5 rounds).
 * PostgreSQL was not restarted; connection loss was injected per database.
+
+## Update: F1 and F2 fixed and remeasured (same machine, same session)
+
+Fix: `packages/db` guards every pool client with a permanent `error` listener, destroys broken clients instead of reusing them, and raises `DatabaseUnavailableError` (never retried automatically: a loss during COMMIT is ambiguous; clients retry with the same Idempotency-Key). The API maps it to **503 `SERVICE_UNAVAILABLE` with `Retry-After: 2`**. Regression tests: `packages/db/test/connection-loss.test.ts` (17), `apps/api/test/connection-loss.int.test.ts` (2), `apps/worker/test/connection-loss.int.test.ts` (1).
+
+Remeasured with `cd tests && pnpm failure <scenario>` after the fix (raw: `T5-failure-rerun-after-F1F2.raw.json`, which holds the last scenario run, db-conn):
+
+| Scenario | Before the fix | After the fix (measured) |
+| --- | --- | --- |
+| db-crash (connection terminated mid-command) | API crashed (4 of 5 checks) | 5 of 5 checks pass; API survives; replay 201 ×60, 409 ×140; each session exactly 10 booked; invariants clean |
+| db-conn (connections terminated + database closed 8 s) | API crashed in 2 of 3 executions; outage answered 500 | 7 of 7 checks pass; API and worker survive; outage answered 243 × `503 SERVICE_UNAVAILABLE`, 0 × 500, slowest 19.4 ms; first success 0 s after reopening; 102/102 failed bookings succeeded on idempotent retry; 847 appointments = 847 idempotency records = 847 keys; invariants clean |
+
+F1 and F2 are closed. The 30-minute sustained load run (NFR-01) has not been repeated.
