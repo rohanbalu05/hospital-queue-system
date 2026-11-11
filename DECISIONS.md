@@ -89,3 +89,9 @@ Spec reviewer and concurrency-security reviewer ran on W0–W1 (no P0 invariant 
 - **Event list extension (spec P2-7):** QueueEntryReentered, QueuePriorityChanged, SessionPaused/Resumed/Unavailable, DocumentOCRFailed, FollowUpAcknowledged are additions beyond §6.7 for the operations the FRs require; same envelope rules.
 - **Hardening queued (db/worker fix pass):** lockSession asserts doctor held, lockCapacity asserts session held; job claim excludes exhausted running jobs; `UNIQUE (lower(email))`; worker logs SQLSTATE/constraint not raw messages; per-IP login limiter; seed refuses NODE_ENV=production; composite ownership FKs for instruction_versions/messages before W3.
 - **Accepted:** business errors don't store idempotency records (a retry re-executes; documented). Outbox `position` is not commit order — SSE uses `sessions.queue_version` + snapshot, never position.
+
+## D-023 Provider adapters live in `packages/providers` (`@hqms/providers`)
+`ObjectStorage` (local-disk default, gcs stub), `OcrProvider` (fake default: deterministic text from fixtures, google-vision stub) and `LlmProvider` (fake default: templated answers citing the instruction version, gemini stub; model id from `LLM_MODEL`, default `gemini-3.5-flash-lite`) are needed by both the API (upload, assistant) and the worker (OCR). One shared package keeps one adapter contract; selection by env (`OBJECT_STORAGE`, `OCR_PROVIDER`, `LLM_PROVIDER`). No provider is called inside a DB transaction.
+
+## D-024 W3 started early in parallel with W2 api
+worker-engineer (providers package, OCR job, upload reconciler) and ui-engineer (follow-up inbox, review inbox, patient documents/assistant/follow-ups, admin) start before the W2 API merges because they don't touch `apps/api`. W3 api work starts after W2 api merges.
