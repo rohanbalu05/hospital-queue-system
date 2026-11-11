@@ -14,7 +14,10 @@ import {
 const ADMIN_URL = process.env['TEST_ADMIN_DATABASE_URL'] ?? 'postgres://postgres:postgres@localhost:5432/postgres';
 
 /** Shared scratch database for tests that build their own isolated fixtures. */
-export const TEST_DB = 'hqms_test_db_engineer';
+// Override with DB_TEST_DB_NAME when several agents run this suite at once (D-027).
+export const TEST_DB = process.env['DB_TEST_DB_NAME'] ?? 'hqms_test_db_engineer';
+/** Prefix for the extra per-file scratch databases (migrate/seed tests). */
+export const TEST_DB_PREFIX = TEST_DB;
 
 export function testUrl(db: string): string {
   const u = new URL(ADMIN_URL);
