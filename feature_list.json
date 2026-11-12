@@ -1,0 +1,402 @@
+[
+  {
+    "id": "FR-01-a",
+    "requirement": "FR-01",
+    "acceptance": "A patient cannot retrieve another patient's appointment or document.",
+    "test": "apps/api/test/authz.int.test.ts (appointments) + apps/api/test/documents.int.test.ts (documents: metadata, file, drafts → 404)",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "FR-01-b",
+    "requirement": "FR-01",
+    "acceptance": "A reception account cannot verify clinical instructions.",
+    "test": "apps/api/test/documents.int.test.ts (reception/followup/admin verify → 403)",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "FR-02-a",
+    "requirement": "FR-02",
+    "acceptance": "Planning configuration supports 10 booked and 5 walk-in places per session.",
+    "test": "apps/api/test/scheduling.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
+  },
+  {
+    "id": "FR-02-b",
+    "requirement": "FR-02",
+    "acceptance": "Invalid capacity reductions (below current usage) are rejected.",
+    "test": "apps/api/test/scheduling.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
+  },
+  {
+    "id": "FR-02-c",
+    "requirement": "FR-02",
+    "acceptance": "Each session references a versioned queue policy with Table 7 values.",
+    "test": "apps/api/test/scheduling.int.test.ts + packages/domain/test/select.unit.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
+  },
+  {
+    "id": "FR-03-a",
+    "requirement": "FR-03",
+    "acceptance": "Simultaneous requests for the last place produce at most one successful reservation.",
+    "test": "tests/concurrency/t1-last-slot.test.ts (+ apps/api scheduling race, packages/db capacity race)",
+    "passes": true,
+    "verified": "T1: 3 runs x 20 rounds x 50-way, 0 oversubscription"
+  },
+  {
+    "id": "FR-03-b",
+    "requirement": "FR-03",
+    "acceptance": "A retry with the same idempotency key returns the original outcome; same key with different input returns 409.",
+    "test": "apps/api/test/scheduling.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
+  },
+  {
+    "id": "FR-04-a",
+    "requirement": "FR-04",
+    "acceptance": "A failed reschedule target leaves the original appointment intact.",
+    "test": "tests/concurrency/t1-reschedule.test.ts + apps/api/test/scheduling.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
+  },
+  {
+    "id": "FR-04-b",
+    "requirement": "FR-04",
+    "acceptance": "Cancellation releases an eligible reservation.",
+    "test": "apps/api/test/scheduling.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
+  },
+  {
+    "id": "FR-04-c",
+    "requirement": "FR-04",
+    "acceptance": "Completed visits never reopen consumed capacity.",
+    "test": "apps/api/test/arrivals.int.test.ts (checked-in and COMPLETED visit cases)",
+    "passes": true,
+    "verified": "2026-11-11 api suite 169/169 green"
+  },
+  {
+    "id": "FR-05-a",
+    "requirement": "FR-05",
+    "acceptance": "Repeated check-in produces no duplicate visit or queue entry.",
+    "test": "apps/api/test/arrivals.int.test.ts + apps/api/test/duplicate-admission.int.test.ts (parked entries hold their place; re-entry cannot duplicate; one open visit per patient/session, D-031)",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge; re-verified after Codex P1 fixes (session 2)"
+  },
+  {
+    "id": "FR-05-b",
+    "requirement": "FR-05",
+    "acceptance": "Arrival after 15-min grace requires walk-in capacity and follows walk-in ordering.",
+    "test": "apps/api/test/arrivals.int.test.ts + apps/api/test/review-fixes.int.test.ts (after worker marks missed)",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify green after W2 api merge"
+  },
+  {
+    "id": "FR-05-c",
+    "requirement": "FR-05",
+    "acceptance": "Walk-in admission is capacity-checked (5 per session).",
+    "test": "apps/api/test/arrivals.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green after W1 api merge"
+  },
+  {
+    "id": "FR-06-a",
+    "requirement": "FR-06",
+    "acceptance": "Identical state, policy and decision time select the same candidate and reason.",
+    "test": "packages/domain/test/select.property.test.ts + tests/concurrency/t2-golden-http.test.ts (identical sequences on two sessions)",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "FR-06-b",
+    "requirement": "FR-06",
+    "acceptance": "Table 8 selection trace reproduces exactly (golden test).",
+    "test": "packages/domain/test/table8.golden.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green"
+  },
+  {
+    "id": "FR-06-c",
+    "requirement": "FR-06",
+    "acceptance": "Priority and aging overrides preserve the rotation pointer; empty groups are skipped without credits.",
+    "test": "packages/domain/test/select.property.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green"
+  },
+  {
+    "id": "FR-07-a",
+    "requirement": "FR-07",
+    "acceptance": "Concurrent call-next, including across overlapping sessions, never allocates two patients to one doctor.",
+    "test": "tests/concurrency/t2-doctor-guard.test.ts (3 runs × 600 requests, overlapping sessions, 0 double allocation) + apps/api/test/queue.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "FR-08-a",
+    "requirement": "FR-08",
+    "acceptance": "A pause stops new calls.",
+    "test": "apps/api/test/queue.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify green after W2 api merge"
+  },
+  {
+    "id": "FR-08-b",
+    "requirement": "FR-08",
+    "acceptance": "Re-entry reuses the existing queue entry and records a fresh eligibility time.",
+    "test": "apps/api/test/queue.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify green after W2 api merge"
+  },
+  {
+    "id": "FR-08-c",
+    "requirement": "FR-08",
+    "acceptance": "Start/complete/skip transitions are validated; an unanswered call becomes SKIPPED after 2 minutes.",
+    "test": "apps/api/test/queue.int.test.ts (start/complete/skip) + apps/worker/test/timers.int.test.ts (2-min timeout)",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify green after W2 api merge"
+  },
+  {
+    "id": "FR-08-d",
+    "requirement": "FR-08",
+    "acceptance": "Doctor unavailability stops calls without silently reassigning patients.",
+    "test": "apps/api/test/queue.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify green after W2 api merge"
+  },
+  {
+    "id": "FR-09-a",
+    "requirement": "FR-09",
+    "acceptance": "A reconnecting client obtains committed state and version from the snapshot.",
+    "test": "apps/api/test/live.int.test.ts + apps/api/test/queue.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify green after W2 api merge"
+  },
+  {
+    "id": "FR-09-b",
+    "requirement": "FR-09",
+    "acceptance": "Public display exposes only approved minimal queue information (tokens, no names).",
+    "test": "apps/api/test/queue.int.test.ts (display body scanned for every patient name/id)",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify green after W2 api merge"
+  },
+  {
+    "id": "FR-09-c",
+    "requirement": "FR-09",
+    "acceptance": "Committed queue changes are published to SSE subscribers as version notices.",
+    "test": "apps/api/test/live.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify green after W2 api merge"
+  },
+  {
+    "id": "FR-10-a",
+    "requirement": "FR-10",
+    "acceptance": "A pause with unknown duration withholds the ETA.",
+    "test": "packages/domain/test/eta.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green"
+  },
+  {
+    "id": "FR-10-b",
+    "requirement": "FR-10",
+    "acceptance": "Estimates identify their timestamp and uncertainty status.",
+    "test": "packages/domain/test/eta.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green"
+  },
+  {
+    "id": "FR-10-c",
+    "requirement": "FR-10",
+    "acceptance": "EWMA estimator m = 0.2*d + 0.8*m, initial 12 min.",
+    "test": "packages/domain/test/eta.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green"
+  },
+  {
+    "id": "FR-11-a",
+    "requirement": "FR-11",
+    "acceptance": "Overdue tasks remain visible and open until documented disposition or cancellation.",
+    "test": "apps/api/test/followup.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "FR-11-b",
+    "requirement": "FR-11",
+    "acceptance": "A staff member can acknowledge task ownership.",
+    "test": "apps/api/test/followup.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "FR-12-a",
+    "requirement": "FR-12",
+    "acceptance": "10 MB / 10-page upload limits are enforced.",
+    "test": "apps/api/test/documents.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "FR-12-b",
+    "requirement": "FR-12",
+    "acceptance": "OCR failure permits review or controlled retry and does not interrupt booking.",
+    "test": "apps/api/test/documents.int.test.ts + apps/worker/test/documents.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "FR-12-c",
+    "requirement": "FR-12",
+    "acceptance": "Documents are stored privately and readable only by the owner or authorized staff.",
+    "test": "apps/api/test/documents.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "FR-13-a",
+    "requirement": "FR-13",
+    "acceptance": "Unverified or superseded text cannot be supplied as the assistant's approved source.",
+    "test": "apps/api/test/assistant.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "FR-13-b",
+    "requirement": "FR-13",
+    "acceptance": "Verification records verifier, time and an immutable version; revisions supersede with history.",
+    "test": "apps/api/test/assistant.int.test.ts + apps/api/test/documents.int.test.ts (immutability trigger)",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "FR-14-a",
+    "requirement": "FR-14",
+    "acceptance": "Unsupported assistant requests create an owned staff task.",
+    "test": "apps/api/test/assistant.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "FR-14-b",
+    "requirement": "FR-14",
+    "acceptance": "The assistant cannot change treatment, assign priority or bypass return capacity.",
+    "test": "apps/api/test/assistant.int.test.ts + apps/api/test/assistant-denylist.int.test.ts + packages/providers/test/llm.test.ts (direct medicine-name treatment changes, D-031)",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge; re-verified after Codex P1 fixes (session 2)"
+  },
+  {
+    "id": "FR-14-c",
+    "requirement": "FR-14",
+    "acceptance": "A return booking consumes normal capacity and links to the originating task.",
+    "test": "apps/api/test/followup.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "FR-14-d",
+    "requirement": "FR-14",
+    "acceptance": "Assistant answers cite the verified instruction version.",
+    "test": "apps/api/test/assistant.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "FR-15-a",
+    "requirement": "FR-15",
+    "acceptance": "Audit shows actor, time, entity, policy version and reason for each queue decision/override.",
+    "test": "apps/api/test/queue.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify green after W2 api merge"
+  },
+  {
+    "id": "FR-15-b",
+    "requirement": "FR-15",
+    "acceptance": "Reports separate proposed targets from observed metrics.",
+    "test": "apps/api/test/reports.int.test.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "NFR-01",
+    "requirement": "NFR-01",
+    "acceptance": "100 req/s sustained with ordinary API p95 <= 500 ms; 200 req/s for 60 s with p95 <= 1 s (measured locally, environment declared).",
+    "test": "tests/load/run-load.ts -> docs/evidence/T5-workload-failure.md (30-minute rerun)",
+    "passes": true,
+    "verified": "Local, one shared 4 vCPU VM, co-located, fake providers, single run: 100 req/s x 1,800 s: 180,070 req, p95 13.8 ms, 0 errors; then 200 req/s x 60 s: p95 11.7 ms, 0 errors; API RSS slope +0.06 MB/min; 0 invariant violations. Hosted environment not tested."
+  },
+  {
+    "id": "NFR-02",
+    "requirement": "NFR-02",
+    "acceptance": "200 connected SSE clients; commit-to-client freshness p95 <= 5 s; unexpected server errors < 1%.",
+    "test": "tests/load/sse.ts -> docs/evidence/T3-live-freshness.md",
+    "passes": true,
+    "verified": "200 SSE clients (170/22/8), 2,226 commits: notice freshness p95 393 ms, notice+snapshot p95 1.5 s (target 5 s), 0 missing/stale, 0 unexpected 5xx; local single box, per-IP caps lifted (declared)"
+  },
+  {
+    "id": "NFR-03",
+    "requirement": "NFR-03",
+    "acceptance": "Zero capacity oversubscriptions, duplicate active entries or concurrent doctor allocations in T1/T2.",
+    "test": "tests/concurrency/t1-*.test.ts + t2-*.test.ts (global invariant checks after every file: 0 violations) + apps/api/test/duplicate-admission.int.test.ts (no duplicate live entries per patient/session, D-031)",
+    "passes": true,
+    "verified": "T1+T2 3 runs each, 0 violations; re-verified after Codex P1 fixes (session 2)"
+  },
+  {
+    "id": "NFR-04",
+    "requirement": "NFR-04",
+    "acceptance": "99.5% availability during operating hours (documented as a target; not measurable in this build).",
+    "test": "docs/evidence/T5-workload-failure.md",
+    "passes": false,
+    "note": "Not measurable in this build; method only in docs/evidence/T5-workload-failure.md §6."
+  },
+  {
+    "id": "NFR-05",
+    "requirement": "NFR-05",
+    "acceptance": "RPO <= 15 min / RTO <= 60 min: local backup-restore drill with measured timings.",
+    "test": "tests/failure/restore-drill.sh -> docs/evidence/T5-workload-failure.md",
+    "passes": false,
+    "note": "Local drill measured: restore 479 ms, local RTO 2.6 s to smoke pass, data loss = backup window (16.9 s, 10 bookings). Hosted PITR RPO <=15 min / RTO <=60 min untested, so the target is not demonstrated."
+  },
+  {
+    "id": "NFR-06",
+    "requirement": "NFR-06",
+    "acceptance": "Zero unauthorized cross-patient reads or writes in the authorization tests.",
+    "test": "tests/integration/authz.test.ts (route table derived from controllers) + apps/api/test/{authz,w3-authz,documents}.int.test.ts",
+    "passes": true,
+    "verified": "0 unauthorized successes, 0 side effects on refusal"
+  },
+  {
+    "id": "NFR-07",
+    "requirement": "NFR-07",
+    "acceptance": "Committed operations survive restarts; OCR/AI provider failure does not block booking or queue.",
+    "test": "tests/failure/run-failure.ts + tests/integration/t4-ocr-failure-isolation.test.ts + apps/worker/test/isolation.int.test.ts + apps/worker/test/documents-fencing.int.test.ts (superseded OCR attempts cannot write, D-031)",
+    "passes": true,
+    "verified": "api-kill 0 lost commits; worker-kill jobs exactly once; OCR failure: 1,200/1,200 bookings, p95 unchanged; db connection loss (after F1/F2 fix): API survives, 503 + Retry-After, 102/102 idempotent retries succeed, invariants clean; re-verified after Codex P1 fixes (session 2)"
+  },
+  {
+    "id": "NFR-08-a",
+    "requirement": "NFR-08",
+    "acceptance": "Versioned migrations and policy; repeatable setup via ./init.sh.",
+    "test": "packages/db/test/migrate.test.ts + ./init.sh (idempotent rerun)",
+    "passes": true,
+    "verified": "2026-11-11 session 1, pnpm verify green"
+  },
+  {
+    "id": "NFR-08-b",
+    "requirement": "NFR-08",
+    "acceptance": "Booking and call-next complete by keyboard alone.",
+    "test": "tests/e2e/full-visit.spec.ts (real stack, keyboard booking + check-in + call-next) + apps/web/e2e/*.spec.ts",
+    "passes": true,
+    "verified": "2026-11-11 pnpm verify / test:concurrency / e2e green after W3 merge"
+  },
+  {
+    "id": "NFR-08-c",
+    "requirement": "NFR-08",
+    "acceptance": "Explicit error, empty and stale states in the UI.",
+    "test": "apps/web/e2e/{booking,reception,screenshots,w2-queue,w3-*}.spec.ts (loading/empty/error/reconnecting states per screen) + ui-reviewer pass",
+    "passes": true,
+    "verified": "2026-11-11: W3 web merge, 105 Playwright specs green (mocked API), states reviewed in screenshots"
+  }
+]

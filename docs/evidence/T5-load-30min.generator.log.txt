@@ -1,0 +1,22 @@
+
+> @hqms/tests@0.1.0 load /home/user/hospital-queue-system/.claude/worktrees/agent-a05b71751e4726dbf/tests
+> tsx load/run-load.ts
+
+[load 14:23:34] phases: a=100/s x 1800s, b=200/s x 60s; db hqms_load; pool 20
+[load 14:23:35] supply: 11700 bookings over 1170 future sessions; 5880 check-ins over 236 sessions; 5880 walk-ins over 118 sessions
+[load 14:23:36] api pid 15945 http://127.0.0.1:45295; worker pid 15957
+[load 14:23:37] logins ready: admin, reception, 10 doctors, 170 patients
+[load 14:23:39] read pool ready: 20 sessions, 170 patient entries
+[load 14:23:42] sessions created: 1170 future, 118 walk-in churn, 236 check-in churn (today 2026-11-11)
+[load 14:24:10] check-in supply booked: 5900 (0 failed)
+[load 14:24:10] dataset before load: {"patients":10040,"users":202,"sessions":1684,"appointments":6025,"queue_entries":170,"sessions_today":394}
+[load 14:24:10] warm-up 20s at 50 req/s (excluded from the statistics)
+[load 14:24:30] phase a: 100 req/s for 1800 s
+[load 14:54:30] a: issued 173999 ticks in 1800 s, in-flight left 0
+[load 14:54:31] phase a done: 180070 requests, p50/p95/p99 6.5/13.8/21.3 ms, 2xx 180070, 409 0, other4xx 0, 5xx 0, net 0, violations 0
+[load 14:54:46] phase b: 200 req/s for 60 s
+[load 14:55:46] b: issued 11599 ticks in 60 s, in-flight left 0
+[load 14:55:46] phase b done: 12031 requests, p50/p95/p99 5.6/11.7/16.4 ms, 2xx 12031, 409 0, other4xx 0, 5xx 0, net 0, violations 0
+[load 14:56:24] raw results written to /home/user/hospital-queue-system/.claude/worktrees/agent-a05b71751e4726dbf/docs/evidence/T5-load-30min.raw.json
+[load 14:56:24] !!! worker (pid 15957) exited: {"code":0,"signal":null,"at":"2026-11-11T14:56:24.821Z"}
+[load 14:56:24] !!! api (pid 15945) exited: {"code":null,"signal":"SIGTERM","at":"2026-11-11T14:56:24.866Z"}

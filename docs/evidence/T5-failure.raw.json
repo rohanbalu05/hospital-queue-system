@@ -1,0 +1,1729 @@
+{
+  "apiKill": {
+    "description": "kill -9 of the API during a burst of 90 bookings (30 in flight) per round, 5 rounds, then restart and replay of every request with its Idempotency-Key",
+    "totals": {
+      "inFlightWhenKilled": 145,
+      "committedButNeverAnswered": 2,
+      "noResponse": 345
+    },
+    "rounds": [
+      {
+        "round": 1,
+        "requests": 90,
+        "answeredBeforeKill": 19,
+        "killedAfterMs": 333.7,
+        "requestsInFlightWhenKilled": 29,
+        "noResponse": 71,
+        "committedButNeverAnswered": 0,
+        "answered201BeforeKill": 19,
+        "lostCommittedBookings": 0,
+        "idleInTransactionAfterCrash": 0,
+        "invariantViolationsRightAfterCrash": 0,
+        "appointmentsBeforeReplay": 19,
+        "appointmentsAfterReplay": 30,
+        "restartToHealthyMs": 520.5,
+        "replayStatus": {
+          "201": 30,
+          "409": 60
+        },
+        "replayMismatches": [],
+        "finalBookedPerSession": [
+          10,
+          10,
+          10
+        ],
+        "distinctPatientsPerSession": [
+          10,
+          10,
+          10
+        ],
+        "invariantViolationsAfterReplay": 0,
+        "rowsPerAppointment": {
+          "appts": 30,
+          "audits": 30,
+          "outbox": 30,
+          "jobs": 30
+        }
+      },
+      {
+        "round": 2,
+        "requests": 90,
+        "answeredBeforeKill": 20,
+        "killedAfterMs": 272.1,
+        "requestsInFlightWhenKilled": 29,
+        "noResponse": 70,
+        "committedButNeverAnswered": 1,
+        "answered201BeforeKill": 20,
+        "lostCommittedBookings": 0,
+        "idleInTransactionAfterCrash": 0,
+        "invariantViolationsRightAfterCrash": 0,
+        "appointmentsBeforeReplay": 21,
+        "appointmentsAfterReplay": 30,
+        "restartToHealthyMs": 522.8,
+        "replayStatus": {
+          "201": 30,
+          "409": 60
+        },
+        "replayMismatches": [],
+        "finalBookedPerSession": [
+          10,
+          10,
+          10
+        ],
+        "distinctPatientsPerSession": [
+          10,
+          10,
+          10
+        ],
+        "invariantViolationsAfterReplay": 0,
+        "rowsPerAppointment": {
+          "appts": 30,
+          "audits": 30,
+          "outbox": 30,
+          "jobs": 30
+        }
+      },
+      {
+        "round": 3,
+        "requests": 90,
+        "answeredBeforeKill": 21,
+        "killedAfterMs": 248.4,
+        "requestsInFlightWhenKilled": 29,
+        "noResponse": 69,
+        "committedButNeverAnswered": 1,
+        "answered201BeforeKill": 21,
+        "lostCommittedBookings": 0,
+        "idleInTransactionAfterCrash": 0,
+        "invariantViolationsRightAfterCrash": 0,
+        "appointmentsBeforeReplay": 22,
+        "appointmentsAfterReplay": 30,
+        "restartToHealthyMs": 642.1,
+        "replayStatus": {
+          "201": 30,
+          "409": 60
+        },
+        "replayMismatches": [],
+        "finalBookedPerSession": [
+          10,
+          10,
+          10
+        ],
+        "distinctPatientsPerSession": [
+          10,
+          10,
+          10
+        ],
+        "invariantViolationsAfterReplay": 0,
+        "rowsPerAppointment": {
+          "appts": 30,
+          "audits": 30,
+          "outbox": 30,
+          "jobs": 30
+        }
+      },
+      {
+        "round": 4,
+        "requests": 90,
+        "answeredBeforeKill": 22,
+        "killedAfterMs": 304.7,
+        "requestsInFlightWhenKilled": 29,
+        "noResponse": 68,
+        "committedButNeverAnswered": 0,
+        "answered201BeforeKill": 22,
+        "lostCommittedBookings": 0,
+        "idleInTransactionAfterCrash": 0,
+        "invariantViolationsRightAfterCrash": 0,
+        "appointmentsBeforeReplay": 22,
+        "appointmentsAfterReplay": 30,
+        "restartToHealthyMs": 650.7,
+        "replayStatus": {
+          "201": 30,
+          "409": 60
+        },
+        "replayMismatches": [],
+        "finalBookedPerSession": [
+          10,
+          10,
+          10
+        ],
+        "distinctPatientsPerSession": [
+          10,
+          10,
+          10
+        ],
+        "invariantViolationsAfterReplay": 0,
+        "rowsPerAppointment": {
+          "appts": 30,
+          "audits": 30,
+          "outbox": 30,
+          "jobs": 30
+        }
+      },
+      {
+        "round": 5,
+        "requests": 90,
+        "answeredBeforeKill": 23,
+        "killedAfterMs": 268.4,
+        "requestsInFlightWhenKilled": 29,
+        "noResponse": 67,
+        "committedButNeverAnswered": 0,
+        "answered201BeforeKill": 23,
+        "lostCommittedBookings": 0,
+        "idleInTransactionAfterCrash": 0,
+        "invariantViolationsRightAfterCrash": 0,
+        "appointmentsBeforeReplay": 23,
+        "appointmentsAfterReplay": 30,
+        "restartToHealthyMs": 646.6,
+        "replayStatus": {
+          "201": 30,
+          "409": 60
+        },
+        "replayMismatches": [],
+        "finalBookedPerSession": [
+          10,
+          10,
+          10
+        ],
+        "distinctPatientsPerSession": [
+          10,
+          10,
+          10
+        ],
+        "invariantViolationsAfterReplay": 0,
+        "rowsPerAppointment": {
+          "appts": 30,
+          "audits": 30,
+          "outbox": 30,
+          "jobs": 30
+        }
+      }
+    ],
+    "checks": [
+      {
+        "check": "round 1: no committed booking lost",
+        "pass": true,
+        "detail": {
+          "answered201": 19
+        }
+      },
+      {
+        "check": "round 1: no half-written state right after the crash",
+        "pass": true,
+        "detail": {
+          "violations": [],
+          "idleInTransaction": 0
+        }
+      },
+      {
+        "check": "round 1: replay returns the stored outcome for every committed key",
+        "pass": true,
+        "detail": []
+      },
+      {
+        "check": "round 1: every session ends with exactly its capacity (10) booked, distinct patients",
+        "pass": true,
+        "detail": [
+          {
+            "session_id": "1fe3b61a-412d-419f-917c-4ffcd3070f4c",
+            "n": 10,
+            "patients": 10
+          },
+          {
+            "session_id": "22f06118-c314-4c84-9ff8-8b44f8eacfcc",
+            "n": 10,
+            "patients": 10
+          },
+          {
+            "session_id": "bc2c7a7f-0a35-4fca-a932-f38943722603",
+            "n": 10,
+            "patients": 10
+          }
+        ]
+      },
+      {
+        "check": "round 1: capacity/allocation invariants hold after replay",
+        "pass": true,
+        "detail": []
+      },
+      {
+        "check": "round 1: one audit row, one AppointmentBooked event and one timer job per appointment",
+        "pass": true,
+        "detail": {
+          "appts": 30,
+          "audits": 30,
+          "outbox": 30,
+          "jobs": 30
+        }
+      },
+      {
+        "check": "round 1: no 5xx during replay",
+        "pass": true,
+        "detail": {
+          "201": 30,
+          "409": 60
+        }
+      },
+      {
+        "check": "round 2: no committed booking lost",
+        "pass": true,
+        "detail": {
+          "answered201": 20
+        }
+      },
+      {
+        "check": "round 2: no half-written state right after the crash",
+        "pass": true,
+        "detail": {
+          "violations": [],
+          "idleInTransaction": 0
+        }
+      },
+      {
+        "check": "round 2: replay returns the stored outcome for every committed key",
+        "pass": true,
+        "detail": []
+      },
+      {
+        "check": "round 2: every session ends with exactly its capacity (10) booked, distinct patients",
+        "pass": true,
+        "detail": [
+          {
+            "session_id": "0b993d90-7d04-49b9-bbf7-a8967c74d782",
+            "n": 10,
+            "patients": 10
+          },
+          {
+            "session_id": "284b7ba5-5929-4ce8-8bed-9a0380dbc0a7",
+            "n": 10,
+            "patients": 10
+          },
+          {
+            "session_id": "6a0d4934-8c02-426f-8e47-b4491e91963d",
+            "n": 10,
+            "patients": 10
+          }
+        ]
+      },
+      {
+        "check": "round 2: capacity/allocation invariants hold after replay",
+        "pass": true,
+        "detail": []
+      },
+      {
+        "check": "round 2: one audit row, one AppointmentBooked event and one timer job per appointment",
+        "pass": true,
+        "detail": {
+          "appts": 30,
+          "audits": 30,
+          "outbox": 30,
+          "jobs": 30
+        }
+      },
+      {
+        "check": "round 2: no 5xx during replay",
+        "pass": true,
+        "detail": {
+          "201": 30,
+          "409": 60
+        }
+      },
+      {
+        "check": "round 3: no committed booking lost",
+        "pass": true,
+        "detail": {
+          "answered201": 21
+        }
+      },
+      {
+        "check": "round 3: no half-written state right after the crash",
+        "pass": true,
+        "detail": {
+          "violations": [],
+          "idleInTransaction": 0
+        }
+      },
+      {
+        "check": "round 3: replay returns the stored outcome for every committed key",
+        "pass": true,
+        "detail": []
+      },
+      {
+        "check": "round 3: every session ends with exactly its capacity (10) booked, distinct patients",
+        "pass": true,
+        "detail": [
+          {
+            "session_id": "7ab1b545-1e5c-4b01-bc4a-ef4179398387",
+            "n": 10,
+            "patients": 10
+          },
+          {
+            "session_id": "c91bc3a5-d00f-4dd8-8b81-c2dd5607c489",
+            "n": 10,
+            "patients": 10
+          },
+          {
+            "session_id": "cb39fad4-807c-4367-b1ef-30a64aae74f7",
+            "n": 10,
+            "patients": 10
+          }
+        ]
+      },
+      {
+        "check": "round 3: capacity/allocation invariants hold after replay",
+        "pass": true,
+        "detail": []
+      },
+      {
+        "check": "round 3: one audit row, one AppointmentBooked event and one timer job per appointment",
+        "pass": true,
+        "detail": {
+          "appts": 30,
+          "audits": 30,
+          "outbox": 30,
+          "jobs": 30
+        }
+      },
+      {
+        "check": "round 3: no 5xx during replay",
+        "pass": true,
+        "detail": {
+          "201": 30,
+          "409": 60
+        }
+      },
+      {
+        "check": "round 4: no committed booking lost",
+        "pass": true,
+        "detail": {
+          "answered201": 22
+        }
+      },
+      {
+        "check": "round 4: no half-written state right after the crash",
+        "pass": true,
+        "detail": {
+          "violations": [],
+          "idleInTransaction": 0
+        }
+      },
+      {
+        "check": "round 4: replay returns the stored outcome for every committed key",
+        "pass": true,
+        "detail": []
+      },
+      {
+        "check": "round 4: every session ends with exactly its capacity (10) booked, distinct patients",
+        "pass": true,
+        "detail": [
+          {
+            "session_id": "7002171b-b5bf-48f3-abfa-739daf86b94f",
+            "n": 10,
+            "patients": 10
+          },
+          {
+            "session_id": "99c6d167-0d0f-4a01-bdc2-e13a054e77e7",
+            "n": 10,
+            "patients": 10
+          },
+          {
+            "session_id": "e4858e8a-0650-4d74-b9b3-450c19398212",
+            "n": 10,
+            "patients": 10
+          }
+        ]
+      },
+      {
+        "check": "round 4: capacity/allocation invariants hold after replay",
+        "pass": true,
+        "detail": []
+      },
+      {
+        "check": "round 4: one audit row, one AppointmentBooked event and one timer job per appointment",
+        "pass": true,
+        "detail": {
+          "appts": 30,
+          "audits": 30,
+          "outbox": 30,
+          "jobs": 30
+        }
+      },
+      {
+        "check": "round 4: no 5xx during replay",
+        "pass": true,
+        "detail": {
+          "201": 30,
+          "409": 60
+        }
+      },
+      {
+        "check": "round 5: no committed booking lost",
+        "pass": true,
+        "detail": {
+          "answered201": 23
+        }
+      },
+      {
+        "check": "round 5: no half-written state right after the crash",
+        "pass": true,
+        "detail": {
+          "violations": [],
+          "idleInTransaction": 0
+        }
+      },
+      {
+        "check": "round 5: replay returns the stored outcome for every committed key",
+        "pass": true,
+        "detail": []
+      },
+      {
+        "check": "round 5: every session ends with exactly its capacity (10) booked, distinct patients",
+        "pass": true,
+        "detail": [
+          {
+            "session_id": "7bf88de6-eee4-4200-b57b-e0c5a4d1713a",
+            "n": 10,
+            "patients": 10
+          },
+          {
+            "session_id": "800d6dd5-c61d-4ace-9a2d-5d916960361b",
+            "n": 10,
+            "patients": 10
+          },
+          {
+            "session_id": "a33d64ab-877c-4c8b-bf09-3ac2ad9c2b9b",
+            "n": 10,
+            "patients": 10
+          }
+        ]
+      },
+      {
+        "check": "round 5: capacity/allocation invariants hold after replay",
+        "pass": true,
+        "detail": []
+      },
+      {
+        "check": "round 5: one audit row, one AppointmentBooked event and one timer job per appointment",
+        "pass": true,
+        "detail": {
+          "appts": 30,
+          "audits": 30,
+          "outbox": 30,
+          "jobs": 30
+        }
+      },
+      {
+        "check": "round 5: no 5xx during replay",
+        "pass": true,
+        "detail": {
+          "201": 30,
+          "409": 60
+        }
+      }
+    ],
+    "allPass": true
+  },
+  "machine": {
+    "cpuModel": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "vCpus": 4,
+    "ramGb": 15.7,
+    "node": "v22.23.4",
+    "postgresClient": "psql (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+    "kernel": "Linux version 6.18.44-fc-v378",
+    "note": "API, worker, PostgreSQL and the load generator run on this same machine; other tenants may use the same PostgreSQL server and CPUs (see otherDatabasesTxPerSec and wholeMachineCpuPct)."
+  },
+  "workerKill": {
+    "description": "kill -9 of the worker while jobs were running (lease held), restart, drain",
+    "declaredShortcuts": [
+      "called_timeout_sec set to 3 s in the scratch database",
+      "appointment slots moved into the past by SQL so the release timers are due",
+      "WORKER_LEASE_SEC=3, WORKER_POLL_MS=50"
+    ],
+    "jobsBefore": [
+      {
+        "job_type": "call_timeout",
+        "state": "pending",
+        "n": 10
+      },
+      {
+        "job_type": "reservation_release",
+        "state": "pending",
+        "n": 200
+      }
+    ],
+    "dueJobsBefore": 210,
+    "killedAfterMsSinceWorkerStart": 438,
+    "runningAtKill": [
+      {
+        "id": "dc72798e-6a7a-4cce-86e1-1d8a9cb9d76c",
+        "job_type": "reservation_release",
+        "attempts": 1,
+        "lease_owner": "t5-worker-1"
+      },
+      {
+        "id": "69fdf625-5abf-4854-950e-4971b0b028c0",
+        "job_type": "reservation_release",
+        "attempts": 1,
+        "lease_owner": "t5-worker-1"
+      },
+      {
+        "id": "04930beb-87df-46d2-b0b1-f5a6d013f12b",
+        "job_type": "reservation_release",
+        "attempts": 1,
+        "lease_owner": "t5-worker-1"
+      },
+      {
+        "id": "89d5dd0e-2778-4ab3-86a7-80216c9267ac",
+        "job_type": "reservation_release",
+        "attempts": 1,
+        "lease_owner": "t5-worker-1"
+      }
+    ],
+    "jobStatesAfterKill": [
+      {
+        "state": "pending",
+        "n": 178
+      },
+      {
+        "state": "running",
+        "n": 3
+      },
+      {
+        "state": "succeeded",
+        "n": 29
+      }
+    ],
+    "appointmentsMissedAtKill": 29,
+    "drainAfterRestartMs": 2016.6,
+    "jobStatesFinal": [
+      {
+        "job_type": "call_timeout",
+        "state": "succeeded",
+        "n": 10,
+        "max_attempts": 1,
+        "retried": 0
+      },
+      {
+        "job_type": "reservation_release",
+        "state": "succeeded",
+        "n": 200,
+        "max_attempts": 2,
+        "retried": 3
+      }
+    ],
+    "effects": {
+      "missed": 200,
+      "still_booked": 0,
+      "appointments_not_version_2": 0,
+      "release_audits": 200,
+      "release_audits_distinct": 200,
+      "release_events": 200,
+      "skipped_entries": 10,
+      "timeout_audits": 10,
+      "timeout_audits_distinct": 10,
+      "timeout_events": 10,
+      "entries_not_version_3": 0,
+      "booked_reserved_total": 0
+    },
+    "checks": [
+      {
+        "check": "the worker was killed while holding leases and with work left",
+        "pass": true,
+        "detail": {
+          "runningAtKill": 4,
+          "appointmentsAlreadyMissed": 29,
+          "jobStatesAfterKill": [
+            {
+              "state": "pending",
+              "n": 178
+            },
+            {
+              "state": "running",
+              "n": 3
+            },
+            {
+              "state": "succeeded",
+              "n": 29
+            }
+          ]
+        }
+      },
+      {
+        "check": "nothing advances while the worker is down",
+        "pass": true,
+        "detail": {
+          "before": 29,
+          "after": 29
+        }
+      },
+      {
+        "check": "all 210 timer jobs reach a terminal state after the restart",
+        "pass": true,
+        "detail": {
+          "drainMs": 2016.6,
+          "jobStates": [
+            {
+              "job_type": "call_timeout",
+              "state": "succeeded",
+              "n": 10,
+              "max_attempts": 1,
+              "retried": 0
+            },
+            {
+              "job_type": "reservation_release",
+              "state": "succeeded",
+              "n": 200,
+              "max_attempts": 2,
+              "retried": 3
+            }
+          ],
+          "dead": 0
+        }
+      },
+      {
+        "check": "reservation_release effect applied exactly once for each of the 200 appointments (1 status change, 1 audit row, 1 event)",
+        "pass": true,
+        "detail": {
+          "missed": 200,
+          "still_booked": 0,
+          "appointments_not_version_2": 0,
+          "release_audits": 200,
+          "release_audits_distinct": 200,
+          "release_events": 200,
+          "skipped_entries": 10,
+          "timeout_audits": 10,
+          "timeout_audits_distinct": 10,
+          "timeout_events": 10,
+          "entries_not_version_3": 0,
+          "booked_reserved_total": 0
+        }
+      },
+      {
+        "check": "call_timeout effect applied exactly once for each of the 10 called entries",
+        "pass": true,
+        "detail": {
+          "missed": 200,
+          "still_booked": 0,
+          "appointments_not_version_2": 0,
+          "release_audits": 200,
+          "release_audits_distinct": 200,
+          "release_events": 200,
+          "skipped_entries": 10,
+          "timeout_audits": 10,
+          "timeout_audits_distinct": 10,
+          "timeout_events": 10,
+          "entries_not_version_3": 0,
+          "booked_reserved_total": 0
+        }
+      },
+      {
+        "check": "released capacity is returned exactly once (counters 0)",
+        "pass": true,
+        "detail": {
+          "bookedReservedTotalOver20Sessions": 0
+        }
+      },
+      {
+        "check": "capacity/allocation invariants hold",
+        "pass": true,
+        "detail": []
+      }
+    ],
+    "allPass": true
+  },
+  "ocrFail": {
+    "description": "booking at a constant 30 req/s for 40 s in three phases: baseline, OCR fixture \"fail\" with 2 uploads/s (80 documents), baseline again",
+    "phases": {
+      "baseline-1": {
+        "bookingsIssued": 1200,
+        "latencyMs": {
+          "n": 1200,
+          "p50": 12.3,
+          "p95": 18.9,
+          "p99": 23.7,
+          "max": 29.3,
+          "mean": 13
+        },
+        "status": {
+          "201": 1200
+        },
+        "codes": {}
+      },
+      "ocr-failing": {
+        "bookingsIssued": 1200,
+        "latencyMs": {
+          "n": 1200,
+          "p50": 12.5,
+          "p95": 20.4,
+          "p99": 29.5,
+          "max": 40.5,
+          "mean": 13.4
+        },
+        "status": {
+          "201": 1200
+        },
+        "codes": {},
+        "uploads": {
+          "count": 79,
+          "status": {
+            "201": 79
+          },
+          "latencyMs": {
+            "n": 79,
+            "p50": 14.7,
+            "p95": 32.5,
+            "p99": 39.8,
+            "max": 39.8,
+            "mean": 16.3
+          }
+        }
+      },
+      "baseline-2": {
+        "bookingsIssued": 1200,
+        "latencyMs": {
+          "n": 1200,
+          "p50": 12,
+          "p95": 17.2,
+          "p99": 23.5,
+          "max": 45,
+          "mean": 12.6
+        },
+        "status": {
+          "201": 1200
+        },
+        "codes": {}
+      }
+    },
+    "p95RatioFailingOverBaselineMean": 1.13,
+    "ocrOutcome": {
+      "documents": [
+        {
+          "status": "ocr_failed",
+          "n": 79,
+          "max_attempts": 5
+        }
+      ],
+      "jobs": [
+        {
+          "state": "dead",
+          "n": 79,
+          "max_attempts": 5
+        }
+      ],
+      "ocrFailedEvents": 395,
+      "waitedSecondsForFinalState": 0.8
+    },
+    "afterwards": {
+      "uploadStatus": 201,
+      "final": "ocr_ready",
+      "seconds": 0.5
+    },
+    "checks": [
+      {
+        "check": "every booking succeeded (201) in all three phases",
+        "pass": true,
+        "detail": [
+          {
+            "201": 1200
+          },
+          {
+            "201": 1200
+          },
+          {
+            "201": 1200
+          }
+        ]
+      },
+      {
+        "check": "zero 5xx and zero network errors in all phases",
+        "pass": true,
+        "detail": [
+          {
+            "201": 1200
+          },
+          {
+            "201": 1200
+          },
+          {
+            "201": 1200
+          }
+        ]
+      },
+      {
+        "check": "documents with the failing fixture end in ocr_failed (visible, not lost) after bounded retries",
+        "pass": true,
+        "detail": {
+          "docs": [
+            {
+              "status": "ocr_failed",
+              "n": 79,
+              "max_attempts": 5
+            }
+          ],
+          "jobStates": [
+            {
+              "state": "dead",
+              "n": 79,
+              "max_attempts": 5
+            }
+          ],
+          "ocrFailedEvents": 395
+        }
+      },
+      {
+        "check": "invariants hold",
+        "pass": true,
+        "detail": []
+      },
+      {
+        "check": "after the failure period the same worker still processes a good document to ocr_ready",
+        "pass": true,
+        "detail": {
+          "uploadStatus": 201,
+          "final": "ocr_ready",
+          "seconds": 0.5
+        }
+      }
+    ],
+    "allPass": true
+  },
+  "dbConn": {
+    "description": "30 req/s (60% snapshot GET, 40% POST /appointments) for 70 s; pg_terminate_backend on IDLE API pool connections at 10 s, database closed to new connections for 8 s at ~25 s (idle connections terminated every 100 ms), 10 terminations 300 ms apart at ~48 s. Terminating BUSY connections crashes the API: see dbCrash",
+    "events": [
+      {
+        "t": 10,
+        "what": "terminated 2 idle API backends (one shot)"
+      },
+      {
+        "t": 25,
+        "what": "database closed to new connections (idle pool connections of API and worker terminated every 100 ms for 8 s)"
+      },
+      {
+        "t": 33.2,
+        "what": "database accepting connections again"
+      },
+      {
+        "t": 48.2,
+        "what": "flapping: idle API backends terminated 10 times, 300 ms apart (3 s)"
+      }
+    ],
+    "errorBodies": {
+      "500 INTERNAL": 247
+    },
+    "networkErrors": {
+      "TypeError: fetch failed (UND_ERR_SOCKET)": 1,
+      "TypeError: fetch failed (ECONNREFUSED)": 662
+    },
+    "recordsTotal": 2100,
+    "firstBadSec": 10,
+    "lastBadSec": 70,
+    "health": {
+      "probes": 279,
+      "non200": 121,
+      "non200Statuses": {
+        "0": 88,
+        "503": 33
+      }
+    },
+    "apiLogTail": [
+      "    at async AuthGuard.canActivate (file:///home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/apps/api/dist/main.js:5460:20)",
+      "    at async GuardsConsumer.pickResult (/home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/guards/guards-consumer.js:35:23)",
+      "    at async GuardsConsumer.tryActivate (/home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/guards/guards-consumer.js:22:17)",
+      "    at async canActivateFn (/home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/router/router-execution-context.js:175:33)",
+      "    at async /home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/router/router-execution-context.js:61:31",
+      "    at async /home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/router/router-proxy.js:9:17",
+      "\u001b[31m[Nest] 26636  - \u001b[39m11/11/2026, 1:53:34 PM \u001b[31m  ERROR\u001b[39m \u001b[38;5;3m[ApiExceptionFilter] \u001b[39m\u001b[31mcac4471d-fe9a-4a43-bc8b-046e5ff2084d GET /sessions/ee8f686f-140d-41ef-a657-f8c7c69b7cf6/queue -> 500: error sqlstate=55000\u001b[39m",
+      "    at /home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11",
+      "    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)",
+      "    at async maybeOne (file:///home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/apps/api/dist/main.js:130:15)",
+      "    at async findUserByAuthToken (file:///home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/apps/api/dist/main.js:815:13)",
+      "    at async AuthGuard.canActivate (file:///home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/apps/api/dist/main.js:5460:20)",
+      "    at async GuardsConsumer.pickResult (/home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/guards/guards-consumer.js:35:23)",
+      "    at async GuardsConsumer.tryActivate (/home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/guards/guards-consumer.js:22:17)",
+      "    at async canActivateFn (/home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/router/router-execution-context.js:175:33)",
+      "    at async /home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/router/router-execution-context.js:61:31",
+      "    at async /home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/router/router-proxy.js:9:17",
+      "\u001b[31m[Nest] 26636  - \u001b[39m11/11/2026, 1:53:34 PM \u001b[31m  ERROR\u001b[39m \u001b[38;5;3m[ApiExceptionFilter] \u001b[39m\u001b[31m56ca4147-1711-4fb9-9157-0c0fc6661b70 GET /sessions/ee8f686f-140d-41ef-a657-f8c7c69b7cf6/queue -> 500: error sqlstate=55000\u001b[39m",
+      "    at /home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/pg-pool@3.14.0_pg@8.23.1/node_modules/pg-pool/index.js:45:11",
+      "    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)",
+      "    at async maybeOne (file:///home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/apps/api/dist/main.js:130:15)",
+      "    at async findUserByAuthToken (file:///home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/apps/api/dist/main.js:815:13)",
+      "    at async AuthGuard.canActivate (file:///home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/apps/api/dist/main.js:5460:20)",
+      "    at async GuardsConsumer.pickResult (/home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/guards/guards-consumer.js:35:23)",
+      "    at async GuardsConsumer.tryActivate (/home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/guards/guards-consumer.js:22:17)",
+      "    at async canActivateFn (/home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/router/router-execution-context.js:175:33)",
+      "    at async /home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/router/router-execution-context.js:61:31",
+      "    at async /home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/@nestjs+core@11.2.9_@nestjs+common@11.2.9_reflect-metadata@0.2.2_rxjs@7.8.2__@nestjs+pl_a4d0ba200d59750b85c37a725867b9c0/node_modules/@nestjs/core/router/router-proxy.js:9:17",
+      "[hqms/db] idle client error: terminating connection due to administrator command",
+      "[hqms/db] idle client error: terminating connection due to administrator command",
+      "[hqms/db] idle client error: terminating connection due to administrator command",
+      "[hqms/db] idle client error: terminating connection due to administrator command",
+      "[hqms/db] idle client error: terminating connection due to administrator command",
+      "[hqms/db] idle client error: terminating connection due to administrator command",
+      "[hqms/db] idle client error: terminating connection due to administrator command",
+      "[hqms/db] idle client error: terminating connection due to administrator command",
+      "[hqms/db] idle client error: terminating connection due to administrator command",
+      "[hqms/db] idle client error: terminating connection due to administrator command",
+      "[hqms/db] idle client error: terminating connection due to administrator command",
+      "[hqms/db] idle client error: terminating connection due to administrator command",
+      "[hqms/db] idle client error: terminating connection due to administrator command",
+      "node:events:497",
+      "      throw er; // Unhandled 'error' event",
+      "      ^",
+      "Error: read ECONNRESET",
+      "    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)",
+      "Emitted 'error' event on Client instance at:",
+      "    at Client._handleErrorEvent (/home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/pg@8.23.1/node_modules/pg/lib/client.js:422:10)",
+      "    at Connection.emit (node:events:519:28)",
+      "    at Socket.reportStreamError (/home/user/hospital-queue-system/.claude/worktrees/agent-a32fb190a8186704e/node_modules/.pnpm/pg@8.23.1/node_modules/pg/lib/connection.js:59:12)",
+      "    at Socket.emit (node:events:519:28)",
+      "    at emitErrorNT (node:internal/streams/destroy:170:8)",
+      "    at emitErrorCloseNT (node:internal/streams/destroy:129:3)",
+      "    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {",
+      "  errno: -104,",
+      "  code: 'ECONNRESET',",
+      "  syscall: 'read'",
+      "}",
+      "Node.js v22.23.4",
+      "[t5-harness] process 26636 exited (1) at 2026-11-11T13:53:49.104Z"
+    ],
+    "workerLogTail": [
+      "{\"ts\":\"2026-11-11T13:53:32.280Z\",\"level\":\"error\",\"msg\":\"outbox.drain_failed\",\"service\":\"worker\",\"workerId\":\"t5-conn-worker\",\"component\":\"outbox\",\"error\":\"DatabaseError sqlstate=55000 constraint=-\"}",
+      "{\"ts\":\"2026-11-11T13:53:32.448Z\",\"level\":\"error\",\"msg\":\"runner.claim_failed\",\"service\":\"worker\",\"workerId\":\"t5-conn-worker\",\"component\":\"runner\",\"error\":\"DatabaseError sqlstate=55000 constraint=-\"}",
+      "{\"ts\":\"2026-11-11T13:53:32.787Z\",\"level\":\"error\",\"msg\":\"outbox.drain_failed\",\"service\":\"worker\",\"workerId\":\"t5-conn-worker\",\"component\":\"outbox\",\"error\":\"DatabaseError sqlstate=55000 constraint=-\"}",
+      "{\"ts\":\"2026-11-11T13:53:32.953Z\",\"level\":\"error\",\"msg\":\"runner.claim_failed\",\"service\":\"worker\",\"workerId\":\"t5-conn-worker\",\"component\":\"runner\",\"error\":\"DatabaseError sqlstate=55000 constraint=-\"}",
+      "{\"ts\":\"2026-11-11T13:53:33.295Z\",\"level\":\"error\",\"msg\":\"outbox.drain_failed\",\"service\":\"worker\",\"workerId\":\"t5-conn-worker\",\"component\":\"outbox\",\"error\":\"DatabaseError sqlstate=55000 constraint=-\"}",
+      "{\"ts\":\"2026-11-11T13:53:33.460Z\",\"level\":\"error\",\"msg\":\"runner.claim_failed\",\"service\":\"worker\",\"workerId\":\"t5-conn-worker\",\"component\":\"runner\",\"error\":\"DatabaseError sqlstate=55000 constraint=-\"}",
+      "{\"ts\":\"2026-11-11T13:53:33.802Z\",\"level\":\"error\",\"msg\":\"outbox.drain_failed\",\"service\":\"worker\",\"workerId\":\"t5-conn-worker\",\"component\":\"outbox\",\"error\":\"DatabaseError sqlstate=55000 constraint=-\"}",
+      "{\"ts\":\"2026-11-11T13:53:33.966Z\",\"level\":\"error\",\"msg\":\"runner.claim_failed\",\"service\":\"worker\",\"workerId\":\"t5-conn-worker\",\"component\":\"runner\",\"error\":\"DatabaseError sqlstate=55000 constraint=-\"}",
+      "{\"ts\":\"2026-11-11T13:53:34.308Z\",\"level\":\"error\",\"msg\":\"outbox.drain_failed\",\"service\":\"worker\",\"workerId\":\"t5-conn-worker\",\"component\":\"outbox\",\"error\":\"DatabaseError sqlstate=55000 constraint=-\"}",
+      "{\"ts\":\"2026-11-11T13:54:11.845Z\",\"level\":\"info\",\"msg\":\"worker.signal\",\"service\":\"worker\",\"workerId\":\"t5-conn-worker\",\"signal\":\"SIGTERM\"}",
+      "{\"ts\":\"2026-11-11T13:54:11.845Z\",\"level\":\"info\",\"msg\":\"worker.stopping\",\"service\":\"worker\",\"workerId\":\"t5-conn-worker\"}",
+      "{\"ts\":\"2026-11-11T13:54:11.845Z\",\"level\":\"info\",\"msg\":\"outbox.stopped\",\"service\":\"worker\",\"workerId\":\"t5-conn-worker\",\"component\":\"outbox\"}",
+      "{\"ts\":\"2026-11-11T13:54:11.845Z\",\"level\":\"info\",\"msg\":\"runner.stopped\",\"service\":\"worker\",\"workerId\":\"t5-conn-worker\",\"component\":\"runner\",\"inFlight\":0}",
+      "{\"ts\":\"2026-11-11T13:54:11.846Z\",\"level\":\"info\",\"msg\":\"worker.stopped\",\"service\":\"worker\",\"workerId\":\"t5-conn-worker\"}",
+      "[t5-harness] process 26648 exited (0) at 2026-11-11T13:54:11.850Z"
+    ],
+    "timeline": [
+      {
+        "fromSec": 0,
+        "n": 59,
+        "status": {
+          "200": 40,
+          "201": 19
+        },
+        "latencyMs": {
+          "n": 59,
+          "p50": 13.2,
+          "p95": 26.6,
+          "p99": 33,
+          "max": 33,
+          "mean": 13.6
+        }
+      },
+      {
+        "fromSec": 2,
+        "n": 60,
+        "status": {
+          "200": 38,
+          "201": 22
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 10.5,
+          "p95": 16.6,
+          "p99": 22.1,
+          "max": 22.1,
+          "mean": 11.6
+        }
+      },
+      {
+        "fromSec": 4,
+        "n": 60,
+        "status": {
+          "200": 36,
+          "201": 24
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 9.7,
+          "p95": 14.6,
+          "p99": 21.9,
+          "max": 21.9,
+          "mean": 10.4
+        }
+      },
+      {
+        "fromSec": 6,
+        "n": 60,
+        "status": {
+          "200": 39,
+          "201": 21
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 10.4,
+          "p95": 25.2,
+          "p99": 31.2,
+          "max": 31.2,
+          "mean": 12.6
+        }
+      },
+      {
+        "fromSec": 8,
+        "n": 60,
+        "status": {
+          "200": 38,
+          "201": 22
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 10.8,
+          "p95": 18.2,
+          "p99": 26.1,
+          "max": 26.1,
+          "mean": 11.8
+        }
+      },
+      {
+        "fromSec": 10,
+        "n": 60,
+        "status": {
+          "200": 31,
+          "201": 28,
+          "500": 1
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 11.1,
+          "p95": 18,
+          "p99": 23.3,
+          "max": 23.3,
+          "mean": 12.3
+        }
+      },
+      {
+        "fromSec": 12,
+        "n": 60,
+        "status": {
+          "200": 42,
+          "201": 18
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 9.8,
+          "p95": 16.2,
+          "p99": 17.4,
+          "max": 17.4,
+          "mean": 10.5
+        }
+      },
+      {
+        "fromSec": 14,
+        "n": 60,
+        "status": {
+          "200": 37,
+          "201": 23
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 10.5,
+          "p95": 17.5,
+          "p99": 27.3,
+          "max": 27.3,
+          "mean": 11.3
+        }
+      },
+      {
+        "fromSec": 16,
+        "n": 60,
+        "status": {
+          "200": 36,
+          "201": 24
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 10.5,
+          "p95": 16.3,
+          "p99": 19.6,
+          "max": 19.6,
+          "mean": 10.9
+        }
+      },
+      {
+        "fromSec": 18,
+        "n": 60,
+        "status": {
+          "200": 28,
+          "201": 32
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 10.2,
+          "p95": 16.5,
+          "p99": 20,
+          "max": 20,
+          "mean": 11.3
+        }
+      },
+      {
+        "fromSec": 20,
+        "n": 60,
+        "status": {
+          "200": 38,
+          "201": 22
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 10.4,
+          "p95": 17.5,
+          "p99": 25.6,
+          "max": 25.6,
+          "mean": 11.4
+        }
+      },
+      {
+        "fromSec": 22,
+        "n": 60,
+        "status": {
+          "200": 36,
+          "201": 24
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 10.1,
+          "p95": 14.8,
+          "p99": 16.4,
+          "max": 16.4,
+          "mean": 10.8
+        }
+      },
+      {
+        "fromSec": 24,
+        "n": 60,
+        "status": {
+          "200": 14,
+          "201": 17,
+          "500": 29
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 9.7,
+          "p95": 16.1,
+          "p99": 20.7,
+          "max": 20.7,
+          "mean": 10.7
+        }
+      },
+      {
+        "fromSec": 26,
+        "n": 60,
+        "status": {
+          "500": 60
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 8.7,
+          "p95": 15.3,
+          "p99": 17.1,
+          "max": 17.1,
+          "mean": 9.8
+        }
+      },
+      {
+        "fromSec": 28,
+        "n": 60,
+        "status": {
+          "500": 60
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 8.6,
+          "p95": 14.5,
+          "p99": 24.7,
+          "max": 24.7,
+          "mean": 9.6
+        }
+      },
+      {
+        "fromSec": 30,
+        "n": 60,
+        "status": {
+          "500": 60
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 8.3,
+          "p95": 16.5,
+          "p99": 29.8,
+          "max": 29.8,
+          "mean": 9.7
+        }
+      },
+      {
+        "fromSec": 32,
+        "n": 60,
+        "status": {
+          "200": 13,
+          "201": 10,
+          "500": 37
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 8.7,
+          "p95": 15.6,
+          "p99": 26.2,
+          "max": 26.2,
+          "mean": 9.9
+        }
+      },
+      {
+        "fromSec": 34,
+        "n": 60,
+        "status": {
+          "200": 35,
+          "201": 25
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 10.3,
+          "p95": 16.5,
+          "p99": 23.5,
+          "max": 23.5,
+          "mean": 11.1
+        }
+      },
+      {
+        "fromSec": 36,
+        "n": 60,
+        "status": {
+          "200": 33,
+          "201": 27
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 11.6,
+          "p95": 19.7,
+          "p99": 23.7,
+          "max": 23.7,
+          "mean": 11.9
+        }
+      },
+      {
+        "fromSec": 38,
+        "n": 60,
+        "status": {
+          "200": 36,
+          "201": 24
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 10.8,
+          "p95": 21.6,
+          "p99": 24.3,
+          "max": 24.3,
+          "mean": 12.2
+        }
+      },
+      {
+        "fromSec": 40,
+        "n": 60,
+        "status": {
+          "200": 32,
+          "201": 28
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 10.9,
+          "p95": 16.6,
+          "p99": 20,
+          "max": 20,
+          "mean": 11.6
+        }
+      },
+      {
+        "fromSec": 42,
+        "n": 60,
+        "status": {
+          "200": 40,
+          "201": 20
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 9.5,
+          "p95": 16.5,
+          "p99": 19.6,
+          "max": 19.6,
+          "mean": 10.5
+        }
+      },
+      {
+        "fromSec": 44,
+        "n": 60,
+        "status": {
+          "200": 38,
+          "201": 22
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 10,
+          "p95": 17.3,
+          "p99": 21.3,
+          "max": 21.3,
+          "mean": 11.2
+        }
+      },
+      {
+        "fromSec": 46,
+        "n": 60,
+        "status": {
+          "0": 2,
+          "200": 33,
+          "201": 25
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 12.4,
+          "p95": 24.5,
+          "p99": 47.3,
+          "max": 47.3,
+          "mean": 14.2
+        }
+      },
+      {
+        "fromSec": 48,
+        "n": 60,
+        "status": {
+          "0": 60
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 1,
+          "p95": 1.4,
+          "p99": 2.5,
+          "max": 2.5,
+          "mean": 1.1
+        }
+      },
+      {
+        "fromSec": 50,
+        "n": 60,
+        "status": {
+          "0": 60
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 1.1,
+          "p95": 1.5,
+          "p99": 2.2,
+          "max": 2.2,
+          "mean": 1.1
+        }
+      },
+      {
+        "fromSec": 52,
+        "n": 60,
+        "status": {
+          "0": 60
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 1,
+          "p95": 1.3,
+          "p99": 1.6,
+          "max": 1.6,
+          "mean": 1
+        }
+      },
+      {
+        "fromSec": 54,
+        "n": 60,
+        "status": {
+          "0": 60
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 1,
+          "p95": 1.3,
+          "p99": 4.5,
+          "max": 4.5,
+          "mean": 1
+        }
+      },
+      {
+        "fromSec": 56,
+        "n": 60,
+        "status": {
+          "0": 60
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 1,
+          "p95": 2,
+          "p99": 3.2,
+          "max": 3.2,
+          "mean": 1.1
+        }
+      },
+      {
+        "fromSec": 58,
+        "n": 60,
+        "status": {
+          "0": 60
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 1.1,
+          "p95": 1.6,
+          "p99": 2.5,
+          "max": 2.5,
+          "mean": 1.1
+        }
+      },
+      {
+        "fromSec": 60,
+        "n": 60,
+        "status": {
+          "0": 60
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 1,
+          "p95": 1.5,
+          "p99": 10.2,
+          "max": 10.2,
+          "mean": 1.2
+        }
+      },
+      {
+        "fromSec": 62,
+        "n": 60,
+        "status": {
+          "0": 60
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 1,
+          "p95": 1.4,
+          "p99": 12.7,
+          "max": 12.7,
+          "mean": 1.2
+        }
+      },
+      {
+        "fromSec": 64,
+        "n": 60,
+        "status": {
+          "0": 60
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 1.1,
+          "p95": 1.4,
+          "p99": 2.6,
+          "max": 2.6,
+          "mean": 1.1
+        }
+      },
+      {
+        "fromSec": 66,
+        "n": 60,
+        "status": {
+          "0": 60
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 1,
+          "p95": 1.3,
+          "p99": 3.1,
+          "max": 3.1,
+          "mean": 1.1
+        }
+      },
+      {
+        "fromSec": 68,
+        "n": 60,
+        "status": {
+          "0": 60
+        },
+        "latencyMs": {
+          "n": 60,
+          "p50": 1,
+          "p95": 1.4,
+          "p99": 5.5,
+          "max": 5.5,
+          "mean": 1.1
+        }
+      },
+      {
+        "fromSec": 70,
+        "n": 1,
+        "status": {
+          "0": 1
+        },
+        "latencyMs": {
+          "n": 1,
+          "p50": 1.6,
+          "p95": 1.6,
+          "p99": 1.6,
+          "max": 1.6,
+          "mean": 1.6
+        }
+      }
+    ],
+    "retryOutcome": {
+      "0": 368
+    },
+    "apiAlive": false,
+    "workerAlive": true,
+    "checks": [
+      {
+        "check": "the API process survived every connection loss",
+        "pass": false,
+        "detail": {
+          "apiPid": 26636
+        }
+      },
+      {
+        "check": "errors during the outage were controlled 5xx responses with a JSON error code (no hangs)",
+        "pass": true,
+        "detail": {
+          "errorBodies": {
+            "500 INTERNAL": 247
+          },
+          "networkErrors": {
+            "TypeError: fetch failed (UND_ERR_SOCKET)": 1,
+            "TypeError: fetch failed (ECONNREFUSED)": 662
+          },
+          "slowestErrorMs": 29.8
+        }
+      },
+      {
+        "check": "requests succeed again after the database reopens",
+        "pass": true,
+        "detail": {
+          "reopenedAtSec": 33.2,
+          "firstSuccessAtSec": 33.2,
+          "secondsToFirstSuccess": 0
+        }
+      },
+      {
+        "check": "idempotent retry of every failed booking returned 201 or a business 409 (never 5xx)",
+        "pass": false,
+        "detail": {
+          "retried": 368,
+          "outcome": {
+            "0": 368
+          }
+        }
+      },
+      {
+        "check": "no duplicate or lost booking: appointments in the database equal distinct idempotency records of bookings",
+        "pass": true,
+        "detail": {
+          "appointments": 477,
+          "idempotencyRecords": 477,
+          "distinctKeysSent": 845,
+          "answered201": 477
+        }
+      },
+      {
+        "check": "invariants hold",
+        "pass": true,
+        "detail": []
+      },
+      {
+        "check": "the worker process survived",
+        "pass": true,
+        "detail": {
+          "workerLogErrorLines": 35
+        }
+      }
+    ],
+    "allPass": false
+  },
+  "dbCrash": {
+    "description": "pg_terminate_backend on every non-idle backend of the API pool (state idle-in-transaction: checked out by a command, between two statements) while 200 bookings (16 in flight) are running",
+    "backendsTerminated": 1,
+    "firstStatusesBeforeRestart": {
+      "0": 0
+    },
+    "outcomeCounts": {
+      "0": 200
+    },
+    "apiAliveAfter": false,
+    "crashLine": "      throw er; // Unhandled 'error' event",
+    "logTail": [
+      "  internalPosition: undefined,",
+      "  internalQuery: undefined,",
+      "  where: undefined,",
+      "  schema: undefined,",
+      "  table: undefined,",
+      "  column: undefined,",
+      "  dataType: undefined,",
+      "  constraint: undefined,",
+      "  file: 'postgres.c',",
+      "  line: '3328',",
+      "  routine: 'ProcessInterrupts'",
+      "}",
+      "Node.js v22.23.4",
+      "[t5-harness] process 25072 exited (1) at 2026-11-11T13:51:26.431Z"
+    ],
+    "replay": {
+      "201": 60,
+      "409": 140
+    },
+    "restartMs": 648.4,
+    "checks": [
+      {
+        "check": "terminating a checked-out API connection (idle in transaction) with pg_terminate_backend leaves the API process running",
+        "pass": false,
+        "detail": {
+          "backendsTerminated": 1,
+          "afterMs": 83.3,
+          "exitedWith": "see crashLine",
+          "crashLine": "      throw er; // Unhandled 'error' event"
+        }
+      },
+      {
+        "check": "no half-written state after the connection loss",
+        "pass": true,
+        "detail": {
+          "before": 0,
+          "violations": []
+        }
+      },
+      {
+        "check": "after restart every request replays with its Idempotency-Key to 201 or a business 409 (no 5xx)",
+        "pass": true,
+        "detail": {
+          "replay": {
+            "201": 60,
+            "409": 140
+          },
+          "restartToHealthyMs": 648.4
+        }
+      },
+      {
+        "check": "each session ends with exactly its capacity booked (10 places x 6 sessions, 200 requests)",
+        "pass": true,
+        "detail": {
+          "perSession": [
+            10,
+            10,
+            10,
+            10,
+            10,
+            10
+          ],
+          "after": 60
+        }
+      },
+      {
+        "check": "invariants hold",
+        "pass": true,
+        "detail": []
+      }
+    ],
+    "allPass": false
+  }
+}

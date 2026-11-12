@@ -1,0 +1,12 @@
+[t5-harness] worker pid 15957 started 2026-11-11T14:23:36.197Z
+{"ts":"2026-11-11T14:23:36.288Z","level":"info","msg":"runner.started","service":"worker","workerId":"t5-load-worker","component":"runner","concurrency":4}
+{"ts":"2026-11-11T14:23:36.290Z","level":"info","msg":"outbox.started","service":"worker","workerId":"t5-load-worker","component":"outbox"}
+{"ts":"2026-11-11T14:23:36.290Z","level":"info","msg":"worker.started","service":"worker","workerId":"t5-load-worker","concurrency":4,"pollMs":500,"leaseSec":30,"jobTypes":"all","outbox":true}
+{"ts":"2026-11-11T14:23:36.845Z","level":"info","msg":"reconcile_uploads.done","service":"worker","workerId":"t5-load-worker","component":"runner","jobId":"c9e4fc71-c7bf-455d-ada4-48c4a1956e71","jobType":"reconcile_uploads","attempt":1,"accepted":0,"rejected":0,"orphansDeleted":0,"jobsEnqueued":0,"stalledProcessing":0}
+{"ts":"2026-11-11T14:23:36.858Z","level":"info","msg":"job.succeeded","service":"worker","workerId":"t5-load-worker","component":"runner","jobId":"c9e4fc71-c7bf-455d-ada4-48c4a1956e71","jobType":"reconcile_uploads","attempt":1}
+{"ts":"2026-11-11T14:56:24.815Z","level":"info","msg":"worker.signal","service":"worker","workerId":"t5-load-worker","signal":"SIGTERM"}
+{"ts":"2026-11-11T14:56:24.816Z","level":"info","msg":"worker.stopping","service":"worker","workerId":"t5-load-worker"}
+{"ts":"2026-11-11T14:56:24.816Z","level":"info","msg":"outbox.stopped","service":"worker","workerId":"t5-load-worker","component":"outbox"}
+{"ts":"2026-11-11T14:56:24.816Z","level":"info","msg":"runner.stopped","service":"worker","workerId":"t5-load-worker","component":"runner","inFlight":0}
+{"ts":"2026-11-11T14:56:24.816Z","level":"info","msg":"worker.stopped","service":"worker","workerId":"t5-load-worker"}
+[t5-harness] process 15957 exited (code=0 signal=null) at 2026-11-11T14:56:24.821Z

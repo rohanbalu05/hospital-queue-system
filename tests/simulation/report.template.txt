@@ -1,0 +1,188 @@
+# Queue policy simulation: FCFS vs the HQMS policy
+
+> Every number in this file is **measured in simulation** on synthetic, seeded sessions. None is a
+> hospital measurement, none is a target, and none validates clinical outcomes. This file is generated
+> by `pnpm --filter @hqms/tests simulate` from `tests/simulation/report.template.txt` and
+> `docs/evidence/simulation/results.json`; do not edit the tables by hand.
+
+Report reference: section 5.6 (queue comparison), Table 7 (policy values), section 6.4 (selection
+procedure), presentation Q&A 5, 6, 7 and 35.
+
+## 1. Purpose
+
+Show, with identical generated arrivals, consultation durations and doctor pauses, how the proposed
+selection policy (A,A,W rotation, authorized clinical priority, 45-minute aging trigger) compares with
+first come first served (FCFS) on median and p95 wait, appointment start delay, group-specific waits,
+longest observed wait, completed visits and doctor utilization, including the metrics on which the
+policy does worse (report section 5.6, Q&A 35).
+
+## 2. Reproduce
+
+```
+pnpm install
+pnpm --filter @hqms/tests simulate          # writes docs/evidence/simulation/* and this file
+cat docs/evidence/simulation/results.sha256 # SHA-256 of results.json
+pnpm --filter @hqms/tests test:simulation   # determinism and invariant tests
+```
+
+- Run again: `results.json` is byte-identical (same SHA-256). Recorded hash of the committed run:
+  `{{SHA256}}`.
+- Environment of the committed run: Node 22 on Linux x86-64 (4 vCPU cloud container). The full run takes
+  about one second. Results depend only on the seeds, the parameters below and the `@hqms/domain`
+  package. The generator uses mulberry32 (no `Math.random`); outputs are rounded to three decimals.
+  Floating-point library functions (`Math.log`, `Math.exp`, `Math.cos`) could in principle differ in the
+  last bit on another platform, so the hash is asserted on the same Node and OS, not across platforms.
+- Raw data: `docs/evidence/simulation/results.json` (aggregates, parameters, seeds),
+  `summary.csv` (one row per scenario and policy) and `per-trial.csv` (one row per trial and policy).
+
+## 3. Model and assumptions
+
+One doctor, one session. Time is in minutes from 09:00 (hospital-local); the session closes at 13:00.
+
+| Element | Modelled as |
+| --- | --- |
+| Session | 09:00 to 13:00 (240 min), 210 consultation minutes, two 15-minute doctor pauses (30 min of breaks) |
+| Pause rule | Each pause begins at the first moment at or after its nominal start (10:30 and 12:00) when the doctor is not in a consultation, and lasts 15 minutes. A consultation is never interrupted. The pause schedule is identical for both policies |
+| Appointments | Slots every 20 minutes (12 slots, 09:00 to 12:40); the scenario's booked count (at most 10) is drawn at random from them |
+| Appointment arrival | On time: Normal(-6, 7) minutes relative to the booked time, never before 09:00. Late (10% of appointments): 16 plus Exponential(mean 12) minutes after the booked time. No-shows per scenario. Arrivals after 13:00 are treated as no-shows |
+| Arrival class | The domain function `classifyArrival` (late grace 15 min). On time keeps group A; later than grace becomes a late admission ordered as W, assumed approved by staff on arrival |
+| Eligibility | The domain function `computeEligibleAt`: on-time appointment max(check-in, booked time - 10 min); walk-in or late admission at its check-in |
+| Walk-ins | Poisson arrivals (piecewise constant rate) until 12:30; the first 5 are admitted, later attempts are turned away (identical for both policies) |
+| Authorized priority | Assigned at arrival to a fraction of patients; class 1, 2 or 3 at 20%, 30%, 50%. Neither policy can assign it later |
+| Consultation duration | Per patient, lognormal with the scenario's arithmetic mean and sigma 0.4 of the underlying normal, clamped to 3 to 45 minutes. Each patient carries the same duration under every policy |
+| Call to start | Zero. A called patient is present and starts immediately (the 2-minute call timeout is not modelled) |
+| After 13:00 | No new check-ins. The doctor keeps seeing patients already checked in; the overrun is measured |
+| Selection (policy) | `selectNext` from `@hqms/domain` with the default policy (Table 7: A,A,W; 45-minute aging; early eligibility 10 min), doctor free (non-preemptive), the rotation pointer carried from each decision to the next |
+| Selection (FCFS) | Lowest eligible time, then check-in sequence. No priority. Same eligibility rules, so nobody is called before they are eligible |
+| Supplementary arm | FCFS with priority: authorized priority first (best class, then eligible time), otherwise FCFS. It is not part of the report's comparison; it isolates what rotation and aging add on top of honouring priority |
+
+Scenario parameters (all synthetic; the mean consultation of 16 minutes is the report's Table 3
+sensitivity case):
+
+<!-- GENERATED:PARAMS -->
+
+Scenario definitions:
+
+- **Appointment-heavy**: 10 booked slots, few walk-ins, mean 12 min.
+- **Walk-in-heavy**: 5 booked slots; about 10 walk-in attempts front-loaded into the first 90 minutes,
+  so the cap of 5 admitted walk-ins is reached early.
+- **Priority-heavy**: 10 booked slots, about 6 walk-in attempts, 20% of attending patients carry an
+  authorized priority.
+- **Overloaded**: 10 booked slots, about 8 walk-in attempts, mean 16 min. Expected consultation work
+  exceeds the 210 available minutes (report Table 3: admission limits and queue order are different
+  controls; a fair order does not create doctor time).
+
+Seeds. A trial's seed is the scenario base seed plus the trial index, and the same seed generates the
+same session for every policy:
+
+<!-- GENERATED:SEEDS -->
+
+## 4. Metrics
+
+- **Wait**: eligible time to call time, minutes, for every patient who checked in (all of them are
+  eventually served, so no wait is censored). Reported pooled over all patients of all trials (median,
+  p95, mean, maximum) and as per-trial values compared pairwise.
+- **Longest wait**: the largest wait in a trial. The table gives the mean over trials with a paired
+  95% interval, the p95 over trials, and the single worst wait seen in any trial.
+- **Group waits**: A = on-time appointments without priority; W = walk-ins and late admissions without
+  priority; P = any patient with authorized priority.
+- **Appointment start delay**: call time minus booked time, for on-time appointments (including those
+  with priority). Negative means called before the booked time.
+- **Completed by 13:00**: consultations that ended by 13:00. **Overrun**: minutes after 13:00 until
+  the last consultation ends.
+- **Utilization**: consultation minutes delivered between 09:00 and 13:00 divided by the 210 nominal
+  consultation minutes.
+- **Over 45 minutes**: share of patients whose wait exceeded 45 minutes, and share of trials in which
+  at least one did. 45 minutes is the aging trigger, not a deadline.
+- **Paired differences**: policy minus FCFS on the same generated session, mean over trials with a
+  normal-approximation 95% interval (mean plus or minus 1.96 standard errors). "Trials policy higher /
+  lower / equal" counts trials by the sign of that difference.
+
+## 5. Invariants asserted during every run
+
+The run fails if any of these is violated (checked in `tests/simulation/engine.ts`, exercised by
+`tests/simulation/simulation.test.ts`):
+
+1. Never two patients in service at once, and no consultation overlaps a doctor pause.
+2. No patient is selected before becoming eligible; every checked-in patient is served exactly once.
+3. Priority never preempts: while a consultation runs, `selectNext` with the doctor occupied is probed
+   mid-consultation and must return NO_ALLOCATION; a paused session must not allocate.
+4. Pointer behaviour: unchanged on CLINICAL_PRIORITY, AGING and NO_ALLOCATION; advanced to the slot
+   after the one served on ROTATION. Each decision is also re-checked against the report section 6.4
+   rules independently of the selector (best class and longest wait for priority, oldest eligible wait
+   at least 45 minutes for aging, no override pending for rotation).
+
+## 6. Results (measured in simulation)
+
+<!-- GENERATED:TABLES -->
+
+## 7. Findings
+
+All statements below describe the simulated sessions above and nothing else.
+
+1. **The policy does not create capacity.** Doctor utilization, completed visits by 13:00 and overrun
+   are the same under both policies (paired overrun difference 0.00 in every trial of every scenario;
+   completed by 13:00 differs in at most 34 of 500 trials and the mean difference is within
+   0.03 visits with an interval that includes zero). In the overloaded scenario both policies
+   overrun by about 35 minutes on average. A queue order moves waiting between patients; it does not
+   remove it. This matches report section 5.5.
+2. **Median wait improves, slightly, in all four scenarios.** The pooled median falls by 0.6, 0.8, 2.2
+   and 3.3 minutes (appointment-heavy, walk-in-heavy, priority-heavy, overloaded), and the paired
+   per-trial median difference has an interval below zero in each. The mean wait is essentially
+   unchanged (within 0.1 minute), so the policy redistributes waiting rather than reducing it.
+3. **The policy is worse in the tail, in every scenario.** Pooled p95 wait rises by 4.0, 5.8, 6.9 and
+   4.4 minutes; the mean longest wait per trial rises by 3.2, 3.4, 8.5 and 6.4 minutes (paired 95%
+   intervals exclude zero); the share of patients waiting more than 45 minutes rises by 1.4, 1.9, 3.2
+   and 3.1 percentage points; and the share of trials with at least one such wait rises by 8.4, 10.0,
+   20.2 and 8.0 points. The worst single wait seen in any trial is longer under the policy in the
+   walk-in-heavy (113 vs 98 min), priority-heavy (145 vs 120 min) and overloaded (175 vs 155 min)
+   scenarios and equal in the appointment-heavy one. FCFS is, by construction, the order that keeps the
+   longest wait small; the policy gives that up on purpose. Aging bounds the damage only loosely: it
+   fired 0.5 to 5.6 times per trial and waits well beyond 45 minutes still occur, because aging is a
+   trigger, priority can displace it, and a busy doctor cannot be preempted (report Q&A 7).
+4. **Walk-in and late-admission patients pay for it.** Group W waits are longer under the policy in
+   every scenario: p95 +14.2 min (appointment-heavy), +10.6 (walk-in-heavy), +18.6 (priority-heavy),
+   +8.0 (overloaded); the W median also rises (+0.3, +0.8, +2.7 and +15.8 min, the last from 29.7 to
+   45.5 min). This is the A,A,W 2:1 rotation doing what it was designed to do, and it is the main cost.
+5. **Appointment patients gain.** Group A median waits fall in three scenarios and stay at 0.0 minutes
+   in the walk-in-heavy one. A's p95 wait improves
+   clearly when load is moderate (35.0 to 30.8 and 35.7 to 21.1 min) but is slightly worse in the
+   priority-heavy (46.5 to 47.3) and overloaded (96.0 to 98.0) scenarios, where priority calls and
+   aging overrides take turns from the rotation. Calls more than 15 minutes after the booked time fall
+   from 15.0% to 11.6%, 15.3% to 6.7%, 27.4% to 19.0% and 63.0% to 51.0% of on-time appointments.
+6. **Authorized priority works as designed, and costs others.** Group P waits fall sharply in the
+   priority-heavy scenario (median 9.2 to 4.4, p95 49.5 to 25.4 min) and in the overloaded one
+   (median 30.5 to 8.4 min). The FCFS arm has no priority, so this compares the full policy with a
+   baseline lacking the feature. Against the supplementary FCFS-with-priority arm in the priority-heavy
+   scenario, P waits are identical, group A improves (median 7.3 to 4.9 min), and group W is worse
+   (median 11.2 to 13.0, p95 57.4 to 66.2 min): the rotation and aging add a further shift from
+   walk-ins to appointments on top of priority.
+7. **Light load makes the choice matter little.** In the appointment-heavy scenario utilization is
+   about 67% and absolute differences are small (median -0.6 min, p95 +4.0 min). The policy's effects
+   grow with congestion (priority-heavy and overloaded).
+
+Summary of the trade-off, in simulation: relative to FCFS the policy shortens the typical wait and the
+appointment start delay and protects authorized-priority patients, at the cost of longer waits for
+walk-in and late patients and a heavier tail (p95, longest wait, share beyond 45 minutes). Whether that
+trade is acceptable is a clinic policy decision; this evidence only quantifies it.
+
+## 8. Limitations
+
+- Simulation, not hospital measurement. All arrivals, durations, no-show and priority rates are
+  synthetic assumptions chosen to exercise the policy (report section 5.5: approved synthetic planning
+  assumptions). Real arrival patterns, interruptions and consultation lengths will differ.
+- One doctor and one session at a time. Cross-doctor effects, reception workload, re-entries after a
+  skipped call and manual staff actions are not modelled.
+- Called patients are assumed present and start at once; the 2-minute call timeout and SKIPPED/ABSENT
+  paths are not simulated. Late admissions are assumed approved immediately.
+- Authorized priority is assigned at arrival by a random draw. Real priority is a clinical decision and
+  can change; priority is modelled as independent of consultation length.
+- Walk-in capacity is the default 5 and walk-ins beyond it are turned away identically under both
+  policies; refused patients are not counted in any wait.
+- The 45-minute aging value is a trigger, not a deadline or guarantee, and the 2:1 rotation is a design
+  choice evaluated here, not shown to be optimal. Other rotations and thresholds were not explored.
+- Paired intervals are normal approximations over 500 trials per scenario and ignore multiple
+  comparisons. Differences of a few tenths of a minute should not be over-read.
+- The simulation does not validate clinical outcomes, patient satisfaction or safety.
+- The same code path as the API (`selectNext`) is used, but the simulation does not exercise the
+  database, locking or idempotency; those are covered by the concurrency tests (T1/T2).

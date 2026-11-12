@@ -1,0 +1,689 @@
+{
+  "t1LastSlot": {
+    "rounds": 20,
+    "perRound": [
+      {
+        "round": 1,
+        "mode": "capacity=1",
+        "bookedCapacity": 1,
+        "preBooked": 0,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 1,
+        "bookedAllocationsAfter": 1,
+        "appointmentsInSession": 1,
+        "latencyMs": {
+          "p50": 184.6,
+          "p95": 257.6,
+          "max": 262.9
+        }
+      },
+      {
+        "round": 2,
+        "mode": "capacity=10, 9 pre-booked",
+        "bookedCapacity": 10,
+        "preBooked": 9,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 10,
+        "bookedAllocationsAfter": 10,
+        "appointmentsInSession": 10,
+        "latencyMs": {
+          "p50": 104.7,
+          "p95": 156.6,
+          "max": 160.1
+        }
+      },
+      {
+        "round": 3,
+        "mode": "capacity=1",
+        "bookedCapacity": 1,
+        "preBooked": 0,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 1,
+        "bookedAllocationsAfter": 1,
+        "appointmentsInSession": 1,
+        "latencyMs": {
+          "p50": 108.6,
+          "p95": 181.2,
+          "max": 188.6
+        }
+      },
+      {
+        "round": 4,
+        "mode": "capacity=10, 9 pre-booked",
+        "bookedCapacity": 10,
+        "preBooked": 9,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 10,
+        "bookedAllocationsAfter": 10,
+        "appointmentsInSession": 10,
+        "latencyMs": {
+          "p50": 148.6,
+          "p95": 230.7,
+          "max": 233.2
+        }
+      },
+      {
+        "round": 5,
+        "mode": "capacity=1",
+        "bookedCapacity": 1,
+        "preBooked": 0,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 1,
+        "bookedAllocationsAfter": 1,
+        "appointmentsInSession": 1,
+        "latencyMs": {
+          "p50": 106.7,
+          "p95": 178.8,
+          "max": 182.7
+        }
+      },
+      {
+        "round": 6,
+        "mode": "capacity=10, 9 pre-booked",
+        "bookedCapacity": 10,
+        "preBooked": 9,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 10,
+        "bookedAllocationsAfter": 10,
+        "appointmentsInSession": 10,
+        "latencyMs": {
+          "p50": 145.7,
+          "p95": 224.7,
+          "max": 229.6
+        }
+      },
+      {
+        "round": 7,
+        "mode": "capacity=1",
+        "bookedCapacity": 1,
+        "preBooked": 0,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 1,
+        "bookedAllocationsAfter": 1,
+        "appointmentsInSession": 1,
+        "latencyMs": {
+          "p50": 104.1,
+          "p95": 156.8,
+          "max": 164.9
+        }
+      },
+      {
+        "round": 8,
+        "mode": "capacity=10, 9 pre-booked",
+        "bookedCapacity": 10,
+        "preBooked": 9,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 10,
+        "bookedAllocationsAfter": 10,
+        "appointmentsInSession": 10,
+        "latencyMs": {
+          "p50": 94.8,
+          "p95": 187.3,
+          "max": 194.3
+        }
+      },
+      {
+        "round": 9,
+        "mode": "capacity=1",
+        "bookedCapacity": 1,
+        "preBooked": 0,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 1,
+        "bookedAllocationsAfter": 1,
+        "appointmentsInSession": 1,
+        "latencyMs": {
+          "p50": 133.6,
+          "p95": 183,
+          "max": 185.5
+        }
+      },
+      {
+        "round": 10,
+        "mode": "capacity=10, 9 pre-booked",
+        "bookedCapacity": 10,
+        "preBooked": 9,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 10,
+        "bookedAllocationsAfter": 10,
+        "appointmentsInSession": 10,
+        "latencyMs": {
+          "p50": 99.9,
+          "p95": 152.5,
+          "max": 157
+        }
+      },
+      {
+        "round": 11,
+        "mode": "capacity=1",
+        "bookedCapacity": 1,
+        "preBooked": 0,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 1,
+        "bookedAllocationsAfter": 1,
+        "appointmentsInSession": 1,
+        "latencyMs": {
+          "p50": 105.8,
+          "p95": 159.7,
+          "max": 162.2
+        }
+      },
+      {
+        "round": 12,
+        "mode": "capacity=10, 9 pre-booked",
+        "bookedCapacity": 10,
+        "preBooked": 9,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 10,
+        "bookedAllocationsAfter": 10,
+        "appointmentsInSession": 10,
+        "latencyMs": {
+          "p50": 110.6,
+          "p95": 205.3,
+          "max": 214
+        }
+      },
+      {
+        "round": 13,
+        "mode": "capacity=1",
+        "bookedCapacity": 1,
+        "preBooked": 0,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 1,
+        "bookedAllocationsAfter": 1,
+        "appointmentsInSession": 1,
+        "latencyMs": {
+          "p50": 171.7,
+          "p95": 265.6,
+          "max": 274.1
+        }
+      },
+      {
+        "round": 14,
+        "mode": "capacity=10, 9 pre-booked",
+        "bookedCapacity": 10,
+        "preBooked": 9,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 10,
+        "bookedAllocationsAfter": 10,
+        "appointmentsInSession": 10,
+        "latencyMs": {
+          "p50": 128,
+          "p95": 197.8,
+          "max": 204
+        }
+      },
+      {
+        "round": 15,
+        "mode": "capacity=1",
+        "bookedCapacity": 1,
+        "preBooked": 0,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 1,
+        "bookedAllocationsAfter": 1,
+        "appointmentsInSession": 1,
+        "latencyMs": {
+          "p50": 130.3,
+          "p95": 199,
+          "max": 206.3
+        }
+      },
+      {
+        "round": 16,
+        "mode": "capacity=10, 9 pre-booked",
+        "bookedCapacity": 10,
+        "preBooked": 9,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 10,
+        "bookedAllocationsAfter": 10,
+        "appointmentsInSession": 10,
+        "latencyMs": {
+          "p50": 102.5,
+          "p95": 159.9,
+          "max": 163.3
+        }
+      },
+      {
+        "round": 17,
+        "mode": "capacity=1",
+        "bookedCapacity": 1,
+        "preBooked": 0,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 1,
+        "bookedAllocationsAfter": 1,
+        "appointmentsInSession": 1,
+        "latencyMs": {
+          "p50": 120.9,
+          "p95": 195.7,
+          "max": 202.9
+        }
+      },
+      {
+        "round": 18,
+        "mode": "capacity=10, 9 pre-booked",
+        "bookedCapacity": 10,
+        "preBooked": 9,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 10,
+        "bookedAllocationsAfter": 10,
+        "appointmentsInSession": 10,
+        "latencyMs": {
+          "p50": 126.5,
+          "p95": 211.5,
+          "max": 215.6
+        }
+      },
+      {
+        "round": 19,
+        "mode": "capacity=1",
+        "bookedCapacity": 1,
+        "preBooked": 0,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 1,
+        "bookedAllocationsAfter": 1,
+        "appointmentsInSession": 1,
+        "latencyMs": {
+          "p50": 129.6,
+          "p95": 197.3,
+          "max": 204.4
+        }
+      },
+      {
+        "round": 20,
+        "mode": "capacity=10, 9 pre-booked",
+        "bookedCapacity": 10,
+        "preBooked": 9,
+        "requests": 50,
+        "created201": 1,
+        "capacityFull409": 49,
+        "otherStatuses": {},
+        "serverErrors": 0,
+        "bookedReservedAfter": 10,
+        "bookedAllocationsAfter": 10,
+        "appointmentsInSession": 10,
+        "latencyMs": {
+          "p50": 79.8,
+          "p95": 129.4,
+          "max": 134.1
+        }
+      }
+    ],
+    "aggregate": {
+      "requests": 1000,
+      "created201": 20,
+      "capacityFull409": 980,
+      "serverErrors": 0,
+      "latencyMs": {
+        "p50": 120.9,
+        "p95": 212.2,
+        "max": 274.1
+      }
+    },
+    "globalInvariantViolations": []
+  },
+  "t1Reschedule": {
+    "intoFullSession": {
+      "attempts": 10,
+      "allConflict": true,
+      "rowSnapshotsEqual": true
+    },
+    "tenRaceOnePlace": {
+      "rounds": 5,
+      "perRound": [
+        {
+          "round": 1,
+          "successes": 1,
+          "capacityFull": 9,
+          "serverErrors": 0,
+          "sourceReservedAfter": 9,
+          "targetReservedAfter": 1
+        },
+        {
+          "round": 2,
+          "successes": 1,
+          "capacityFull": 9,
+          "serverErrors": 0,
+          "sourceReservedAfter": 9,
+          "targetReservedAfter": 1
+        },
+        {
+          "round": 3,
+          "successes": 1,
+          "capacityFull": 9,
+          "serverErrors": 0,
+          "sourceReservedAfter": 9,
+          "targetReservedAfter": 1
+        },
+        {
+          "round": 4,
+          "successes": 1,
+          "capacityFull": 9,
+          "serverErrors": 0,
+          "sourceReservedAfter": 9,
+          "targetReservedAfter": 1
+        },
+        {
+          "round": 5,
+          "successes": 1,
+          "capacityFull": 9,
+          "serverErrors": 0,
+          "sourceReservedAfter": 9,
+          "targetReservedAfter": 1
+        }
+      ]
+    },
+    "rescheduleVsCancel": {
+      "trials": 20,
+      "rescheduleWon": 7,
+      "cancelWon": 13,
+      "serverErrors": 0,
+      "bothAppliedOrNeither": 0
+    },
+    "globalInvariantViolations": []
+  },
+  "t1CheckIn": {
+    "repeatedCheckIn": {
+      "trials": 5,
+      "requestsPerTrial": 10,
+      "perTrial": [
+        {
+          "trial": 1,
+          "created201": 1,
+          "existing200": 9,
+          "distinctTokens": 1,
+          "visits": 1,
+          "queueEntries": 1,
+          "auditRows": 1
+        },
+        {
+          "trial": 2,
+          "created201": 1,
+          "existing200": 9,
+          "distinctTokens": 1,
+          "visits": 1,
+          "queueEntries": 1,
+          "auditRows": 1
+        },
+        {
+          "trial": 3,
+          "created201": 1,
+          "existing200": 9,
+          "distinctTokens": 1,
+          "visits": 1,
+          "queueEntries": 1,
+          "auditRows": 1
+        },
+        {
+          "trial": 4,
+          "created201": 1,
+          "existing200": 9,
+          "distinctTokens": 1,
+          "visits": 1,
+          "queueEntries": 1,
+          "auditRows": 1
+        },
+        {
+          "trial": 5,
+          "created201": 1,
+          "existing200": 9,
+          "distinctTokens": 1,
+          "visits": 1,
+          "queueEntries": 1,
+          "auditRows": 1
+        }
+      ]
+    },
+    "walkInRace": {
+      "rounds": 3,
+      "perRound": [
+        {
+          "round": 1,
+          "requests": 20,
+          "created201": 5,
+          "capacityFull409": 15,
+          "tokens": [
+            "W-001",
+            "W-002",
+            "W-003",
+            "W-004",
+            "W-005"
+          ]
+        },
+        {
+          "round": 2,
+          "requests": 20,
+          "created201": 5,
+          "capacityFull409": 15,
+          "tokens": [
+            "W-001",
+            "W-002",
+            "W-003",
+            "W-004",
+            "W-005"
+          ]
+        },
+        {
+          "round": 3,
+          "requests": 20,
+          "created201": 5,
+          "capacityFull409": 15,
+          "tokens": [
+            "W-001",
+            "W-002",
+            "W-003",
+            "W-004",
+            "W-005"
+          ]
+        }
+      ]
+    },
+    "samePatientWalkInTwice": {
+      "requests": 6,
+      "statuses": {
+        "201": 1,
+        "409": 5
+      }
+    },
+    "checkInVersusWalkIn": {
+      "checkIns": 5,
+      "walkInRequests": 10,
+      "walkInSucceeded": 3,
+      "statuses": {
+        "201": 8,
+        "409": 7
+      }
+    },
+    "globalInvariantViolations": []
+  },
+  "t1Idempotency": {
+    "sameKeyParallel": {
+      "rounds": 10,
+      "requestsPerRound": 10,
+      "perRound": [
+        {
+          "round": 1,
+          "statuses": {
+            "201": 10
+          },
+          "distinctIds": 1,
+          "replayed": 9,
+          "appointments": 1
+        },
+        {
+          "round": 2,
+          "statuses": {
+            "201": 10
+          },
+          "distinctIds": 1,
+          "replayed": 9,
+          "appointments": 1
+        },
+        {
+          "round": 3,
+          "statuses": {
+            "201": 10
+          },
+          "distinctIds": 1,
+          "replayed": 9,
+          "appointments": 1
+        },
+        {
+          "round": 4,
+          "statuses": {
+            "201": 10
+          },
+          "distinctIds": 1,
+          "replayed": 9,
+          "appointments": 1
+        },
+        {
+          "round": 5,
+          "statuses": {
+            "201": 10
+          },
+          "distinctIds": 1,
+          "replayed": 9,
+          "appointments": 1
+        },
+        {
+          "round": 6,
+          "statuses": {
+            "201": 10
+          },
+          "distinctIds": 1,
+          "replayed": 9,
+          "appointments": 1
+        },
+        {
+          "round": 7,
+          "statuses": {
+            "201": 10
+          },
+          "distinctIds": 1,
+          "replayed": 9,
+          "appointments": 1
+        },
+        {
+          "round": 8,
+          "statuses": {
+            "201": 10
+          },
+          "distinctIds": 1,
+          "replayed": 9,
+          "appointments": 1
+        },
+        {
+          "round": 9,
+          "statuses": {
+            "201": 10
+          },
+          "distinctIds": 1,
+          "replayed": 9,
+          "appointments": 1
+        },
+        {
+          "round": 10,
+          "statuses": {
+            "201": 10
+          },
+          "distinctIds": 1,
+          "replayed": 9,
+          "appointments": 1
+        }
+      ]
+    },
+    "differentBody": {
+      "sequentialReuse": 409,
+      "parallelMixedBodies": {
+        "201": 5,
+        "409": 5
+      }
+    },
+    "keyScopedToActor": {
+      "statuses": [
+        201,
+        201
+      ]
+    },
+    "businessFailureNotStored": {
+      "firstStatus": 409,
+      "retryStatus": 201
+    },
+    "globalInvariantViolations": []
+  }
+}

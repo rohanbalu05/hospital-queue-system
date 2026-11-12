@@ -1,0 +1,16 @@
+{
+  "t3SseFreshness": {
+    "reconnect": {
+      "versionBeforeDisconnect": 3,
+      "versionAfterMissedCommits": 5,
+      "firstNoticeAfterReconnect": {
+        "sessionId": "d2db321b-247c-4f19-8cff-b06a6cd5c9d7",
+        "queueVersion": 5,
+        "eventType": "connected",
+        "committedAt": "2026-11-11T13:22:17.956Z"
+      },
+      "snapshotVersionMatches": true,
+      "snapshotActiveToken": "W-001"
+    }
+  }
+}
