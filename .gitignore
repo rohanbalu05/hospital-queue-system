@@ -9,3 +9,5 @@ test-results/
 *.log
 .DS_Store
 .turbo/
+.claude/worktrees/
+var/

@@ -1,0 +1,31 @@
+{
+  "name": "@hqms/tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p simulation/tsconfig.json --noEmit",
+    "test": "vitest run --dir integration --passWithNoTests && vitest run --config simulation/vitest.config.ts",
+    "test:simulation": "vitest run --config simulation/vitest.config.ts",
+    "simulate": "tsx simulation/run.ts",
+    "test:concurrency": "vitest run --dir concurrency --passWithNoTests",
+    "e2e": "playwright test --trace off",
+    "test:coverage": "vitest run --config simulation/vitest.config.ts --coverage --coverage.include=simulation/** --coverage.exclude=simulation/**/*.test.ts --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reporter=lcov --coverage.reportsDirectory=coverage",
+    "load": "tsx load/run-load.ts",
+    "failure": "tsx failure/run-failure.ts",
+    "restore-drill": "bash failure/restore-drill.sh",
+    "load:sse": "tsx load/sse.ts"
+  },
+  "devDependencies": {
+    "@hqms/db": "workspace:*",
+    "@hqms/domain": "workspace:*",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "@vitest/coverage-v8": "^2.1.9",
+    "pg": "^8.13.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

@@ -1,0 +1,174 @@
+{
+  "t4InstructionControls": {
+    "ocrLatencyMs": 141,
+    "preVerificationQuestions": 3,
+    "verifiedAnswerCitesV1": true,
+    "supersede": {
+      "v1Status": "superseded",
+      "v2Status": "current",
+      "citedOnly": "v2"
+    },
+    "immutability": {
+      "update body of current v2": "instruction_versions rows are immutable (only current -> superseded allowed)",
+      "update body of superseded v1": "instruction_versions rows are immutable (only current -> superseded allowed)",
+      "re-activate superseded v1": "instruction_versions rows are immutable (only current -> superseded allowed)",
+      "change verifier": "instruction_versions rows are immutable (only current -> superseded allowed)",
+      "delete v1": "instruction_versions rows are immutable (only current -> superseded allowed)"
+    },
+    "sharedTaskDetailListsQuestions": 5,
+    "denyListWithVerifiedContext": {
+      "questions": 3,
+      "auditReason": "denied_intent"
+    },
+    "weakOverlapOutcome": "escalated",
+    "escalationTasks": {
+      "distinct": 3,
+      "ownedByFollowupUser": true
+    },
+    "escalationCap": {
+      "cap": 3,
+      "escalationsAskedByP1": 13,
+      "openTasksCreated": 3,
+      "auditRows": 13
+    },
+    "escalationCapCleanPatient": {
+      "questions": 5,
+      "distinctTasks": 3,
+      "joinedQuestions": 2
+    },
+    "crossPatientProbes": {
+      "count": 12,
+      "results": [
+        {
+          "request": "GET /documents/:id",
+          "status": 404
+        },
+        {
+          "request": "GET /documents/:id/file",
+          "status": 404
+        },
+        {
+          "request": "GET /documents/:id/drafts",
+          "status": 403
+        },
+        {
+          "request": "GET /documents?patientId=P1",
+          "status": 404
+        },
+        {
+          "request": "GET /instructions?patientId=P1",
+          "status": 404
+        },
+        {
+          "request": "GET /assistant/conversations/:id/messages",
+          "status": 404
+        },
+        {
+          "request": "POST /assistant/messages (P1 conversation)",
+          "status": 404
+        },
+        {
+          "request": "GET /follow-up-tasks/:id",
+          "status": 403
+        },
+        {
+          "request": "POST /follow-up-tasks/:id/acknowledge",
+          "status": 403
+        },
+        {
+          "request": "POST /documents (patientId=P1)",
+          "status": 404
+        },
+        {
+          "request": "POST /documents/:id/verify",
+          "status": 403
+        },
+        {
+          "request": "GET /documents/:id/file (anonymous)",
+          "status": 401
+        }
+      ],
+      "unauthorizedSuccesses": 0
+    },
+    "workerErrorLines": 0,
+    "globalInvariantViolations": []
+  },
+  "t4FollowUpTasks": {
+    "overdueCreatedPastDue": {
+      "status": "open",
+      "overdue": true
+    },
+    "overdueFlippedWhileWatching": {
+      "status": "open",
+      "overdue": true
+    },
+    "defaultOwner": {
+      "followUpCreator": "self",
+      "doctorCreator": "assigned follow-up user"
+    },
+    "acknowledge": {
+      "ownerAfter": "caller",
+      "status": "acknowledged"
+    },
+    "resolveCancelOwnerRule": {
+      "nonOwnerStatus": 403,
+      "adminStatus": 200
+    },
+    "returnIntoFullSession": {
+      "status": 409,
+      "code": "CAPACITY_FULL"
+    },
+    "returnBooking": {
+      "bookedReservedDelta": 1,
+      "linkedBothWays": true,
+      "replayIdempotent": true
+    },
+    "resolveReturnBooked": {
+      "status": "resolved",
+      "disposition": "return_booked"
+    },
+    "globalInvariantViolations": []
+  },
+  "t4OcrFailureIsolation": {
+    "ocrFailureWallMs": 4188,
+    "failedDocument": {
+      "finalStatus": "ocr_failed",
+      "attempts": 5,
+      "jobState": "dead"
+    },
+    "manualReviewOfFailedDocument": {
+      "status": 201,
+      "code": null
+    },
+    "retry": {
+      "retryStatus": 202,
+      "jobsAfterRetry": 2,
+      "finalStatus": "ocr_failed",
+      "attempts": 10
+    },
+    "workerDown": {
+      "documentStatusWhileDown": "accepted",
+      "jobStateWhileDown": "pending",
+      "afterRestart": "ocr_ready"
+    },
+    "coreOperations": {
+      "cycles": 43,
+      "requests": 215,
+      "statuses": {
+        "200": 129,
+        "201": 86
+      },
+      "serverErrors": 0,
+      "latencyMs": {
+        "p50": 11,
+        "p95": 18,
+        "max": 39
+      }
+    },
+    "workerErrorLogs": {
+      "job.dead": 3
+    },
+    "workerLogsContainClinicalText": false,
+    "globalInvariantViolations": []
+  }
+}

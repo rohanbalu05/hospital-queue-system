@@ -1,0 +1,49 @@
+{
+  "fixture": {
+    "sessionId": "66a7f9d8-dc1a-4b2f-b2bf-5e54db78b270",
+    "startsAt": "2026-11-11T14:56:00.000Z",
+    "roomLabel": "OPD 1"
+  },
+  "timingsMs": {
+    "callToDisplayMs": 490,
+    "callToPatientMs": 564,
+    "completeToPatientMs": 357
+  },
+  "databaseAfter": {
+    "visit": {
+      "id": "c6e84294-ac76-4ddc-9491-bd1899f35352",
+      "status": "completed",
+      "kind": "appointment",
+      "started_at": "2026-11-11T15:12:54.602Z",
+      "completed_at": "2026-11-11T15:12:55.091Z",
+      "entry_state": "completed",
+      "token": "A-001",
+      "call_count": 1,
+      "appointment_status": "completed"
+    },
+    "decisions": [
+      {
+        "reason": "ROTATION",
+        "policy_version": 1,
+        "explanation": "Called by rotation: 1st appointment of A, A, W"
+      }
+    ],
+    "auditOperations": [
+      "appointment.book (patient)",
+      "visit.check_in (reception)",
+      "queue.call_next (doctor)",
+      "consultation.start (doctor)",
+      "consultation.complete (doctor)"
+    ],
+    "activeAllocationsForDoctor": 0
+  },
+  "fourXxResponsesSeen": [
+    "patient 401 GET /api/me",
+    "reception 401 GET /api/me",
+    "display 401 GET /api/me",
+    "display 401 GET /api/me",
+    "doctor 401 GET /api/me"
+  ],
+  "fiveXxResponses": [],
+  "pageErrors": []
+}
