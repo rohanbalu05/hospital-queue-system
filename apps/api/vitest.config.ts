@@ -23,6 +23,9 @@ export default defineConfig({
       NODE_ENV: 'test',
       // Tests log in many times from one address.
       LOGIN_RATE_LIMIT_MAX: '1000',
+      // Per-user read limits (alternatives, today's visits, bell): tests poll these far more than a person would.
+      READS_RATE_LIMIT_PER_MIN: '100000',
+      UNREAD_COUNT_RATE_LIMIT_PER_MIN: '100000',
       // The public display snapshot is cached for 1 s in production; tests read their own writes.
       DISPLAY_CACHE_MS: '0',
     },

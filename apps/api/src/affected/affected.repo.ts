@@ -20,8 +20,13 @@ export interface AlternativeQuery {
   minArrivalWindowMin: number;
   /** Skip sessions where this patient already holds an active appointment. */
   excludePatientId?: string | null;
+  /** Doctors the caller may see (reception: their assignments); null or absent = every doctor. */
+  scopeDoctorIds?: readonly string[] | null;
   limit?: number;
 }
+
+/** Candidate sessions examined before the per-session slot query: the earliest few are all a list of 6 can ever need. */
+export const ALTERNATIVE_CANDIDATE_CAP = 20;
 
 /**
  * Sessions of OTHER doctors in the same department that are scheduled or open, not ended, in the next 7 days
@@ -31,14 +36,24 @@ export interface AlternativeQuery {
 export async function findAlternatives(db: Queryable, q: AlternativeQuery): Promise<AlternativeSession[]> {
   const records = await listSessionRecords(db, { from: q.today, to: addDays(q.today, 7), department: q.department });
   const activeDoctors = new Set((await listDoctors(db, { activeOnly: true })).map((d) => d.id));
-  const candidates = records.filter(
-    ({ session: s }) =>
-      s.doctorId !== q.sourceDoctorId &&
-      activeDoctors.has(s.doctorId) &&
-      (s.status === 'scheduled' || s.status === 'open') &&
-      new Date(s.endsAt).getTime() > q.now.getTime() &&
-      s.capacity.bookedAvailable > 0,
-  );
+  const inScope = q.scopeDoctorIds == null ? null : new Set(q.scopeDoctorIds);
+  const candidates = records
+    .filter(
+      ({ session: s }) =>
+        s.doctorId !== q.sourceDoctorId &&
+        activeDoctors.has(s.doctorId) &&
+        (inScope === null || inScope.has(s.doctorId)) &&
+        (s.status === 'scheduled' || s.status === 'open') &&
+        new Date(s.endsAt).getTime() > q.now.getTime() &&
+        s.capacity.bookedAvailable > 0,
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.session.startsAt).getTime() - new Date(b.session.startsAt).getTime() ||
+        a.session.id.localeCompare(b.session.id),
+    )
+    // cap BEFORE the per-session slot queries: a busy week must not turn one read into dozens of queries
+    .slice(0, ALTERNATIVE_CANDIDATE_CAP);
   let heldByPatient = new Set<string>();
   if (q.excludePatientId && candidates.length > 0) {
     const res = await db.query<{ session_id: string }>(
@@ -113,9 +128,15 @@ export async function findSessionAlternatives(db: Queryable, q: SessionAlternati
       new Date(s.endsAt).getTime() > q.now.getTime() &&
       (s.capacity.walkinAvailable > 0 || s.capacity.bookedAvailable > 0),
   );
+  candidates.sort(
+    (a, b) =>
+      b.session.capacity.walkinAvailable - a.session.capacity.walkinAvailable ||
+      new Date(a.session.startsAt).getTime() - new Date(b.session.startsAt).getTime() ||
+      a.session.id.localeCompare(b.session.id),
+  );
   const rules = new Map<string, SlotRule>();
   const out: AlternativeSession[] = [];
-  for (const { session: s, policyId } of candidates) {
+  for (const { session: s, policyId } of candidates.slice(0, ALTERNATIVE_CANDIDATE_CAP)) {
     let rule = rules.get(policyId);
     if (!rule) {
       const policy = await getPolicyById(db, policyId);
