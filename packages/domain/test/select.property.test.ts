@@ -449,7 +449,7 @@ describe('projectEta properties', () => {
           expect(eta.computedAt).toBe(new Date(now).toISOString());
           expect(eta.estimatorMeanMinutes).toBe(mean);
           if (status === 'unavailable' || status === 'closed' || status === 'scheduled') expect(eta.status).toBe('withheld');
-          if (status === 'paused' && pauseMin === null) expect(eta).toMatchObject({ status: 'withheld', note: 'Estimate paused' });
+          if (status === 'paused' && pauseMin === null) expect(eta).toMatchObject({ status: 'withheld', note: 'The doctor has stepped away; no return time given' });
           if (eta.status === 'ok') {
             expect(eta.lowMinutes).toBeGreaterThanOrEqual(0);
             expect(eta.highMinutes as number).toBeGreaterThanOrEqual(eta.lowMinutes as number);

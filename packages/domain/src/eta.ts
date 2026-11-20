@@ -71,6 +71,10 @@ export interface EtaInput {
   now: Instant;
 }
 
+/** Notes shown with a withheld estimate while the doctor is away (D-032). */
+export const AWAY_NO_RETURN_NOTE = 'The doctor has stepped away; no return time given';
+export const AWAY_OVERDUE_NOTE = 'The doctor is away longer than expected';
+
 const MODEL_NOTE = 'Model estimate from queue order and average consultation time, not a measured confidence interval.';
 
 /**
@@ -107,11 +111,11 @@ export function projectEta(input: EtaInput): Eta {
 
   let pauseMs: number | null = null;
   if (status === 'paused') {
-    if (pauseUntil === null) return make('withheld', null, null, 'Estimate paused');
+    // "Away" (D-032). A known return starts the projection at that return (below); an unknown or overdue one is
+    // withheld with a plain reason rather than a guess.
+    if (pauseUntil === null) return make('withheld', null, null, AWAY_NO_RETURN_NOTE);
     pauseMs = toMs(pauseUntil);
-    if (pauseMs <= nowMs) {
-      return make('withheld', null, null, 'Estimate paused (pause is longer than planned)');
-    }
+    if (pauseMs <= nowMs) return make('withheld', null, null, AWAY_OVERDUE_NOTE);
   }
 
   const target = input.entries.find((e) => e.id === input.targetEntryId);
