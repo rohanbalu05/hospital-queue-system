@@ -207,7 +207,7 @@ async function writeRecipient(tx: Tx, ev: OutboxEventRow, n: RenderedNotificatio
         `INSERT INTO notification_deliveries
            (event_id, notification_id, recipient_user_id, patient_id, channel, address, body, status, session_id, sent_at)
          VALUES ($1, $2, $3, $4, 'in_app', $5, $6, 'sent', $7, now())
-         ON CONFLICT (event_id, channel, address) DO NOTHING`,
+         ON CONFLICT (event_id, channel, address, patient_id) DO NOTHING`,
         [ev.id, notificationId, n.recipientUserId, n.patientId ?? null, inAppAddress(n.recipientUserId), n.body, ev.sessionId],
       );
     }
@@ -221,7 +221,7 @@ async function writeRecipient(tx: Tx, ev: OutboxEventRow, n: RenderedNotificatio
       `INSERT INTO notification_deliveries
          (event_id, recipient_user_id, patient_id, channel, address, body, status, session_id)
        VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7)
-       ON CONFLICT (event_id, channel, address) DO NOTHING
+       ON CONFLICT (event_id, channel, address, patient_id) DO NOTHING
        RETURNING id`,
       [ev.id, n.recipientUserId, n.patientId, channel, address, n.body, ev.sessionId],
     );
