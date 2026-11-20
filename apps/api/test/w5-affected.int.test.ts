@@ -48,7 +48,8 @@ const code = (body: unknown): string => ApiError.parse(body).error.code;
 
 let dayN = 0;
 const nextDay = (): string => new Date(Date.UTC(2120, 0, 1 + 10 * ++dayN)).toISOString().slice(0, 10);
-const addDays = (date: string, n: number): string => new Date(Date.parse(`${date}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+const addDays = (date: string, n: number): string =>
+  new Date(Date.parse(`${date}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const ist = (date: string, hhmm: string): Date => new Date(`${date}T${hhmm}:00+05:30`);
 
 interface Sess {
@@ -138,7 +139,10 @@ describe('B3.1 GET /appointments/{id}/alternatives and one-click rebook', () => 
     const p = await newPatient(reception, 'Alt Six');
     const appt = await book(source, p);
     const targets: Sess[] = [];
-    for (let i = 0; i < 8; i += 1) targets.push(await mk(2, addDays(day, i % 7), { from: i < 7 ? '09:00' : '14:00', to: i < 7 ? '13:00' : '17:00' }));
+    for (let i = 0; i < 8; i += 1)
+      targets.push(
+        await mk(2, addDays(day, i % 7), { from: i < 7 ? '09:00' : '14:00', to: i < 7 ? '13:00' : '17:00' }),
+      );
     const alt = AppointmentAlternatives.parse((await reception.get(`/appointments/${appt.id}/alternatives`)).body);
     expect(alt.alternatives).toHaveLength(6);
     const starts = alt.alternatives.map((a) => iso(a.startsAt));
@@ -164,16 +168,30 @@ describe('B3.1 GET /appointments/{id}/alternatives and one-click rebook', () => 
     const tiny = await mk(2, addDays(day, 1), { booked: 1 });
     await book(tiny, filler);
     const before = await capacityOf(t.pool, source.id);
-    const full = await mine.client.post(`/appointments/${appt.id}/reschedule`, { targetSessionId: tiny.id, expectedVersion: appt.version });
+    const full = await mine.client.post(`/appointments/${appt.id}/reschedule`, {
+      targetSessionId: tiny.id,
+      expectedVersion: appt.version,
+    });
     expect(full.status).toBe(409);
     expect(code(full.body)).toBe('CAPACITY_FULL');
-    expect((await mine.client.get(`/appointments/${appt.id}`)).body).toMatchObject({ status: 'booked', version: appt.version });
+    expect((await mine.client.get(`/appointments/${appt.id}`)).body).toMatchObject({
+      status: 'booked',
+      version: appt.version,
+    });
     expect(await capacityOf(t.pool, source.id)).toEqual(before);
 
-    const res = await mine.client.post(`/appointments/${appt.id}/reschedule`, { targetSessionId: target.id, expectedVersion: appt.version });
+    const res = await mine.client.post(`/appointments/${appt.id}/reschedule`, {
+      targetSessionId: target.id,
+      expectedVersion: appt.version,
+    });
     expect(res.status).toBe(201);
     const moved = Appointment.parse(res.body);
-    expect(moved).toMatchObject({ sessionId: target.id, doctorId: doctorId(2), status: 'booked', rescheduledFromId: appt.id });
+    expect(moved).toMatchObject({
+      sessionId: target.id,
+      doctorId: doctorId(2),
+      status: 'booked',
+      rescheduledFromId: appt.id,
+    });
     expect((await mine.client.get(`/appointments/${appt.id}`)).body.status).toBe('rescheduled');
     expect((await capacityInvariant(t.pool, source.id)).ok).toBe(true);
     expect((await capacityInvariant(t.pool, target.id)).ok).toBe(true);
@@ -228,7 +246,9 @@ describe('B3.2 GET /sessions/{id}/affected', () => {
     expect(one).toMatchObject({ patientName: 'Story Booked One', hasLogin: true, status: 'booked' });
     expect(a.notArrived.find((x) => x.appointmentId === w.a2.id)!.hasLogin).toBe(false);
     expect(a.notArrived.find((x) => x.appointmentId === w.a2.id)!.patientMrn).toMatch(/\S/);
-    expect(a.inQueue.map((x) => x.queueEntryId).sort()).toEqual([w.checkedIn.queueEntryId, w.walkIn.queueEntryId].sort());
+    expect(a.inQueue.map((x) => x.queueEntryId).sort()).toEqual(
+      [w.checkedIn.queueEntryId, w.walkIn.queueEntryId].sort(),
+    );
     expect(a.inQueue.find((x) => x.queueEntryId === w.checkedIn.queueEntryId)).toMatchObject({
       group: 'A',
       state: 'waiting',
@@ -259,13 +279,32 @@ describe('B3.3 POST /sessions/{id}/affected/move', () => {
     expect(open.status).toBe(409);
     expect(code(open.body)).toBe('INVALID_TRANSITION');
     expect((await reception.post(`/sessions/${S.id}/open`, {})).status).toBe(200);
-    expect((await reception.post(`/sessions/${S.id}/pause`, { until: ist(day, '08:30').toISOString(), reason: 'Ward round' })).status).toBe(200);
+    expect(
+      (
+        await reception.post(`/sessions/${S.id}/pause`, {
+          until: ist(day, '08:30').toISOString(),
+          reason: 'Ward round',
+        })
+      ).status,
+    ).toBe(200);
     expect((await reception.post(`/sessions/${S.id}/affected/move`, body, null)).status).toBe(400); // Idempotency-Key required
     expect((await reception.post(`/sessions/${S.id}/affected/move`, { targetSessionId: T.id })).status).toBe(400); // nobody chosen
-    expect((await reception.post(`/sessions/${S.id}/affected/move`, { ...body, targetSessionId: S.id })).status).toBe(400);
-    expect((await reception.post(`/sessions/${S.id}/affected/move`, { ...body, targetSessionId: '00000000-0000-4000-8000-000000000000' })).status).toBe(404);
+    expect((await reception.post(`/sessions/${S.id}/affected/move`, { ...body, targetSessionId: S.id })).status).toBe(
+      400,
+    );
+    expect(
+      (
+        await reception.post(`/sessions/${S.id}/affected/move`, {
+          ...body,
+          targetSessionId: '00000000-0000-4000-8000-000000000000',
+        })
+      ).status,
+    ).toBe(404);
     expect((await reception3.post(`/sessions/${S.id}/affected/move`, body)).status).toBe(403);
-    expect((await (await newLoginPatient(t, reception, 'Move Patient')).client.post(`/sessions/${S.id}/affected/move`, body)).status).toBe(403);
+    expect(
+      (await (await newLoginPatient(t, reception, 'Move Patient')).client.post(`/sessions/${S.id}/affected/move`, body))
+        .status,
+    ).toBe(403);
     // away (paused) is enough: the booked appointment moves
     const ok = await reception.post(`/sessions/${S.id}/affected/move`, body);
     expect(ok.status).toBe(200);
@@ -275,16 +314,24 @@ describe('B3.3 POST /sessions/{id}/affected/move', () => {
   it('moves booked appointments and transfers checked-in patients with their group, times and a new token', async () => {
     const w = await story();
     const capS = await capacityOf(t.pool, w.S.id);
-    const verS = (await t.pool.query(`SELECT queue_version FROM sessions WHERE id = $1`, [w.S.id])).rows[0]!.queue_version as number;
-    const verT = (await t.pool.query(`SELECT queue_version FROM sessions WHERE id = $1`, [w.T.id])).rows[0]!.queue_version as number;
+    const verS = (await t.pool.query(`SELECT queue_version FROM sessions WHERE id = $1`, [w.S.id])).rows[0]!
+      .queue_version as number;
+    const verT = (await t.pool.query(`SELECT queue_version FROM sessions WHERE id = $1`, [w.T.id])).rows[0]!
+      .queue_version as number;
     const oldEntry = (
-      await t.pool.query(`SELECT scheduled_at, checked_in_at, eligible_at, token FROM queue_entries WHERE id = $1`, [w.checkedIn.queueEntryId])
+      await t.pool.query(`SELECT scheduled_at, checked_in_at, eligible_at, token FROM queue_entries WHERE id = $1`, [
+        w.checkedIn.queueEntryId,
+      ])
     ).rows[0]!;
 
     const key = 'move-batch-0001';
     const res = await reception.post(
       `/sessions/${w.S.id}/affected/move`,
-      { targetSessionId: w.T.id, appointmentIds: [w.a1.id, w.a2.id], queueEntryIds: [w.checkedIn.queueEntryId, w.walkIn.queueEntryId] },
+      {
+        targetSessionId: w.T.id,
+        appointmentIds: [w.a1.id, w.a2.id],
+        queueEntryIds: [w.checkedIn.queueEntryId, w.walkIn.queueEntryId],
+      },
       key,
     );
     expect(res.status).toBe(200);
@@ -300,20 +347,39 @@ describe('B3.3 POST /sessions/{id}/affected/move', () => {
       expect(moved).toMatchObject({ sessionId: w.T.id, status: 'booked', rescheduledFromId: a.id });
       expect((await reception.get(`/appointments/${a.id}`)).body.status).toBe('rescheduled');
     }
-    expect(await count(t.pool, `SELECT 1 FROM outbox_events WHERE event_type = 'AppointmentRescheduled' AND session_id = $1`, [w.T.id])).toBe(2);
+    expect(
+      await count(
+        t.pool,
+        `SELECT 1 FROM outbox_events WHERE event_type = 'AppointmentRescheduled' AND session_id = $1`,
+        [w.T.id],
+      ),
+    ).toBe(2);
 
     // checked-in A patient: transferred, same group, original times carried over, new token in the target
     const mc = out.results.find((r) => r.sourceId === w.checkedIn.queueEntryId)!;
     expect(mc).toMatchObject({ kind: 'queue_entry', outcome: 'moved', newAppointmentId: null });
     expect(mc.token).toMatch(/^A-\d{3}$/);
     const ne = (await t.pool.query(`SELECT * FROM queue_entries WHERE id = $1`, [mc.newQueueEntryId])).rows[0]!;
-    expect(ne).toMatchObject({ session_id: w.T.id, doctor_id: doctorId(2), queue_group: 'A', state: 'waiting', token: mc.token });
+    expect(ne).toMatchObject({
+      session_id: w.T.id,
+      doctor_id: doctorId(2),
+      queue_group: 'A',
+      state: 'waiting',
+      token: mc.token,
+    });
     expect(iso(ne.scheduled_at)).toBe(iso(oldEntry.scheduled_at));
     expect(iso(ne.checked_in_at)).toBe(iso(oldEntry.checked_in_at));
     expect(iso(ne.eligible_at)).toBe(iso(oldEntry.eligible_at));
     const nv = (await t.pool.query(`SELECT * FROM visits WHERE id = $1`, [ne.visit_id])).rows[0]!;
-    expect(nv).toMatchObject({ kind: 'transfer', status: 'open', session_id: w.T.id, transferred_from_visit_id: w.checkedIn.visitId, appointment_id: null });
-    const oe = (await t.pool.query(`SELECT state FROM queue_entries WHERE id = $1`, [w.checkedIn.queueEntryId])).rows[0]!;
+    expect(nv).toMatchObject({
+      kind: 'transfer',
+      status: 'open',
+      session_id: w.T.id,
+      transferred_from_visit_id: w.checkedIn.visitId,
+      appointment_id: null,
+    });
+    const oe = (await t.pool.query(`SELECT state FROM queue_entries WHERE id = $1`, [w.checkedIn.queueEntryId]))
+      .rows[0]!;
     const ov = (await t.pool.query(`SELECT status FROM visits WHERE id = $1`, [w.checkedIn.visitId])).rows[0]!;
     expect(oe.state).toBe('cancelled');
     expect(ov.status).toBe('transferred');
@@ -323,7 +389,10 @@ describe('B3.3 POST /sessions/{id}/affected/move', () => {
     // walk-in: stays W with a W token, consuming a walk-in place
     const mw = out.results.find((r) => r.sourceId === w.walkIn.queueEntryId)!;
     expect(mw.token).toMatch(/^W-\d{3}$/);
-    expect((await t.pool.query(`SELECT queue_group FROM queue_entries WHERE id = $1`, [mw.newQueueEntryId])).rows[0]!.queue_group).toBe('W');
+    expect(
+      (await t.pool.query(`SELECT queue_group FROM queue_entries WHERE id = $1`, [mw.newQueueEntryId])).rows[0]!
+        .queue_group,
+    ).toBe('W');
 
     // capacity: target holds 2 appointments + 1 transferred A (booked) and 1 walk-in; source counters unchanged (consumed never reopens)
     const capT = await capacityOf(t.pool, w.T.id);
@@ -332,13 +401,28 @@ describe('B3.3 POST /sessions/{id}/affected/move', () => {
     expect((await capacityInvariant(t.pool, w.S.id)).ok).toBe(true);
     expect((await capacityInvariant(t.pool, w.T.id)).ok).toBe(true);
     // queue_version bumped on BOTH sessions
-    expect((await t.pool.query(`SELECT queue_version FROM sessions WHERE id = $1`, [w.S.id])).rows[0]!.queue_version).toBeGreaterThan(verS);
-    expect((await t.pool.query(`SELECT queue_version FROM sessions WHERE id = $1`, [w.T.id])).rows[0]!.queue_version).toBeGreaterThan(verT);
+    expect(
+      (await t.pool.query(`SELECT queue_version FROM sessions WHERE id = $1`, [w.S.id])).rows[0]!.queue_version,
+    ).toBeGreaterThan(verS);
+    expect(
+      (await t.pool.query(`SELECT queue_version FROM sessions WHERE id = $1`, [w.T.id])).rows[0]!.queue_version,
+    ).toBeGreaterThan(verT);
     // audit on both sides, outbox event with routing data only
-    expect(await count(t.pool, `SELECT 1 FROM audit_events WHERE operation = 'visit.transfer_out' AND entity_id = $1`, [w.checkedIn.visitId])).toBe(1);
-    expect(await count(t.pool, `SELECT 1 FROM audit_events WHERE operation = 'visit.transfer_in' AND entity_id = $1`, [ne.visit_id])).toBe(1);
+    expect(
+      await count(t.pool, `SELECT 1 FROM audit_events WHERE operation = 'visit.transfer_out' AND entity_id = $1`, [
+        w.checkedIn.visitId,
+      ]),
+    ).toBe(1);
+    expect(
+      await count(t.pool, `SELECT 1 FROM audit_events WHERE operation = 'visit.transfer_in' AND entity_id = $1`, [
+        ne.visit_id,
+      ]),
+    ).toBe(1);
     const ev = (
-      await t.pool.query(`SELECT * FROM outbox_events WHERE event_type = 'QueuePatientTransferred' AND entity_id = $1`, [mc.newQueueEntryId])
+      await t.pool.query(
+        `SELECT * FROM outbox_events WHERE event_type = 'QueuePatientTransferred' AND entity_id = $1`,
+        [mc.newQueueEntryId],
+      )
     ).rows[0]!;
     expect(ev).toMatchObject({ entity_type: 'queue_entry', session_id: w.T.id, patient_id: w.pc.id });
     expect(ev.payload).toMatchObject({ token: mc.token, fromSessionId: w.S.id });
@@ -352,7 +436,11 @@ describe('B3.3 POST /sessions/{id}/affected/move', () => {
     // a retried batch (same key, same body) never moves twice
     const again = await reception.post(
       `/sessions/${w.S.id}/affected/move`,
-      { targetSessionId: w.T.id, appointmentIds: [w.a1.id, w.a2.id], queueEntryIds: [w.checkedIn.queueEntryId, w.walkIn.queueEntryId] },
+      {
+        targetSessionId: w.T.id,
+        appointmentIds: [w.a1.id, w.a2.id],
+        queueEntryIds: [w.checkedIn.queueEntryId, w.walkIn.queueEntryId],
+      },
       key,
     );
     expect(again.status).toBe(200);
@@ -364,7 +452,11 @@ describe('B3.3 POST /sessions/{id}/affected/move', () => {
     expect(await capacityOf(t.pool, w.T.id)).toMatchObject({ booked_reserved: 3, walkin_used: 1 });
     expect(await count(t.pool, `SELECT 1 FROM queue_entries WHERE session_id = $1`, [w.T.id])).toBe(2);
     // the same key with another target is a reuse error, not a second move
-    const reuse = await reception.post(`/sessions/${w.S.id}/affected/move`, { targetSessionId: (await mk(2, addDays(w.day, 1))).id, appointmentIds: [w.a1.id] }, key);
+    const reuse = await reception.post(
+      `/sessions/${w.S.id}/affected/move`,
+      { targetSessionId: (await mk(2, addDays(w.day, 1))).id, appointmentIds: [w.a1.id] },
+      key,
+    );
     expect(reuse.status).toBe(409);
     expect(code(reuse.body)).toBe('IDEMPOTENCY_KEY_REUSED');
   });
@@ -384,19 +476,23 @@ describe('B3.3 POST /sessions/{id}/affected/move', () => {
     expect(out.skipped).toBe(2);
     for (const id of [w.checkedIn.queueEntryId, w.walkIn.queueEntryId]) {
       expect(out.results.find((r) => r.sourceId === id)).toMatchObject({ outcome: 'skipped', code: 'CAPACITY_FULL' });
-      expect((await t.pool.query(`SELECT state FROM queue_entries WHERE id = $1`, [id])).rows[0]!.state).toBe('waiting');
+      expect((await t.pool.query(`SELECT state FROM queue_entries WHERE id = $1`, [id])).rows[0]!.state).toBe(
+        'waiting',
+      );
     }
     expect((await capacityInvariant(t.pool, T2.id)).ok).toBe(true);
     expect((await capacityInvariant(t.pool, w.S.id)).ok).toBe(true);
   });
 
   it('skips a patient who already holds a place in the target (CONFLICT), a called patient and a foreign id', async () => {
-    const w = await story(9, 10) /* doctors 9 and 10: no called entries left over by other test files */;
+    const w = await story(9, 10); /* doctors 9 and 10: no called entries left over by other test files */
     // pw is also admitted as a walk-in in the target before the move
     t.clock.set(ist(w.day, '09:00'));
     expect((await reception.post(`/sessions/${w.T.id}/walk-ins`, { patientId: w.pw.id })).status).toBe(201);
     // the checked-in A patient has been called by the doctor in the meantime
-    await t.pool.query(`UPDATE queue_entries SET state = 'called', called_at = now() WHERE id = $1`, [w.checkedIn.queueEntryId]);
+    await t.pool.query(`UPDATE queue_entries SET state = 'called', called_at = now() WHERE id = $1`, [
+      w.checkedIn.queueEntryId,
+    ]);
     const other = await mk(2, addDays(w.day, 1));
     const foreign = await book(other, await newPatient(reception, 'Foreign Appointment'));
     const res = await reception.post(`/sessions/${w.S.id}/affected/move`, {
@@ -408,8 +504,14 @@ describe('B3.3 POST /sessions/{id}/affected/move', () => {
     const out = MoveAffectedResult.parse(res.body);
     expect(out.results.find((r) => r.sourceId === foreign.id)).toMatchObject({ outcome: 'skipped', code: 'NOT_FOUND' });
     expect(out.results.find((r) => r.sourceId === w.a1.id)!.outcome).toBe('moved');
-    expect(out.results.find((r) => r.sourceId === w.checkedIn.queueEntryId)).toMatchObject({ outcome: 'skipped', code: 'INVALID_TRANSITION' });
-    expect(out.results.find((r) => r.sourceId === w.walkIn.queueEntryId)).toMatchObject({ outcome: 'skipped', code: 'CONFLICT' });
+    expect(out.results.find((r) => r.sourceId === w.checkedIn.queueEntryId)).toMatchObject({
+      outcome: 'skipped',
+      code: 'INVALID_TRANSITION',
+    });
+    expect(out.results.find((r) => r.sourceId === w.walkIn.queueEntryId)).toMatchObject({
+      outcome: 'skipped',
+      code: 'CONFLICT',
+    });
     expect(out).toMatchObject({ moved: 1, skipped: 3 });
     expect((await reception.get(`/appointments/${foreign.id}`)).body.status).toBe('booked');
   });
@@ -428,9 +530,14 @@ describe('B3.3 POST /sessions/{id}/affected/move', () => {
     });
     const out = MoveAffectedResult.parse(res.body);
     expect(out.moved).toBe(2);
-    const ne = (await t.pool.query(`SELECT state, priority_class, priority_reason FROM queue_entries WHERE id = $1`, [out.results[0]!.newQueueEntryId])).rows[0]!;
+    const ne = (
+      await t.pool.query(`SELECT state, priority_class, priority_reason FROM queue_entries WHERE id = $1`, [
+        out.results[0]!.newQueueEntryId,
+      ])
+    ).rows[0]!;
     expect(ne).toMatchObject({ priority_class: 2, priority_reason: 'fever' });
-    const wi = (await t.pool.query(`SELECT state FROM queue_entries WHERE id = $1`, [out.results[1]!.newQueueEntryId])).rows[0]!;
+    const wi = (await t.pool.query(`SELECT state FROM queue_entries WHERE id = $1`, [out.results[1]!.newQueueEntryId]))
+      .rows[0]!;
     expect(wi.state).toBe('absent'); // a parked patient stays parked in the target (re-entry is reception's call there)
   });
 });
