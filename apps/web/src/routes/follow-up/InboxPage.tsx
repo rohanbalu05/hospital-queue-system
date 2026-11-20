@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useFollowUpTasks, type FollowUpTaskView } from '@/api';
+import { UrgentTag, sortInboxTasks } from '@/components/followup/task-parts';
 import { TaskStatusWord, TimingWord } from '@/components/followup/words';
 import { StaffShell } from '@/components/layout/Shells';
 import { EmptyState, ErrorState, SkeletonRows } from '@/components/queue';
@@ -10,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatLocalDate, istDate } from '@/lib/dates';
 import { formatIST } from '@/lib/format';
-import { isClosed, KIND_WORD, sortTasks, sourceVisitWord, taskTiming } from '@/lib/followup';
+import { isClosed, KIND_WORD, sourceVisitWord, taskTiming } from '@/lib/followup';
 import { useNow } from '@/lib/useNow';
 import { cn } from '@/lib/utils';
 
@@ -41,15 +42,17 @@ export function TaskTable({ tasks, now }: { tasks: FollowUpTaskView[]; now: numb
         <TableBody>
           {tasks.map((t) => {
             const overdue = taskTiming(t, now).overdue;
+            const urgent = t.urgent === true && !isClosed(t.status);
             return (
               <TableRow
                 key={t.id}
                 data-testid="task-row"
                 data-overdue={overdue ? 'true' : 'false'}
+                data-urgent={urgent ? 'true' : 'false'}
                 className={cn('h-10 cursor-pointer', isClosed(t.status) && 'text-muted-foreground')}
                 onClick={() => void navigate(`/follow-up/tasks/${t.id}`)}
               >
-                <TableCell className={cn('border-l-[3px] pl-3 tabular-nums', overdue ? 'border-l-ink' : 'border-l-transparent')}>
+                <TableCell className={cn('border-l-[3px] pl-3 tabular-nums', urgent ? 'border-l-priority' : overdue ? 'border-l-ink' : 'border-l-transparent')}>
                   {formatIST(t.dueAt, 'date-time')}
                 </TableCell>
                 <TableCell>
@@ -66,6 +69,7 @@ export function TaskTable({ tasks, now }: { tasks: FollowUpTaskView[]; now: numb
                 </TableCell>
                 <TableCell className="max-w-72 whitespace-normal" title={t.title}>
                   <span className="line-clamp-2">
+                    {urgent ? <UrgentTag className="mr-1.5 align-middle" /> : null}
                     <span className="text-muted-foreground">{KIND_WORD[t.kind] ?? t.kind}: </span>
                     {t.title}
                   </span>
@@ -86,7 +90,7 @@ export function TaskTable({ tasks, now }: { tasks: FollowUpTaskView[]; now: numb
 
 function TabPanel({ tab, showClosed, now }: { tab: Tab; showClosed: boolean; now: number }) {
   const q = useFollowUpTasks({ owner: OWNER[tab] });
-  const tasks = useMemo(() => sortTasks((q.data ?? []).filter((t) => showClosed || !isClosed(t.status)), now), [q.data, showClosed, now]);
+  const tasks = useMemo(() => sortInboxTasks((q.data ?? []).filter((t) => showClosed || !isClosed(t.status)), now), [q.data, showClosed, now]);
 
   if (q.isPending) return <SkeletonRows count={6} />;
   if (q.isError && !q.data) return <ErrorState title="Follow-up tasks could not be loaded" error={q.error} onRetry={() => void q.refetch()} />;
