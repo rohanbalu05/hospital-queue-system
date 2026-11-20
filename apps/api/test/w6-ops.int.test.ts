@@ -15,7 +15,10 @@ beforeAll(async () => {
   reception = await loginAs(t.server, 'reception@hqms.test');
   patient = await loginAs(t.server, 'patient@hqms.test');
 });
-afterAll(() => t.close());
+afterAll(async () => {
+  await t.pool.query(`DELETE FROM worker_heartbeats`);
+  await t.close();
+});
 beforeEach(async () => {
   await t.pool.query(`DELETE FROM worker_heartbeats`);
 });
