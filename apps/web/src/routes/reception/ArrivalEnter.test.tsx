@@ -119,7 +119,7 @@ describe('reception arrival search: Enter only acts on results for the current q
     );
   }
 
-  it('does not check in the first row of the old list when Enter is pressed before the new results arrive', async () => {
+  it('remembers an early Enter and checks in the match for the current query, never a row of the old list', async () => {
     const user = userEvent.setup();
     renderDesk();
     const search = await screen.findByRole('combobox', { name: 'Find an arrival' });
@@ -127,14 +127,38 @@ describe('reception arrival search: Enter only acts on results for the current q
     await screen.findByRole('option', { name: /Harish Gowda/ });
 
     await user.type(search, 'Ananya{Enter}');
-    // Results for "Ananya" (and the debounce) are still pending: nothing may be checked in.
+    // Results for "Ananya" (and the debounce) are still pending: nothing is checked in yet, and nothing stale ever is.
     expect(checkedIn).toEqual([]);
 
-    // Once the results for "Ananya" are in, Enter checks in the row that matches it.
-    await waitFor(() => expect(screen.getByRole('button', { name: /^Check in/ })).toBeEnabled(), { timeout: 3000 });
-    expect(screen.queryByRole('option', { name: /Harish Gowda/ })).toBeNull();
-    await user.keyboard('{Enter}');
+    // The Enter is not dropped: once the results for "Ananya" arrive, she is checked in.
     await waitFor(() => expect(checkedIn).toEqual([uid(0xb00 + 3)]), { timeout: 3000 });
+    expect(screen.queryByRole('option', { name: /Harish Gowda/ })).toBeNull();
+  });
+
+  it('does not guess between several matches: it asks for a choice, then Enter checks in the highlighted one', async () => {
+    const user = userEvent.setup();
+    renderDesk();
+    const search = await screen.findByRole('combobox', { name: 'Find an arrival' });
+    await screen.findByRole('option', { name: /Harish Gowda/ });
+
+    // "an" matches Lakshmi Narayanan and Ananya Iyer.
+    await user.type(search, 'an{Enter}');
+    expect(await screen.findByText('Choose a patient, then press Enter', {}, { timeout: 3000 })).toBeVisible();
+    expect(checkedIn).toEqual([]);
+
+    await user.keyboard('{ArrowDown}{Enter}');
+    await waitFor(() => expect(checkedIn).toEqual([uid(0xb00 + 3)]), { timeout: 3000 });
+  });
+
+  it('drops the remembered Enter when the text changes before the results arrive', async () => {
+    const user = userEvent.setup();
+    renderDesk();
+    const search = await screen.findByRole('combobox', { name: 'Find an arrival' });
+    await screen.findByRole('option', { name: /Harish Gowda/ });
+    await user.type(search, 'Ananya{Enter}');
+    await user.type(search, 'x');
+    await new Promise((r) => setTimeout(r, 1200));
+    expect(checkedIn).toEqual([]);
   });
 
   it('keeps Check in disabled while the list on screen is for an older query', async () => {

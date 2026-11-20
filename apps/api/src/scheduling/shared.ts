@@ -97,7 +97,7 @@ export async function cancelReservationReleaseJob(tx: Tx, appointmentId: string)
 /**
  * Read projection of appointments (GET /appointments, GET /appointments/:id): adds queueEntryId + token
  * once checked in (staff and the owning patient) and, for STAFF callers only, the patient's name, MRN
- * and phone (D-021). Two batched queries regardless of list size. Patients never receive patient fields.
+ * and phone (D-021). A few batched queries regardless of list size. Patients never receive patient fields.
  */
 export async function enrichAppointments(
   db: Queryable,
@@ -113,6 +113,18 @@ export async function enrichAppointments(
     [ids],
   );
   const entryByAppt = new Map(entries.rows.map((r) => [r.appointment_id, r]));
+  // A checked-in patient reception moved to another doctor: the original visit ends 'transferred', and the visit that
+  // continues it (transferred_from_visit_id) says where the patient went.
+  const moved = await db.query<{ appointment_id: string; session_id: string; doctor_name: string; room: string; token: string }>(
+    `SELECT ov.appointment_id, nv.session_id, d.full_name AS doctor_name, d.room, qe.token
+       FROM visits ov
+       JOIN visits nv ON nv.transferred_from_visit_id = ov.id
+       JOIN doctors d ON d.id = nv.doctor_id
+       JOIN queue_entries qe ON qe.visit_id = nv.id
+      WHERE ov.appointment_id = ANY($1::uuid[]) AND ov.status = 'transferred'`,
+    [ids],
+  );
+  const movedByAppt = new Map(moved.rows.map((r) => [r.appointment_id, r]));
   const patientById = new Map<string, { name: string; mrn: string; phone: string | null }>();
   if (includePatient) {
     const pids = [...new Set(recs.map((r) => r.patientId))];
@@ -126,10 +138,12 @@ export async function enrichAppointments(
     const base = toAppointment(rec);
     const entry = entryByAppt.get(rec.id);
     const patient = patientById.get(rec.patientId);
+    const to = movedByAppt.get(rec.id);
     return {
       ...base,
       queueEntryId: entry?.queue_entry_id ?? null,
       token: entry?.token ?? null,
+      transferredTo: to ? { sessionId: to.session_id, doctorName: to.doctor_name, room: to.room, token: to.token } : null,
       ...(patient ? { patientName: patient.name, patientMrn: patient.mrn, patientPhone: patient.phone } : {}),
     };
   });

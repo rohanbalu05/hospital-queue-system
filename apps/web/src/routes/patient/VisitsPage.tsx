@@ -163,7 +163,7 @@ function AppointmentLine({ a }: { a: Appointment }) {
         <p className="text-base text-muted-foreground">{a.department}</p>
         {isReturnVisit(a) ? <ReturnVisitTag className="mt-1" /> : null}
       </div>
-      <StatusWord status={a.status} className="shrink-0" />
+      <StatusWord status={a.status} transferredTo={a.transferredTo} className="shrink-0" />
     </div>
   );
 }

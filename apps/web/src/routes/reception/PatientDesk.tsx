@@ -119,7 +119,7 @@ export function PatientDesk({ patient, onClose }: { patient: DeskPatient | null;
                             {a.doctorName}, {a.department}
                           </p>
                         </div>
-                        <StatusWord status={a.status} />
+                        <StatusWord status={a.status} transferredTo={a.transferredTo} showToken />
                         {a.status === 'booked' ? (
                           <div className="flex w-full gap-2 sm:w-auto">
                             <Button

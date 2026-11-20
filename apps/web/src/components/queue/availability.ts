@@ -53,9 +53,9 @@ export function reasonProblem(choice: AwayReason, other: string): string | null 
   return other.trim().length >= MIN_REASON_LENGTH ? null : 'Write the reason, at least 3 characters.';
 }
 
-/** First part of "Dr. Meenakshi Rao, General Medicine": the display names doctors, never patients. */
+/** First part of "Dr. Meenakshi Rao, General Medicine" or "Dr. Hegde \u00b7 General Medicine": the display names doctors, never patients. */
 export function doctorNameOnly(label: string): string {
-  return label.split(',')[0]?.trim() || label;
+  return label.split(/[,\u00b7]/)[0]?.trim() || label;
 }
 
 /**

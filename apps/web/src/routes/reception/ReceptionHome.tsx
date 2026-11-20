@@ -122,6 +122,9 @@ export default function ReceptionHome() {
   const items = useMemo(() => buildItems(debounced, appointments ?? [], patientsQ.data), [debounced, appointments, patientsQ.data]);
 
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [pendingEnter, setPendingEnter] = useState<string | null>(null);
+  const [enterHint, setEnterHint] = useState(false);
+  useEffect(() => setEnterHint(false), [query, activeKey]);
   const active: ArrivalItem | null = items.find((i) => i.key === activeKey) ?? items[0] ?? null;
 
   const [tokens, setTokens] = useState<Record<string, ArrivalResult>>({});
@@ -346,9 +349,34 @@ export default function ReceptionHome() {
   };
 
   const onEnter = () => {
-    if (!resultsCurrent) return;
+    if (!resultsCurrent) {
+      // Enter came before the results for the text in the box: remember it instead of dropping it, and act when they arrive.
+      setPendingEnter(query);
+      setEnterHint(false);
+      return;
+    }
     if (active && canCheckIn(active) && !late && !checkInOff) doCheckIn(active);
   };
+
+  // The remembered Enter acts only on rows of the CURRENT query: exactly one row that can be checked in, or a row the desk
+  // highlighted with the arrows after typing. Anything else asks for a choice. Typing more drops it.
+  useEffect(() => {
+    if (pendingEnter === null) return;
+    if (query !== pendingEnter) {
+      setPendingEnter(null);
+      return;
+    }
+    if (!resultsCurrent) return;
+    setPendingEnter(null);
+    const actionable = items.filter((i) => canCheckIn(i));
+    const chosen = activeKey ? items.find((i) => i.key === activeKey) ?? null : null;
+    const target = actionable.length === 1 ? (actionable[0] ?? null) : canCheckIn(chosen) ? chosen : null;
+    if (target) {
+      if (!late && !checkInOff) doCheckIn(target);
+    } else if (items.length > 0) {
+      setEnterHint(true);
+    }
+  }, [pendingEnter, query, resultsCurrent, items, activeKey, late, checkInOff, doCheckIn]);
 
   const description = `${formatLocalDate(today, 'weekday-date')}. Arrivals, walk-ins and the session board for your doctors.`;
 
@@ -399,6 +427,7 @@ export default function ReceptionHome() {
             onActive={setActiveKey}
             onEnter={onEnter}
             resultsCurrent={resultsCurrent}
+            enterHint={enterHint}
             loading={sessionsQ.isPending || (session !== null && (apptQ.isPending || searching) && items.length === 0)}
             error={apptQ.isError && !apptQ.data ? apptQ.error : patientsQ.isError ? patientsQ.error : null}
             onRetry={() => {
