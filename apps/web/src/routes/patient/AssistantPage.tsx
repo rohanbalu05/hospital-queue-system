@@ -11,13 +11,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/lib/auth';
 import { formatIST } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { UrgentCallout } from './UrgentCallout';
 
 export function citationLine(c: { title: string; version: number }, verifiedAt: string | undefined): string {
   return `From: ${c.title} (version ${c.version}${verifiedAt ? `, verified ${formatIST(verifiedAt, 'date')}` : ''})`;
 }
 
 /** One message. Answers are plain rows with an ink edge: no avatar, no sparkle. */
-export function MessageView({ message: m }: { message: ConversationMessage }) {
+export function MessageView({ message: m, announce = false }: { message: ConversationMessage; announce?: boolean }) {
   if (m.role === 'patient') {
     return (
       <li className="border-l-[3px] border-l-rule px-4 py-3" data-role="patient">
@@ -26,14 +27,23 @@ export function MessageView({ message: m }: { message: ConversationMessage }) {
       </li>
     );
   }
+  // Red-flag advice comes first, before anything the assistant or the team says about the question.
+  const urgent = m.urgentAdvice ? <UrgentCallout advice={m.urgentAdvice} announce={announce} className="mb-3" /> : null;
   if (m.outcome === 'escalated') {
     const due = m.escalationDueAt;
     return (
       <li className="border-l-[3px] border-l-ink px-4 py-3" data-role="assistant" data-outcome="escalated">
+        {urgent}
         <p className="text-sm font-bold text-muted-foreground">Reply</p>
         <p className="mt-0.5 font-bold">
           Sent to the follow-up team.
-          {due ? <span> You&apos;ll hear back by {formatIST(due, 'date-time')}.</span> : <span> You&apos;ll hear back soon.</span>}
+          {urgent && due ? (
+            <span> The care team will contact you within 2 hours, by {formatIST(due, 'date-time')}.</span>
+          ) : due ? (
+            <span> You&apos;ll hear back by {formatIST(due, 'date-time')}.</span>
+          ) : (
+            <span> You&apos;ll hear back soon.</span>
+          )}
         </p>
         <p className="mt-1 text-muted-foreground">Your question needs a person, so it was not answered here.</p>
       </li>
@@ -41,6 +51,7 @@ export function MessageView({ message: m }: { message: ConversationMessage }) {
   }
   return (
     <li className="border-l-[3px] border-l-ink px-4 py-3" data-role="assistant" data-outcome={m.outcome ?? 'answered'}>
+      {urgent}
       <p className="text-sm font-bold text-muted-foreground">{m.outcome === 'refused' ? 'Not answered' : 'Answer from your verified instructions'}</p>
       <p className="mt-0.5 whitespace-pre-wrap">{m.body}</p>
       {m.citations.length > 0 ? (
@@ -64,6 +75,8 @@ export default function AssistantPage() {
   const [question, setQuestion] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [asked, setAsked] = useState<string | null>(null);
+  // The red-flag answer that has just arrived is announced once; the same message later is quiet history.
+  const [announced, setAnnounced] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   const messages = useConversationMessages(conversationId);
@@ -72,8 +85,11 @@ export default function AssistantPage() {
   const list = useMemo(() => [...(messages.data ?? [])].sort((a, b) => a.createdAt.localeCompare(b.createdAt)), [messages.data]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView?.({ block: 'nearest' });
-  }, [list.length, asked]);
+    // A red-flag answer is brought to the top of the screen so the advice is read before anything else.
+    const urgent = announced ? document.querySelector('[data-testid="urgent-advice"][role="alert"]') : null;
+    if (urgent) urgent.scrollIntoView?.({ block: 'start' });
+    else endRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [list.length, asked, announced]);
 
   const send = () => {
     const parsed = AskAssistantRequest.safeParse({ question: question.trim(), ...(conversationId ? { conversationId } : {}) });
@@ -82,10 +98,12 @@ export default function AssistantPage() {
       return;
     }
     setFieldError(null);
+    setAnnounced(null);
     setAsked(parsed.data.question);
     ask.mutate(parsed.data, {
       onSuccess: (a) => {
         setStarted(a.conversationId);
+        if (a.urgentAdvice) setAnnounced(a.messageId);
         setQuestion('');
         setAsked(null);
       },
@@ -111,7 +129,7 @@ export default function AssistantPage() {
         ) : (
           <ul className="divide-y divide-rule overflow-hidden rounded-xl border border-rule bg-surface" aria-live="polite">
             {list.map((m) => (
-              <MessageView key={m.id} message={m} />
+              <MessageView key={m.id} message={m} announce={m.id === announced} />
             ))}
             {asked !== null ? (
               <>

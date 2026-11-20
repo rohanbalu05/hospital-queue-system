@@ -72,7 +72,7 @@ describe('follow-ups show the care team reply (PR-14)', () => {
       task(2, { dueAt: '2026-11-11T12:05:00+05:30', urgent: true }),
     ]);
     await screen.findByText('Check-in after your visit');
-    const rows = screen.getAllByRole('listitem');
+    const rows = Array.from(document.querySelectorAll('li[data-status]'));
     expect(rows[0]).toHaveTextContent('Urgent');
     expect(rows[0]).toHaveTextContent('Your question for the follow-up team');
     expect(rows[1]).not.toHaveTextContent('Urgent');
