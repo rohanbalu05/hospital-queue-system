@@ -4,7 +4,6 @@ import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '@/lib/auth';
-import { Toaster } from '@/components/ui/sonner';
 import { istDate, addDays } from '@/lib/dates';
 import { FakeEventSource } from '@/live/fakeEventSource';
 import { AVAILABLE, staffSnapshot, uid } from '@/live/fixtures';
@@ -189,7 +188,7 @@ export function installDesk(world: DeskWorld) {
         return json(patient(90, String(body.fullName), (body.phone as string | null) ?? null), 201);
       }
       if (method === 'POST' && /^\/sessions\/[^/]+\/walk-ins$/.test(path)) {
-        return json({ visitId: uid(0xc1), queueEntryId: uid(0xc2), token: 'W-004', group: 'W', kind: 'walk_in', eligibleAt: at('10:00'), queueVersion: 8 });
+        return json({ visitId: uid(0xc1), queueEntryId: uid(0xc2), token: 'W-004', group: 'W', kind: 'walkin', eligibleAt: at('10:00'), queueVersion: 8 });
       }
       if (method === 'POST' && path === '/appointments') {
         const s = world.sessions.find((x) => x.id === body.sessionId)!;

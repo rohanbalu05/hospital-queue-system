@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { RegisterPatientRequest, type ArrivalResult, type Session } from '@hqms/contracts';
+import { RegisterPatientRequest, type AlternativeSession, type ArrivalResult, type Patient, type Session } from '@hqms/contracts';
 import { GroupTag, TokenText } from '@/components/queue';
 import { InlineAlert, StatusWord } from '@/components/scheduling/status';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatIST } from '@/lib/format';
+import { AlternativesPanel, DuplicatePanel, OtherQueueNote } from './DeskNotices';
 import { canAdmitWalkIn, canCheckIn, type ArrivalItem, type ArrivalOutcome, type PanelError } from './model';
 
 interface ActionPanelProps {
@@ -22,8 +23,18 @@ interface ActionPanelProps {
   checkInPending: boolean;
   onAdmit: () => void;
   admitPending: boolean;
-  onRegister: (form: RegisterPatientRequest) => void;
+  /** `admit` is false when this session cannot take a walk-in (full, closed or unavailable): the patient is only registered. */
+  onRegister: (form: RegisterPatientRequest, admit: boolean) => void;
   registerPending: boolean;
+  /** Open the patient desk (appointments, cancel, reschedule, book) for the selected arrival. */
+  onOpenDesk: () => void;
+  /** PR-22: the last registration looked like an existing patient. */
+  duplicates: { candidates: Patient[] } | null;
+  onUseCandidate: (p: Patient) => void;
+  onCreateAnyway: () => void;
+  onDismissDuplicates: () => void;
+  /** PR-23: admit the selected arrival to another doctor's session. */
+  onAdmitTo: (alt: AlternativeSession) => void;
   outcome: ArrivalOutcome | null;
   onDismissOutcome: () => void;
   error: PanelError | null;
@@ -73,6 +84,9 @@ export function ActionPanel(p: ActionPanelProps) {
             <Button size="lg" className="mt-3 w-full" disabled={!current || !canCheckIn(p.item) || p.checkInPending || sessionOff} onClick={p.onCheckIn}>
               {p.checkInPending ? 'Checking in…' : 'Check in'}
             </Button>
+            <Button size="lg" variant="outline" className="mt-2 w-full" disabled={!current} onClick={p.onOpenDesk}>
+              Open patient desk
+            </Button>
             {sessionOff && p.session ? (
               <p role="status" className="mt-2 rounded-md border border-l-[3px] border-rule border-l-priority bg-priority/10 px-3 py-2 font-bold">
                 {p.session.status === 'unavailable'
@@ -121,7 +135,22 @@ export function ActionPanel(p: ActionPanelProps) {
         )}
         {walkinFull ? <p className="mt-1.5 text-sm font-bold">Walk-in places are full for this session.</p> : null}
 
-        <RegisterForm pending={p.registerPending} disabled={walkinFull || sessionOff || !p.session} onSubmit={p.onRegister} />
+        <OtherQueueNote item={p.item} session={p.session} />
+
+        {p.session && (walkinFull || p.session.status === 'unavailable') ? (
+          <AlternativesPanel session={p.session} item={p.item} pending={p.admitPending} onAdmitTo={p.onAdmitTo} />
+        ) : null}
+
+        <RegisterForm
+          pending={p.registerPending}
+          canAdmit={!walkinFull && !sessionOff && Boolean(p.session)}
+          disabled={!p.session}
+          onSubmit={p.onRegister}
+          duplicates={p.duplicates}
+          onUseCandidate={p.onUseCandidate}
+          onCreateAnyway={p.onCreateAnyway}
+          onDismissDuplicates={p.onDismissDuplicates}
+        />
       </div>
 
       {p.entryPanel}
@@ -136,6 +165,7 @@ function Outcome({ outcome, onDone }: { outcome: ArrivalOutcome; onDone: () => v
     <div role="status" data-testid="arrival-outcome" className="rounded-xl border border-l-[3px] border-rule border-l-ink bg-surface p-4">
       <p className="text-lg font-bold">{verb}</p>
       <p className="mt-0.5 font-bold">{name}</p>
+      {outcome.doctorName ? <p className="text-muted-foreground">With {outcome.doctorName}</p> : null}
       <div className="mt-2 flex items-center gap-3">
         <TokenText token={result.token} size="xl" className="[&_[data-token]]:text-[72px] [&_[data-token]]:leading-none" />
       </div>
@@ -151,7 +181,19 @@ function Outcome({ outcome, onDone }: { outcome: ArrivalOutcome; onDone: () => v
   );
 }
 
-function RegisterForm({ pending, disabled, onSubmit }: { pending: boolean; disabled: boolean; onSubmit: (form: RegisterPatientRequest) => void }) {
+interface RegisterFormProps {
+  pending: boolean;
+  /** This session can take a walk-in now. When not, the form only registers the patient. */
+  canAdmit: boolean;
+  disabled: boolean;
+  onSubmit: (form: RegisterPatientRequest, admit: boolean) => void;
+  duplicates: { candidates: Patient[] } | null;
+  onUseCandidate: (p: Patient) => void;
+  onCreateAnyway: () => void;
+  onDismissDuplicates: () => void;
+}
+
+function RegisterForm({ pending, canAdmit, disabled, onSubmit, duplicates, onUseCandidate, onCreateAnyway, onDismissDuplicates }: RegisterFormProps) {
   const [open, setOpen] = useState(false);
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -177,7 +219,7 @@ function RegisterForm({ pending, disabled, onSubmit }: { pending: boolean; disab
       return;
     }
     setErrors({});
-    onSubmit(parsed.data);
+    onSubmit(parsed.data, canAdmit);
   };
 
   return (
@@ -212,9 +254,17 @@ function RegisterForm({ pending, disabled, onSubmit }: { pending: boolean; disab
             {errors.dateOfBirth ? <p className="text-sm font-bold text-ink">{errors.dateOfBirth}</p> : null}
           </div>
           <Button type="submit" size="lg" className="w-full" disabled={pending || disabled}>
-            {pending ? 'Registering…' : 'Register and admit walk-in'}
+            {pending ? 'Registering…' : canAdmit ? 'Register and admit walk-in' : 'Register patient'}
           </Button>
+          {!canAdmit ? (
+            <p className="text-sm text-muted-foreground">
+              This session cannot take a walk-in now. The patient is registered only. Then admit them to another doctor.
+            </p>
+          ) : null}
         </form>
+        {duplicates ? (
+          <DuplicatePanel candidates={duplicates.candidates} pending={pending} onUse={onUseCandidate} onCreateAnyway={onCreateAnyway} onDismiss={onDismissDuplicates} />
+        ) : null}
       </CollapsibleContent>
     </Collapsible>
   );

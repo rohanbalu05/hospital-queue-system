@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'sonner';
 import {
   DOC_KULKARNI,
   DOC_RAO,
@@ -24,8 +25,13 @@ import {
  * the only way they get a future appointment.
  */
 
+vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn() }), Toaster: () => null }));
+
 polyfillRadix();
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
 
 function world(): DeskWorld {
   const s1 = makeSession(1, DOC_RAO);
@@ -90,7 +96,7 @@ describe('reception patient desk', () => {
     const sent = posts.find((p) => p.path.endsWith('/cancel'))!;
     expect(sent.body).toEqual({ reason: 'Patient rang to say he is travelling', expectedVersion: 2 });
     expect(sent.key).toBeTruthy();
-    expect(await screen.findByText('Cancelled')).toBeVisible();
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Cancelled', expect.anything()));
   });
 
   it('keeps the appointment when the desk chooses Keep appointment', async () => {
@@ -121,7 +127,7 @@ describe('reception patient desk', () => {
     const sent = posts.find((p) => p.path.endsWith('/reschedule'))!;
     expect(sent.body).toEqual({ targetSessionId: makeSession(2, DOC_KULKARNI).id, expectedVersion: 2 });
     expect(sent.key).toBeTruthy();
-    expect(await screen.findByText('Rescheduled')).toBeVisible();
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Rescheduled', expect.anything()));
   });
 
   it('books an appointment for the patient: department, doctor, day, session, then confirm', async () => {
@@ -149,7 +155,9 @@ describe('reception patient desk', () => {
     const sent = posts.find((p) => p.path === '/appointments')!;
     expect(sent.body).toEqual({ sessionId: makeSession(3, DOC_KULKARNI, { day: TOMORROW }).id, patientId: HARISH.id });
     expect(sent.key).toBeTruthy();
-    expect(await screen.findByText('Booked')).toBeVisible();
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith('Booked', { description: expect.stringMatching(/Harish Gowda with Dr. Shweta Kulkarni, Tomorrow, about 10:12 am/) }),
+    );
     // Back on the list, which refetches.
     expect(await within(desk).findByRole('heading', { name: 'Upcoming appointments' })).toBeVisible();
   });

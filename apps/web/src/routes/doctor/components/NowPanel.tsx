@@ -1,4 +1,4 @@
-import type { Ref } from 'react';
+import type { ReactNode, Ref } from 'react';
 import type { QueueEntry } from '@hqms/contracts';
 import { GroupTag, TokenText } from '@/components/queue';
 import { GROUPS } from '@/components/queue/group';
@@ -16,11 +16,15 @@ interface NowPanelProps {
   onStart: () => void;
   onComplete: () => void;
   onSkip: () => void;
+  /** PR-32: create a follow-up task for the patient with the doctor now. */
+  onFollowUp: () => void;
+  /** Shown once a follow-up exists for this visit. */
+  confirmation?: ReactNode;
   busy: boolean;
 }
 
 /** The one big panel: who is with the doctor now, with Start and Complete. */
-export function NowPanel({ active, fromOtherSession, completedCount, startRef, completeRef, onStart, onComplete, onSkip, busy }: NowPanelProps) {
+export function NowPanel({ active, fromOtherSession, completedCount, startRef, completeRef, onStart, onComplete, onSkip, onFollowUp, confirmation, busy }: NowPanelProps) {
   const state = active?.state ?? null;
   const canStart = state === 'called' && !busy;
   const canComplete = state === 'in_service' && !busy;
@@ -90,12 +94,18 @@ export function NowPanel({ active, fromOtherSession, completedCount, startRef, c
         >
           Complete
         </Button>
+        {active ? (
+          <Button size="lg" variant="outline" disabled={busy} onClick={onFollowUp}>
+            Create follow-up
+          </Button>
+        ) : null}
         {state === 'called' ? (
           <Button size="lg" variant="outline" className="ml-auto" disabled={busy} onClick={onSkip}>
             Skip
           </Button>
         ) : null}
       </div>
+      {confirmation}
       <p className="mt-2 text-sm text-muted-foreground">
         {state === 'called'
           ? 'Start when the patient is in the room.'

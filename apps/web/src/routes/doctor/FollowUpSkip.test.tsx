@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '@/lib/auth';
-import { Toaster } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { addDays } from '@/lib/dates';
 import { FakeEventSource } from '@/live/fakeEventSource';
 import { decision, entry, staffSnapshot, uid } from '@/live/fixtures';
@@ -16,6 +16,8 @@ import { SessionConsole } from './components/SessionConsole';
  * PR-32: the doctor creates a follow-up task for the patient with them, and for the one just completed (kept on screen
  * until the next call). PR-35: Skip asks for confirmation first.
  */
+
+vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn() }), Toaster: () => null }));
 
 beforeAll(() => {
   Element.prototype.hasPointerCapture = () => false;
@@ -41,6 +43,8 @@ const task = (body: Record<string, unknown>) => ({
   patientId: body.patientId,
   patientName: 'Ananya Iyer',
   sourceVisitId: body.sourceVisitId ?? null,
+  sourceMessageId: null,
+  overdue: false,
   kind: body.kind,
   title: body.title,
   detail: body.detail ?? null,
@@ -60,6 +64,15 @@ const task = (body: Record<string, unknown>) => ({
 beforeEach(() => {
   FakeEventSource.reset();
   vi.stubGlobal('EventSource', FakeEventSource);
+  // Radix radios inside a <form> measure their hidden input.
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
   posts = [];
   failFollowUp = false;
   state = { active: entry(14, { state: 'in_service', calledAt: '2026-11-11T04:42:00.000Z', patientName: 'Ananya Iyer' }), waiting: [entry(15, { patientName: 'Harish Gowda' })], completed: 3 };
@@ -97,7 +110,10 @@ beforeEach(() => {
     }),
   );
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
 
 function renderConsole() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
@@ -106,7 +122,6 @@ function renderConsole() {
       <MemoryRouter>
         <AuthProvider>
           <SessionConsole session={session as never} picker={null} />
-          <Toaster />
         </AuthProvider>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -138,7 +153,7 @@ describe('doctor: Create follow-up (PR-32)', () => {
       dueAt: istFivePm(7),
     });
     expect(sent.key).toBeTruthy();
-    expect(await screen.findByText('Follow-up created')).toBeVisible();
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Follow-up created', expect.anything()));
     // Confirmation stays in the panel, with no link to anywhere.
     const confirmation = await screen.findByTestId('followup-confirmation');
     expect(confirmation).toHaveTextContent('Check medication response');
@@ -211,7 +226,7 @@ describe('doctor: Skip asks first (PR-35)', () => {
     expect(posts.filter((p) => p.path.endsWith('/skip'))).toHaveLength(0);
     await user.click(within(dialog).getByRole('button', { name: 'Skip' }));
     await waitFor(() => expect(posts.filter((p) => p.path.endsWith('/skip'))).toHaveLength(1));
-    expect(await screen.findByText('Skipped A-014')).toBeVisible();
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Skipped A-014'));
   });
 
   it('keeps the patient called when the doctor chooses Keep called', async () => {
