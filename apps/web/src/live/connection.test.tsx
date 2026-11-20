@@ -25,7 +25,7 @@ afterEach(() => {
 
 describe('useConnectionStatus', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] });
   });
 
   it('passes the stream status through while the browser is online', () => {

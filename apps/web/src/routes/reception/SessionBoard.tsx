@@ -79,11 +79,7 @@ export function SessionBoard(p: SessionBoardProps) {
             <p className="font-bold tabular-nums">
               {sessionLabelWord(s)}, {sessionTimes(s)}
             </p>
-            <p>
-              <span className={cn('font-bold', s.status === 'paused' || s.status === 'unavailable' ? 'text-ink' : 'text-muted-foreground')}>
-                {SESSION_WORD[s.status]}
-              </span>
-            </p>
+            <BoardStatus session={s} />
           </div>
         </div>
         <BoardCapacity session={s} />
@@ -127,6 +123,19 @@ export function SessionBoard(p: SessionBoardProps) {
         </div>
       ) : null}
     </section>
+  );
+}
+
+/** The session chip follows the live snapshot, so "Doctor away" and "Doctor unavailable" appear without a reload (PR-24). */
+function BoardStatus({ session }: { session: Session }) {
+  const { data } = useQueueSnapshot(session.id);
+  const status = data?.view === 'staff' ? data.status : session.status;
+  return (
+    <p>
+      <span data-testid="board-status" className={cn('font-bold', status === 'paused' || status === 'unavailable' ? 'text-ink' : 'text-muted-foreground')}>
+        {SESSION_WORD[status]}
+      </span>
+    </p>
   );
 }
 

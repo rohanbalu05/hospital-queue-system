@@ -341,3 +341,63 @@ for (const vp of VIEWPORTS) {
     });
   });
 }
+
+// PR-04: offline for more than about 10 s must say so, and coming back must refetch and clear the banner.
+for (const vp of VIEWPORTS) {
+  test.describe(`offline banner on staff screens at ${vp.width}`, () => {
+    test.use({ viewport: vp, deviceScaleFactor: 1 });
+
+    test('doctor console: Reconnecting… after 10 s offline, then a fresh snapshot on reconnect', async ({ page, context }) => {
+      const mock = await setupDoctor(page);
+      await page.goto('/doctor');
+      await doctorReady(page);
+      await context.setOffline(true);
+      await expect(page.getByText('Reconnecting…')).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText(/Showing the queue as of/)).toBeVisible();
+      await shot(page, `w5-doctor-offline-${vp.width}`);
+
+      // While offline someone else called A-014; the snapshot refetches on reconnect.
+      mock.world.active = { ...mock.world.waiting.shift()!, state: 'called', calledAt: '2026-11-11T04:34:00.000Z' };
+      mock.world.version += 1;
+      await context.setOffline(false);
+      await expect(page.getByText('Reconnecting…')).toBeHidden();
+      await expect(page.getByTestId('now-active')).toContainText('A-014');
+    });
+
+    test('reception board: Reconnecting… after 10 s offline and cleared on reconnect', async ({ page, context }) => {
+      await setupReceptionAvailability(page);
+      await page.goto('/reception');
+      await expect(page.getByRole('heading', { name: 'Waiting, appointment' })).toBeVisible();
+      await context.setOffline(true);
+      await expect(page.getByText('Reconnecting…')).toBeVisible({ timeout: 15_000 });
+      await shot(page, `w5-reception-offline-${vp.width}`);
+      await context.setOffline(false);
+      await expect(page.getByText('Reconnecting…')).toBeHidden();
+    });
+  });
+}
+
+for (const vp of [DISPLAY_VIEWPORTS[0], DISPLAY_VIEWPORTS[1]]) {
+  test.describe(`offline banner on the display at ${vp.width}`, () => {
+    test.use({ viewport: vp, deviceScaleFactor: 1 });
+
+    test('shows Reconnecting… with the last-known time, then the called token after reconnect', async ({ page, context }) => {
+      await installFakeEventSource(page);
+      await mockApi(page, null);
+      const mock = await mockQueue(page);
+      await page.goto('/display');
+      const mine = page.getByTestId('display-column').first();
+      await expect(mine.getByTestId('now-calling-idle')).toBeVisible();
+      await context.setOffline(true);
+      await expect(page.getByText('Reconnecting…')).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByTestId('last-updated')).toContainText('Showing the queue as of');
+      await shot(page, `w5-display-offline-${vp.width}`);
+
+      mock.world.active = { ...mock.world.waiting.shift()!, state: 'called' };
+      mock.world.version += 1;
+      await context.setOffline(false);
+      await expect(mine.getByTestId('now-calling')).toHaveText('A-014');
+      await expect(page.getByText('Reconnecting…')).toBeHidden();
+    });
+  });
+}

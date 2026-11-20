@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { ArrivalResult, QueueEntry, RegisterPatientRequest } from '@hqms/contracts';
 import {
@@ -123,6 +124,14 @@ export default function ReceptionHome() {
     if (!snapshot || !selectedEntryId) return null;
     return [snapshot.active, ...snapshot.waiting, ...snapshot.skipped].find((e): e is QueueEntry => e !== null && e.id === selectedEntryId) ?? null;
   }, [snapshot, selectedEntryId]);
+  // The session list is polled; the live snapshot is the truth for status (away, unavailable) between polls (PR-24).
+  const liveSession = useMemo(() => (session && snapshot && snapshot.status !== session.status ? { ...session, status: snapshot.status } : session), [session, snapshot]);
+  const qc = useQueryClient();
+  const liveStatus = snapshot?.status ?? null;
+  useEffect(() => {
+    if (liveStatus !== null && session && liveStatus !== session.status) void qc.invalidateQueries({ queryKey: ['sessions'] });
+  }, [liveStatus, session?.status, qc]);
+  const checkInOff = liveSession ? liveSession.status === 'closed' || liveSession.status === 'unavailable' : false;
   const entryAction = useEntryAction(session?.id ?? '');
   const [entryError, setEntryError] = useState<PanelError | null>(null);
   const [lateEntry, setLateEntry] = useState<{ entry: QueueEntry; minutesLate: number; scheduledAt: string | null } | null>(null);
@@ -272,7 +281,7 @@ export default function ReceptionHome() {
 
   const onEnter = () => {
     if (!resultsCurrent) return;
-    if (active && canCheckIn(active) && !late) doCheckIn(active);
+    if (active && canCheckIn(active) && !late && !checkInOff) doCheckIn(active);
   };
 
   const description = `${formatLocalDate(today, 'weekday-date')}. Arrivals, walk-ins and the session board for your doctors.`;
@@ -336,11 +345,11 @@ export default function ReceptionHome() {
         <div className="lg:col-start-3 lg:row-start-1">
           <ActionPanel
             item={active}
-            session={session}
+            session={liveSession}
             knownToken={active?.appointment ? tokens[active.appointment.id] : undefined}
             resultsCurrent={resultsCurrent}
             searchText={query.trim()}
-            onCheckIn={() => resultsCurrent && active && doCheckIn(active)}
+            onCheckIn={() => resultsCurrent && !checkInOff && active && doCheckIn(active)}
             checkInPending={checkIn.isPending}
             onAdmit={() => resultsCurrent && active && doAdmit(active.patientId, active.name)}
             admitPending={admit.isPending}

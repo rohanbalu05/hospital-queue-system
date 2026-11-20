@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { CallNextResult, QueueDecision, QueueEntry, Session, SessionAvailability } from '@hqms/contracts';
 import { AvailabilityStrip, ErrorState, PressureNote, SkeletonRows, StaleBanner, useAvailabilityControls } from '@/components/queue';
@@ -59,6 +60,14 @@ export function SessionConsole({ session, picker }: SessionConsoleProps) {
     subject: 'you',
     role: 'doctor',
   });
+
+  // The session list behind the picker is polled; when the live status moves (away, unavailable, back) refresh it so the
+  // picker's "(open)" never lags the console (PR-34).
+  const qc = useQueryClient();
+  const liveStatus = snapshot?.view === 'staff' ? snapshot.status : null;
+  useEffect(() => {
+    if (liveStatus !== null && liveStatus !== session.status) void qc.invalidateQueries({ queryKey: ['queue', 'sessions'] });
+  }, [liveStatus, session.status, qc]);
 
   const [dialog, setDialog] = useState<DialogState>(null);
   const [justCalled, setJustCalled] = useState<CallNextResult | null>(null);
