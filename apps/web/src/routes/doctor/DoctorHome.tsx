@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useTodayIST } from '@/live';
 import { SessionConsole } from './components/SessionConsole';
 import { SessionPicker } from './components/SessionPicker';
+import { pickDefaultSession } from './defaultSession';
 import ReviewPage from './review/ReviewPage';
 
 function DoctorNav() {
@@ -47,8 +48,7 @@ function QueuePage() {
 
   const list = sessions.data ?? [];
   const requested = params.get('session');
-  const selected =
-    list.find((s) => s.id === requested) ?? list.find((s) => s.status === 'open' || s.status === 'paused') ?? list[0] ?? null;
+  const selected = list.find((s) => s.id === requested) ?? pickDefaultSession(list, Date.now());
 
   return (
     <StaffShell
