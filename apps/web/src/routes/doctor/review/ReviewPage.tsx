@@ -223,6 +223,11 @@ function ReviewDetail({ item, onDone }: { item: ReviewItem; onDone: () => void }
                 sourceDraftId={latest?.id}
                 pending={verify.isPending}
                 error={verify.isError ? verify.error.message : null}
+                conflict={verify.isError && verify.error.status === 409}
+                onRefresh={() => {
+                  verify.reset();
+                  void instructions.refetch();
+                }}
                 onVerify={doVerify}
               />
             )
