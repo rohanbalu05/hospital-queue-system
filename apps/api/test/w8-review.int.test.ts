@@ -2,8 +2,8 @@
 /** Session-3 review fixes (D-039): batch idempotency of the affected-move, admin deactivate lock order. */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ApiError, Appointment, MoveAffectedResult, StaffCredentials } from '@hqms/contracts';
-import { type Client, type TestApp, createTestApp, loginAs, makeSession, newPatient } from './helpers.js';
+import { AffectedPatients, ApiError, Appointment, AppointmentAlternatives, MoveAffectedResult, StaffCredentials } from '@hqms/contracts';
+import { type Client, type TestApp, createTestApp, doctorId, loginAs, makeSession, newLoginPatient, newPatient } from './helpers.js';
 
 let t: TestApp;
 let admin: Client;
@@ -102,5 +102,91 @@ describe('admin deactivate: lock order (P2)', () => {
       expect([r1.status, r2.status]).toContain(200);
     }
     expect(await deadlocks()).toBe(before);
+  });
+});
+
+describe('GET /sessions/{id}/affected: alternatives limited to the caller scope (P2)', () => {
+  it('reception sees only targets of doctors they can move patients to; admin and a wider scope see more', async () => {
+    const S = await makeSession(admin, { doctor: 1 });
+    const T = await makeSession(admin, { doctor: 2 }); // General Medicine, like doctor 1
+    t.clock.set(new Date(`${S.date}T08:00:00+05:30`)); // alternatives look at today and the next 7 days
+    expect((await reception.post(`/sessions/${S.id}/unavailable`, { reason: 'Doctor unwell' })).status).toBe(200);
+
+    const mkReception = async (doctors: string[]): Promise<Client> => {
+      const res = await admin.post(
+        '/admin/staff',
+        { displayName: 'Scope Reception', email: `w8-${randomUUID().slice(0, 8)}@hqms.test`, role: 'reception', doctorIds: doctors },
+        null,
+      );
+      expect(res.status).toBe(201);
+      const cred = StaffCredentials.parse(res.body);
+      return loginAs(t.server, cred.member.email, cred.temporaryPassword);
+    };
+    const ids = async (c: Client): Promise<string[]> => {
+      const res = await c.get(`/sessions/${S.id}/affected`);
+      expect(res.status).toBe(200);
+      return AffectedPatients.parse(res.body).alternatives.map((a) => a.sessionId);
+    };
+    const narrow = await mkReception([doctorId(1)]);
+    expect(await ids(narrow)).not.toContain(T.id);
+    const both = await mkReception([doctorId(1), doctorId(2)]);
+    expect(await ids(both)).toContain(T.id);
+    expect(await ids(admin)).toContain(T.id);
+    t.clock.reset();
+  });
+});
+
+describe('per-user rate limits on the new reads (P2)', () => {
+  let lt: TestApp;
+  const old: Record<string, string | undefined> = {};
+  beforeAll(async () => {
+    for (const [k, v] of Object.entries({ READS_RATE_LIMIT_PER_MIN: '3', UNREAD_COUNT_RATE_LIMIT_PER_MIN: '4' })) {
+      old[k] = process.env[k];
+      process.env[k] = v;
+    }
+    lt = await createTestApp();
+  });
+  afterAll(async () => {
+    await lt.close();
+    for (const [k, v] of Object.entries(old)) {
+      if (v === undefined) Reflect.deleteProperty(process.env, k);
+      else process.env[k] = v;
+    }
+  });
+
+  async function hammer(c: Client, call: (c: Client) => PromiseLike<{ status: number; body: unknown }>, allowed: number) {
+    for (let i = 0; i < allowed; i += 1) expect((await call(c)).status).not.toBe(429);
+    const over = await call(c);
+    expect(over.status).toBe(429);
+    expect(code(over.body)).toBe('RATE_LIMITED');
+  }
+
+  it('GET /me/visits/today: per patient, and another patient is not affected', async () => {
+    const adminL = await loginAs(lt.server, 'admin@hqms.test');
+    const rec = await loginAs(lt.server, 'reception@hqms.test');
+    const p1 = await newLoginPatient(lt, rec, 'Limit One');
+    const p2 = await newLoginPatient(lt, rec, 'Limit Two');
+    await hammer(p1.client, (c) => c.get('/me/visits/today'), 3);
+    expect((await p2.client.get('/me/visits/today')).status).toBe(200);
+    expect(adminL).toBeDefined();
+  });
+
+  it('GET /notifications/unread-count (4/min here) and POST /notifications/read-all (3/min here)', async () => {
+    const rec = await loginAs(lt.server, 'reception@hqms.test');
+    const p = await newLoginPatient(lt, rec, 'Limit Bell');
+    await hammer(p.client, (c) => c.get('/notifications/unread-count'), 4);
+    await hammer(p.client, (c) => c.post('/notifications/read-all', {}, null), 3);
+  });
+
+  it('GET /appointments/{id}/alternatives: per user', async () => {
+    const a = await loginAs(lt.server, 'admin@hqms.test');
+    const rec = await loginAs(lt.server, 'reception@hqms.test');
+    const S = await makeSession(a, { doctor: 1 });
+    const p = await newLoginPatient(lt, rec, 'Limit Alt');
+    const appt = await rec.post('/appointments', { sessionId: S.id, patientId: p.id });
+    expect(appt.status).toBe(201);
+    const id = Appointment.parse(appt.body).id;
+    await hammer(p.client, (c) => c.get(`/appointments/${id}/alternatives`), 3);
+    expect(AppointmentAlternatives.safeParse((await rec.get(`/appointments/${id}/alternatives`)).body).success).toBe(true);
   });
 });
