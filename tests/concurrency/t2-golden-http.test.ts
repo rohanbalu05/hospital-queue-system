@@ -119,7 +119,11 @@ interface RunResult {
 async function runTable8(doctorNumber: number, patientOffset: number): Promise<RunResult> {
   const doctor = await loginAs(doctorEmail(doctorNumber));
   const session = await makeRunningSession(admin, { doctor: doctorNumber, startOffsetMin: -12 });
-  const p = (i: number): string => patients[patientOffset + i] as string;
+  // D-035: booking never hands out a slot the patient cannot reach in time (slot + 15 min grace >= now + 10 min),
+  // so with 20-minute slots two just-booked appointments cannot both be eligible now. 5-minute slots keep the
+  // golden situation (A1 and A2 both eligible at the first decision) without touching the policy under test.
+  await sqlRows(`UPDATE sessions SET slot_minutes = 5 WHERE id = $1`, [session.id]);
+  const p =(i: number): string => patients[patientOffset + i] as string;
 
   const arrive = async (i: number) => {
     const appt = await book(reception, session.id, p(i));

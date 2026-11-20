@@ -39,6 +39,10 @@ export const NOTIFICATION_LINKS = {
   patientVisit: (sessionId: string) => `/patient/visit/${sessionId}`,
   /** Visits page with the rebook panel open for one appointment (doctor unavailable). */
   patientRebook: (appointmentId: string) => `/patient/visits?rebook=${appointmentId}`,
+  /** Follow-ups page: the care team's reply is waiting (PR-14). */
+  patientFollowUps: () => '/patient/follow-ups',
+  /** Admin sessions page (e.g. a session reopened). */
+  adminSessions: () => '/admin',
   receptionSession: (sessionId: string) => `/reception?session=${sessionId}`,
   doctorSession: (sessionId: string) => `/doctor?session=${sessionId}`,
 } as const;

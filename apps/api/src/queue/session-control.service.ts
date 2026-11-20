@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Session, SessionStatus } from '@hqms/contracts';
+import { deriveAvailability, type Session, type SessionStatus } from '@hqms/contracts';
 import {
   bumpQueueVersion,
   getPolicyById,
@@ -25,7 +25,8 @@ type Command = 'open' | 'pause' | 'resume' | 'unavailable' | 'close';
 /** Session status machine (kept here: the domain package has no session lifecycle). */
 const ALLOWED: Record<Command, { from: SessionStatus[]; to: SessionStatus }> = {
   open: { from: ['scheduled'], to: 'open' },
-  pause: { from: ['open'], to: 'paused' },
+  // "Step away": also allowed while already away, to update the expected return (D-032).
+  pause: { from: ['open', 'paused'], to: 'paused' },
   resume: { from: ['paused'], to: 'open' },
   unavailable: { from: ['scheduled', 'open', 'paused'], to: 'unavailable' },
   close: { from: ['scheduled', 'open', 'paused', 'unavailable'], to: 'closed' },
@@ -57,7 +58,10 @@ export class SessionControlService {
     return this.run(ctx, id, 'open', key, {});
   }
 
-  /** `until` omitted = unknown duration: the ETA is withheld rather than guessed (FR-10-a). */
+  /**
+   * "Step away" (D-032). `until` omitted = unknown duration: the ETA is withheld rather than guessed (FR-10-a).
+   * Allowed from open and, to update the expected return, from paused.
+   */
   pause(ctx: RequestCtx, id: string, body: PauseSessionRequestDto, key: string | undefined) {
     return this.run(ctx, id, 'pause', key, body);
   }
@@ -100,18 +104,40 @@ export class SessionControlService {
         });
       }
       const now = this.clock.now();
+      const isUpdate = command === 'pause' && session.status === 'paused';
       let pauseUntil: Date | null = null;
       if (command === 'pause' && body.until !== undefined) {
         pauseUntil = new Date(body.until);
         if (!(pauseUntil.getTime() > now.getTime())) throw validationFailed('`until` must be in the future');
+        if (pauseUntil.getTime() > new Date(session.endsAt).getTime()) {
+          throw validationFailed('The expected return is after the session ends. Mark the doctor unavailable instead.');
+        }
+      }
+      if (command === 'pause') {
+        // The called patient would be skipped by the 2-minute timeout while the doctor is away (the doctor lock is
+        // held, so nobody can call between this check and the update). A patient already in service is fine.
+        const called = await tx.query(`SELECT 1 FROM queue_entries WHERE doctor_id = $1 AND state = 'called' LIMIT 1`, [
+          session.doctorId,
+        ]);
+        if ((called.rowCount ?? 0) > 0) {
+          throw conflict('DOCTOR_OCCUPIED', 'A patient has been called and has not started yet. Start or skip the called patient first.');
+        }
       }
       const policy = required(await getPolicyById(tx, session.policyId), 'policy');
 
-      if (command === 'pause' || command === 'unavailable') {
+      if (command === 'pause') {
+        // An update keeps the original paused_at (when the doctor first stepped away) and, without a new reason, the old one.
         await tx.query(
-          `UPDATE sessions SET status = $2, paused_at = $3, pause_until = $4, pause_reason = $5,
+          `UPDATE sessions SET status = $2, paused_at = COALESCE(paused_at, $3), pause_until = $4,
+                  pause_reason = CASE WHEN $6::boolean THEN COALESCE($5, pause_reason) ELSE $5 END,
                   version = version + 1, updated_at = now() WHERE id = $1`,
-          [id, rule.to, now, pauseUntil, body.reason ?? null],
+          [id, rule.to, now, pauseUntil, body.reason ?? null, isUpdate],
+        );
+      } else if (command === 'unavailable') {
+        await tx.query(
+          `UPDATE sessions SET status = $2, paused_at = $3, pause_until = NULL, pause_reason = $4,
+                  version = version + 1, updated_at = now() WHERE id = $1`,
+          [id, rule.to, now, body.reason ?? null],
         );
       } else {
         await tx.query(
@@ -127,24 +153,49 @@ export class SessionControlService {
         operation: `session.${command}`,
         entityType: 'session',
         entityId: id,
-        previous: { status: session.status, pauseUntil: session.pauseUntil },
-        next: { status: rule.to, pauseUntil: pauseUntil?.toISOString() ?? null, queueVersion },
+        previous: {
+          status: session.status,
+          pauseUntil: session.pauseUntil === null ? null : new Date(session.pauseUntil).toISOString(),
+        },
+        next: { status: rule.to, pauseUntil: pauseUntil?.toISOString() ?? null, queueVersion, update: isUpdate },
         reason: body.reason ?? null,
         policyVersion: policy.version,
         correlationId: ctx.correlationId,
       });
       const eventType = EVENT[command];
       if (eventType) {
+        // Routing data only: never the free-text reason (it stays in the audit row). The worker builds notices from this.
         await writeOutbox(tx, {
           eventType,
           entityType: 'session',
           entityId: id,
           entityVersion: session.version + 1,
           sessionId: id,
-          payload: { queueVersion, status: rule.to, pauseUntil: pauseUntil?.toISOString() ?? null },
+          payload: {
+            queueVersion,
+            status: rule.to,
+            pauseUntil: pauseUntil?.toISOString() ?? null,
+            update: isUpdate,
+            doctorId: session.doctorId,
+          },
         });
       }
-      return { status: 200, body: required(await getSession(tx, id), 'session') };
+      const view = required(await getSession(tx, id), 'session');
+      const row = required(
+        (
+          await tx.query<{ status: SessionStatus; ends_at: string; paused_at: string | null; pause_until: string | null; pause_reason: string | null }>(
+            `SELECT status, ends_at, paused_at, pause_until, pause_reason FROM sessions WHERE id = $1`,
+            [id],
+          )
+        ).rows[0],
+        'session',
+      );
+      const availability = deriveAvailability(
+        { status: row.status, endsAt: row.ends_at, pausedAt: row.paused_at, pauseUntil: row.pause_until, pauseReason: row.pause_reason },
+        now,
+        { includeReason: true }, // staff-only response
+      );
+      return { status: 200, body: { ...view, availability } };
     });
   }
 }

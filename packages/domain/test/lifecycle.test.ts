@@ -24,6 +24,7 @@ const LEGAL: { [M in MachineName]: readonly Edge[] } = {
   visit: [
     ['open', 'in_service'],
     ['open', 'left'],
+    ['open', 'transferred'],
     ['in_service', 'completed'],
   ],
   queueEntry: [
@@ -145,6 +146,7 @@ describe('selected rules from the report', () => {
       ['appointment', 'rescheduled'],
       ['visit', 'completed'],
       ['visit', 'left'],
+      ['visit', 'transferred'],
       ['queueEntry', 'completed'],
       ['queueEntry', 'cancelled'],
       ['followUpTask', 'resolved'],
@@ -163,5 +165,14 @@ describe('selected rules from the report', () => {
     expect(canTransition('document', 'ocr_failed', 'verified')).toBe(true);
     expect(canTransition('document', 'accepted', 'verified')).toBe(false);
     expect(canTransition('document', 'uploaded', 'ocr_ready')).toBe(false);
+  });
+});
+
+describe('B3 transfer (D-033)', () => {
+  it('only an open visit can be transferred; an in-service or completed visit cannot', () => {
+    expect(canTransition('visit', 'open', 'transferred')).toBe(true);
+    expect(canTransition('visit', 'in_service', 'transferred')).toBe(false);
+    expect(canTransition('visit', 'completed', 'transferred')).toBe(false);
+    expect(() => assertTransition('visit', 'in_service', 'transferred')).toThrow(InvalidTransitionError);
   });
 });

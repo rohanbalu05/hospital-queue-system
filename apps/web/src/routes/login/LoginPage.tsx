@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ApiRequestError } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { ROLE_HOME, useAuth } from '@/lib/auth';
+import { ROLE_HOME, SESSION_ENDED_MESSAGE, useAuth } from '@/lib/auth';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD, HOSPITAL_NAME, HOSPITAL_PLACE, SHOW_DEMO } from '@/lib/config';
 
 function loginErrorMessage(e: unknown): string {
@@ -23,7 +23,7 @@ function loginErrorMessage(e: unknown): string {
 }
 
 export default function LoginPage() {
-  const { login, loginPending } = useAuth();
+  const { login, loginPending, sessionEnded } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [formError, setFormError] = useState<string | null>(null);
@@ -71,6 +71,12 @@ export default function LoginPage() {
             Sign in
           </h1>
           <p className="mt-1 text-muted-foreground">Outpatient appointments and queue.</p>
+          {sessionEnded ? (
+            <div role="status" className="mt-4 rounded-md border border-l-[3px] border-rule border-l-ink bg-surface px-3 py-2">
+              <p className="font-bold">{SESSION_ENDED_MESSAGE}</p>
+              <p className="text-muted-foreground">Sign in again to carry on where you left off.</p>
+            </div>
+          ) : null}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="mt-6 space-y-4" aria-busy={loginPending}>
