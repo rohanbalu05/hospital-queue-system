@@ -54,11 +54,12 @@ environment (Cloud Run + Cloud SQL) has not been tested.
 
 ```
 pnpm --filter @hqms/api build        # the suite also rebuilds it in global setup
-pnpm test:concurrency                # = pnpm --filter @hqms/tests test:concurrency (4 files, 12 tests)
+pnpm test:concurrency                # = pnpm --filter @hqms/tests test:concurrency (historical: 4 T1 files, 12 tests; since session 3: 5 T1 files, 14 tests, see the session 3 section)
 ```
 
 Source: `tests/concurrency/t1-last-slot.test.ts`, `t1-idempotency.test.ts`, `t1-reschedule.test.ts`,
-`t1-checkin.test.ts`. Raw numbers of the last run: `docs/evidence/T1-booking-collision.raw.json`.
+`t1-checkin.test.ts` (session 3 adds `t1-move.test.ts`). Raw numbers of the last run: `docs/evidence/T1-booking-collision.raw.json`
+(regenerated in session 3; the three-run tables below are the original session-1 runs and are kept as history, see "Session 3 re-run" at the end for the current numbers).
 
 ## Results (measured)
 
@@ -177,3 +178,62 @@ Test-first record:
 - After the fix: 11/11; API suite 187/187; `pnpm verify` green; `pnpm test:concurrency` 17/17 (T1 + T2 unchanged).
 
 Measured: 10 parallel walk-ins for a patient whose entry is absent → 0 successes, capacity unchanged; 10 parallel walk-ins for a patient with no place → exactly 1 success; a patient whose earlier visit was completed or left can still be admitted.
+
+## Session 3 re-run (2026-11-20, code tree of commit `1697f3e`): bulk move and transfer races, current raw numbers
+
+Re-measured on 2026-11-20 on the final product tree (commit `1697f3e`; the evidence commits on top of it change documents only). Same kind of machine
+as above (cloud sandbox VM, Linux 6.18.44, 4 vCPU, PostgreSQL 16.15 on localhost, Node v22.23.5), with scratch database
+`hqms_test_bb_ev` (set through `BLACKBOX_DB_NAME`) instead of `hqms_test_blackbox`. One full `pnpm test:concurrency` run:
+**19 of 19 tests passed in 7 of 7 files** (Vitest reported 16.8 s; T1 is 5 files and 14 tests, T2 is 2 files and 5 tests). One run is the sample
+behind this section; the earlier "3 consecutive runs" statement above belongs to session 1.
+
+**Superseded numbers.** The latency figures and the per-run splits in the tables above (for example the last-slot p50 of 159.2, 145.9 and 121.2
+ms, and "reschedule won 11, 15, 10 and 9 of 20") are measurements of the session-1 build on the session-1 runs. They are kept as history and are not
+the current figures. The pass criteria (counts and invariants) are unchanged and held again; latencies differ because of code, machine load and
+database state at the time.
+
+### Current numbers (raw: `T1-booking-collision.raw.json`, last run)
+
+| Check                                                              | Measured result (this run)                                                                                                                                                  |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Last-slot race, 20 rounds x 50 requests                            | 1000 requests: 20 x `201` (one per round), 980 x `409 CAPACITY_FULL`, 0 5xx; every round ended with counters equal to the allocation rows                                   |
+| Last-slot latency, all 1000 requests                               | p50 58.4 ms, p95 92.5 ms, max 106.2 ms (client-side, shared 4-vCPU machine; not a latency target)                                                                          |
+| Reschedule into a full session                                     | 10 attempts, all `409 CAPACITY_FULL`; row snapshots before and after equal                                                                                                  |
+| 10 reschedules racing for 1 place, 5 rounds                        | every round 1 x success, 9 x `409 CAPACITY_FULL`, 0 5xx; source `booked_reserved` 9, target 1                                                                                |
+| Reschedule racing cancel, 20 trials                                | reschedule won 3, cancel won 17; never both and never neither; 0 5xx                                                                                                        |
+| 10 parallel check-ins of one appointment, 5 trials                 | each trial 1 x `201` and 9 x `200` with one token, 1 visit, 1 queue entry, 1 audit row                                                                                     |
+| 20 parallel walk-ins into 5 places, 3 rounds                       | each round 5 x `201` (W-001 to W-005) and 15 x `409 CAPACITY_FULL`                                                                                                         |
+| Same patient as walk-in 6 times at once                            | 1 x `201`, 5 x `409`                                                                                                                                                        |
+| 5 check-ins and 10 walk-in requests on 3 walk-in places            | 8 x `201` (5 check-ins and 3 walk-ins), 7 x `409`                                                                                                                           |
+| Same key, same body, 10 parallel requests, 10 rounds               | every round 10 x `201`, 1 distinct id, 9 replayed                                                                                                                           |
+| Same key with another body                                         | sequential reuse `409`; 5 x `201` and 5 x `409` when the two bodies race                                                                                                    |
+| Key scoped to the actor; business failure not stored               | two staff with the same key: `201` and `201`; `409` then retry `201`                                                                                                         |
+| Global invariant violations after each of the four recorded groups | 0, 0, 0, 0 (`t1LastSlot`, `t1Reschedule`, `t1CheckIn`, `t1Idempotency` in the raw file)                                                                                     |
+
+**Run-to-run spread, same tree, same day.** The final-tree verification run, whose raw file this run replaced, gave the same counts (1000 requests, 20 x `201`, 980 x `409`, 0 5xx) with last-slot
+latency p50 83.3 ms, p95 131.1 ms, max 160.6 ms (this run: 58.4, 92.5, 106.2), and reschedule won 2 and cancel won 18 of 20 (this run: 3 and 17). Counts and invariants repeat; latencies and race splits do not.
+
+### New in session 3: bulk move and transfer of affected patients (`tests/concurrency/t1-move.test.ts`, D-033)
+
+When a doctor becomes unavailable for the rest of a session, reception or admin can move the affected patients into another session through
+`POST /sessions/:id/affected/move` (checked-in patients are transferred, booked appointments are rescheduled). Two staff members can do this at
+the same time with overlapping selections, which is a new place where one patient could be moved twice or a target could be over-allocated.
+
+What the two tests do (real HTTP against the built API, real PostgreSQL, reception and admin logins, nothing mocked):
+
+1. **Checked-in patients, 6 rounds.** Each round creates a source session (doctor 1, 10 booked and 5 walk-in places) with 6 booked and checked-in
+   patients, a target session (doctor 2, `booked_capacity` 2, no walk-in places), marks the source unavailable, and then fires two
+   `affected/move` requests at once: reception moves entries 0 to 3, admin moves entries 2 to 5 (entries 2 and 3 overlap).
+2. **Booked appointments, 4 rounds.** The same race with six booked appointments (not checked in) and `appointmentIds` in the selection.
+
+Asserted per round: no 5xx; both requests answer `200`; the two responses together report exactly **2 moved** (the target's two free places);
+every skipped item carries a controlled code (`CAPACITY_FULL`, `INVALID_TRANSITION` or `CONFLICT`); the target has `booked_reserved` 2 and exactly
+2 allocation rows; no source entry (or appointment) has more than one successor, and exactly 2 do; in test 1 exactly 2 source entries are
+`cancelled` with visit `transferred`, the other 4 stay `waiting` with visit `open`, and the target holds exactly 2 queue entries. After the file,
+`checkGlobalInvariants` must report no violation.
+
+**Measured result (2026-11-20 run described above): both tests passed (10 race rounds in total, the file took 1.27 s in Vitest's report), and
+the global-invariant check after the file passed.** This file does not write a `.raw.json` entry (`tests/support/results.ts` has no key for it),
+so the only recorded measurements are Vitest's pass result and durations; per-round counts such as how many of the 4 + 4 selected items each staff
+member happened to move are not recorded and are not claimed here. Limits: two concurrent staff and a 2-place target is the one shape tested;
+more than two movers, moves racing patient self-cancel, and moves racing the worker are not covered.

@@ -59,19 +59,21 @@ Asserted in the browser, all passed in the final runs:
   before the step and compares). Audit: `session.pause (doctor)`, `session.resume (doctor)`; outbox
   `SessionPaused`, `SessionResumed`.
 
-Measured latencies (final run, same machine as server, one observation each, not a distribution; the display and
-reception use their own polling or stream, the worker poll is 200 ms):
+Measured latencies. **Current figures: the last of the two final-tree runs on commit `1697f3e` (2026-11-20, raw `e2e-availability-away.raw.json`).** One observation each, not a distribution; the display and reception use their
+own polling or stream, the worker poll is 200 ms. The "earlier run" column is the first version of this file (before the polish merges), kept to show the spread; it is superseded.
 
-| From the doctor's confirm                          | ms   | From I'm back                                    | ms   |
-| -------------------------------------------------- | ---: | ------------------------------------------------ | ---: |
-| doctor's own strip                                 |  407 | doctor's own strip                               |  272 |
-| waiting patient's banner (away)                    |  584 | waiting patient's banner (back)                  | 1238 |
-| display banner                                     | 1119 | display banner cleared                           | 1410 |
-| reception strip                                    | 1193 | reception strip cleared                          | 1464 |
-| patient's bell shows an unread count               | 1467 | patient's bell gets one more unread              | 1742 |
-| admin log shows in-app and SMS rows sent           | 5043 |                                                  |      |
+| From the doctor's confirm                          | ms (current) | ms (earlier run) | From I'm back                                    | ms (current) | ms (earlier run) |
+| -------------------------------------------------- | -----------: | ---------------: | ------------------------------------------------ | -----------: | ---------------: |
+| doctor's own strip                                 |          484 |              407 | doctor's own strip                               |          332 |              272 |
+| waiting patient's banner (away)                    |          699 |              584 | waiting patient's banner (back)                  |          490 |             1238 |
+| display banner                                     |         1278 |             1119 | display banner cleared                           |          637 |             1410 |
+| reception strip                                    |         1335 |             1193 | reception strip cleared                          |          680 |             1464 |
+| patient's bell shows an unread count               |         1623 |             1467 | patient's bell gets one more unread              |        15884 |             1742 |
+| admin log shows in-app and SMS rows sent           |         5335 |             5043 |                                                  |              |                  |
 
-The admin-log figure includes the spec's own polling (a Refresh click every 0.5 to 1.5 s) and is an upper bound.
+The admin-log figure includes the spec's own polling (a Refresh click every 0.5 to 1.5 s) and is an upper bound. The 15,884 ms for the bell after I'm back is not a delivery delay of the notification: the bell's unread
+count is fetched by a 15-second poll (`UNREAD_POLL_MS = 15_000` in `apps/web/src/api/notifications.ts`), so a single observation can land anywhere from about 1 to 16 s depending on the phase of that poll. The earlier run happened to
+land early. The notice itself is delivered in-app by the worker as soon as its outbox event is fanned out; this file does not measure that time separately.
 
 ## Spec B: unavailable -> rebook -> reception moves the queue (`availability-unavailable.spec.ts`)
 
@@ -104,10 +106,14 @@ Asserted in the browser, all passed in the final runs:
 - Delivery log for the two sessions: `SessionUnavailable` 3 in-app + 3 SMS + 3 email (patients) and 2 in-app (staff);
   `QueuePatientTransferred` 2 in-app + 2 SMS; none failed or queued.
 
-Measured (final run, single observations): doctor strip 341 ms, display banner 710 ms, booked patient's bell 1463 ms,
-rebook click to confirmation 57 ms, move click to results 74 ms.
+Measured (last final-tree run on `1697f3e`, single observations; raw `e2e-availability-unavailable.raw.json`): doctor strip 375 ms, display banner 712 ms, booked patient's bell 1543 ms, rebook click to confirmation 69 ms, move click to
+results 76 ms, and the affected-patients list dropped the patient who had already rebooked **2 ms** after the check (the earlier run's 341, 710, 1463, 57 and 74 ms, and the 15.4 to 16.4 s stale list in observation 2 below, are superseded).
+Spec B in this run: 6 options shown on the rebook panel, next slot for doctor B 10:37 am; moved patients got new tokens A-001 (Farida Begum) and W-001 (Anitha Shankar); outbox `SessionUnavailable`, `AppointmentRescheduled`, `QueuePatientTransferred` x 2;
+**all deliveries `sent`, 0 not sent**; 9 x `401 GET /api/me` probes, 0 5xx, no page error.
 
 ## Results (measured)
+
+**Session 3 final-tree status.** On commit `1697f3e` (the final product tree) `pnpm e2e` was run twice by the orchestrator: **3 of 3 passed in each run**. I did not run `pnpm e2e` for this update (instructed not to); the pass counts are as reported to me, and the raw JSON files and screenshots in this folder are the outputs of the second of those runs (their stamps are 2026-11-20 about 10:29 to 10:30 Asia/Kolkata). The paragraph below describes an earlier pair of runs, kept as history.
 
 `E2E_DB_NAME=hqms_e2e_test_w7 pnpm e2e` (3 specs: the old full visit and the two new ones) after the final change:
 **3 of 3 passed in each of 2 consecutive runs on the final tree (after lint and format changes)** (57.6 s and 59.1 s wall time, API and worker already built; the first run after a change adds the builds). No
@@ -116,23 +122,16 @@ every page makes before it has a session (10 in each availability spec). Earlier
 spec-side problems that were fixed (the narrow reception defaulting to another doctor, an unread-count assumption, an outbox
 ordering query, a leftover called patient blocking the next spec); those runs are not counted. Two passes do not bound flakiness.
 
-## Product observations (not fixed here; this branch changes tests and evidence only)
+## Product observations (as first written; status on the final tree added)
 
-1. **Display banner names the department in the sentence.** The display's doctor label is "Dr. Hegde . General Medicine";
-   `doctorNameOnly` splits on a comma, so the banner reads "Dr. Hegde . General Medicine is temporarily away, expected back
-   about 10:13 am". Cosmetic; the spec matches `Dr. Hegde.* is temporarily away`.
-2. **Affected-patients list can show a patient who has already rebooked.** After the booked patient rebooked herself, reception's
-   dialog still listed her under "Booked, not arrived" (status `rescheduled` in the database; the API excludes it) and dropped
-   her only at the next 20-second poll (measured 15.4 s, 15.9 s and 16.4 s after the dialog opened in three runs). The move API is
-   server-checked, so this is a stale view, not a double move, but the desk could pick her.
-3. **Enter on the reception search is silently ignored while the debounced search is running.** Typing "Ramesh" and pressing
-   Enter within ~200 ms shows one row (from the session's appointments) but does nothing until the patient search returns.
-   The `full-visit` spec hit this and now waits for the "Press Enter in the search box to check in." hint.
-4. **A transferred patient's original appointment still reads "Checked in" on the reception list** (by design in D-033: the
-   original appointment is untouched), next to a note that the session is unavailable. Could confuse the desk.
-5. **Doctor console selection rule (from reading `DoctorHome.tsx`, not exercised).** It picks the first open or away session and
-   otherwise `list[0]`, so after "unavailable" a doctor with an earlier closed session today and no `?session=` in the URL would
-   be moved to that closed session. Spec B opens `/doctor?session=...` and therefore does not show this.
+These five were found while writing the specs, when this branch changed tests and evidence only. Each was then fixed on the product side (the persona-review follow-up, D-038/D-039) or is noted below. "Fixed" means a product commit plus
+a unit or component test; unless a measured number is quoted, it was not re-demonstrated by a new browser step.
+
+1. **Display banner names the department in the sentence** ("Dr. Hegde . General Medicine is temporarily away"). **Fixed** (`831da99`, `doctorNameOnly` handles the middle-dot label, tested in `f073dae`); the e2e spec's text match accepts either wording, so the spec does not by itself prove the new wording.
+2. **Affected-patients list could show a patient who had already rebooked** (stale for 15.4 to 16.4 s in three earlier runs). **Fixed** (`573aa52`: the list refetches on open and on live queue notices); **measured in the final-tree run: the patient was gone 2 ms after the check** (`affectedListDroppedRebookedPatientAfterMs` in the raw file; one observation).
+3. **Enter on the reception search ignored while the debounced search runs.** **Fixed** (`25456aa`: reception acts on a remembered Enter once the current query's results arrive; `fc6ef04` tests it). The `full-visit` spec still waits for the "Press Enter in the search box to check in." hint, so the e2e does not exercise the fast-Enter case.
+4. **A transferred patient's original appointment still read "Checked in" on the reception list.** **Fixed** (`5ebdd80`, `d425e06`, `08accb7`: the appointment carries `transferredTo` and reads "Moved to Dr. Y (token)"); component and API tests, not re-observed in this e2e.
+5. **Doctor console could open an earlier closed session after "Unavailable".** **Fixed** (`650c649`, test `2ed0b22`: the console opens on the session covering now); not exercised by the e2e (it opens the session by URL).
 
 ## Limitations
 

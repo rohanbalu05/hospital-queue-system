@@ -15,7 +15,7 @@ Show, over the real HTTP API and a real PostgreSQL, that:
    call-next requests race (the doctor-level guard of report 6.5, D-017), and every loser gets a clean
    `409 DOCTOR_OCCUPIED`, never a 5xx;
 3. call-next racing start, complete and skip of the same entry produces one valid transition sequence;
-4. a pause racing call-next never lets a call succeed after the pause has committed;
+4. a pause racing call-next never lets a call succeed after the pause has committed (**session 3: since D-032 a pause can also be refused with `409 DOCTOR_OCCUPIED`; see the session 3 section, which supersedes the pause wording in section 4 below**);
 5. the same `Idempotency-Key` sent ten times in parallel allocates one patient and replays one response.
 
 ## Environment (this machine; not the hosted environment)
@@ -58,7 +58,7 @@ API, database and load generator share 4 vCPUs on localhost, so latencies are co
 
 ```
 pnpm --filter @hqms/api build
-pnpm test:concurrency      # T1 + T2 together: 6 files, 17 tests (T2 is 2 files, 5 tests)
+pnpm test:concurrency      # T1 + T2 together: historical 6 files, 17 tests; since session 3: 7 files, 19 tests (T2 is still 2 files, 5 tests)
 ```
 
 Source: `tests/concurrency/t2-golden-http.test.ts`, `tests/concurrency/t2-doctor-guard.test.ts`. Raw numbers of the
@@ -144,7 +144,9 @@ consultation is in progress; at most 1 called/in-service entry for the doctor at
 | Final state: in service (complete lost)      |         1 |        3 |        2 |
 | Highest called or in-service count seen      |         1 |        1 |        1 |
 
-### 4. Pause racing call-next (20 rounds x 12 requests)
+### 4. Pause racing call-next (20 rounds x 12 requests) (historical, session 1; superseded by the session 3 section for the pause rules)
+
+> The checks described in this paragraph are the session-1 rules ("exactly one pause applies, the other is `409 INVALID_TRANSITION`"). D-032 changed the pause rules, and the test was rewritten; the current rule and the current numbers are in the "Session 3 re-run" section at the end. The Run 1 to 3 table here is history.
 
 Per round (fresh session, doctor 7, 4 walk-ins waiting, session opened): two pause requests (doctor and reception) and
 ten call-next requests, offset randomly, burst order rotated each round. Checks: exactly one pause applies (the other is
@@ -179,3 +181,69 @@ exactly one entry is called. 5 of 5 trials in each of the 3 runs.
   between outcomes differs from run to run (shown above); the pass criteria are invariants, not the split.
 - **Three runs** were done after the last edit of the suite; that is the sample behind "no flakiness observed", not a
   statistical bound on flakiness.
+
+## Session 3 re-run (2026-11-20, code tree of commit `1697f3e`): D-032 pause semantics and current raw numbers
+
+Re-measured on 2026-11-20 on the final product tree (commit `1697f3e`; later commits change documents only), same machine class as above (Linux 6.18.44,
+4 vCPU, PostgreSQL 16.15 on localhost, Node v22.23.5), scratch database `hqms_test_bb_ev`. One full `pnpm test:concurrency` run: 19 of 19 tests passed
+(7 files, Vitest 16.8 s). The raw numbers in `T2-policy-doctor-guard.raw.json` are from this run. **Superseded:** all latency figures, poller read counts, winner
+splits and outcome splits in sections 1 to 5 above are from the 2026-11-11 session-1 runs; the figures below replace them as the current numbers. The
+pass criteria did not change except for the pause race.
+
+### Current numbers (raw file, last run)
+
+| Check                                                                          | Measured result (this run)                                                                                                                                                                      |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Table 8 over HTTP, twice (doctor 3 and doctor 4)                               | both runs: A-001 `ROTATION` (slot 0, pointer 0 to 1), W-002 `CLINICAL_PRIORITY`, A-002 `ROTATION` (1, 1 to 2), W-001 `ROTATION` (2, 2 to 0), W-003 `ROTATION` (2, 0 to 0); policy version 1; final pointer 0; sequences identical over HTTP and in the table; 10 `DOCTOR_OCCUPIED` refusals per run |
+| Overlapping sessions, 30 parallel call-next x 20 rounds                        | 600 requests: 20 x `200`, 580 x `409 DOCTOR_OCCUPIED`, 0 5xx; winners 13 from session A and 7 from session B; 0 invariant violations                                                            |
+| Poller during the races                                                        | 789 reads, highest called-or-in-service count ever seen 1                                                                                                                                       |
+| call-next latency, all 600 requests                                            | p50 42.7 ms, p95 72.9 ms, max 184.8 ms                                                                                                                                                          |
+| call-next latency, winning requests only (n = 20)                              | p50 22.2 ms, p95 30 ms                                                                                                                                                                          |
+| Transition race, 40 rounds x 9 requests                                        | 360 requests: 104 x `200`, 256 x `409` (174 `INVALID_TRANSITION`, 82 `DOCTOR_OCCUPIED`), 0 5xx, 0 sequence violations                                                                           |
+| Transition race, final states                                                  | completed then another called 24; skipped then another called 14; completed with nobody called after 2                                                                                          |
+| Same Idempotency-Key, 10 parallel call-next, 5 trials                          | every trial: 10 x `200`, 1 distinct entry, 1 decision row                                                                                                                                       |
+| Global invariant violations (both T2 groups)                                   | 0                                                                                                                                                                                               |
+
+The previous latency and split figures (for example call-next p50 125.4, 92.7 and 137.8 ms, and winner splits 13 / 7, 12 / 8 and 15 / 5) are the
+session-1 measurements; a different split between sessions A and B from run to run is normal, because the winner depends on lock order.
+
+**Run-to-run spread, same tree, same day.** The final-tree verification run, whose raw file this run replaced, gave the same pass results with all-request call-next latency p50 54.6 ms, p95 102.3 ms,
+max 170.2 ms (this run: 42.7, 72.9, 184.8), 890 poller reads (this run: 789), a transition race of 94 x `200` and 266 x `409` (this run: 104 and 256), and the same 16 / 4 pause split. Pass criteria held in both.
+
+### Pause racing call-next under D-032 (20 rounds x 12 requests)
+
+D-032 (session 3) made "Away" the `paused` state and changed the pause rules: a pause is allowed from `open` and from `paused` (the second one only updates
+the expected return), and it is refused with `409 DOCTOR_OCCUPIED` while this doctor has a patient `called` and not yet started. So in a race between a
+pause and call-next, either order is a valid outcome:
+
+- **the pause commits first:** the pause applies (`200`; a second concurrent pause applies too and only updates the expected return), and every
+  call-next after it is refused with `409 SESSION_NOT_CALLABLE`;
+- **a call commits first:** the doctor is now occupied, so every pause is refused with `409 DOCTOR_OCCUPIED`, the session stays `open`, and the other
+  call-next requests are refused with `409 DOCTOR_OCCUPIED`.
+
+Test (`tests/concurrency/t2-doctor-guard.test.ts`, "pause racing call-next: after the first applied pause commits no call succeeds"): per round a fresh
+session (doctor 7, 4 walk-ins waiting), two pause requests (doctor and reception) and ten call-next requests, random 0 to 10 ms offsets, burst order rotated.
+Asserted: no 5xx; every pause is `200` or `409 DOCTOR_OCCUPIED`; every failed call is `409` with `DOCTOR_OCCUPIED` or `SESSION_NOT_CALLABLE`; at most one call wins;
+the number of `session.pause` audit rows equals the number of applied pauses; when a pause applied, every successful call has a queue version lower than the
+first pause's version, no decision with a patient exists at or after it, the session status is `paused`, and six further call-next requests after the pause
+all return `409 SESSION_NOT_CALLABLE`.
+
+Raw counters (`t2DoctorGuard.pauseRace` in the raw file), measured:
+
+| Counter                                                       | Measured |
+| ------------------------------------------------------------- | -------: |
+| Rounds                                                        |       20 |
+| `roundsWhereACallWonBeforeThePause`                           |       16 |
+| `roundsWhereThePauseWonFirst`                                 |        4 |
+| `roundsWithAnAppliedPause` (a pause returned `200`)           |        4 |
+| `roundsWherePauseWasRefusedDoctorOccupied`                    |       16 |
+| `successfulCallsSerialisedAfterThePause`                      |        0 |
+| `allRefusedSessionNotCallable` (calls after a committed pause) |     true |
+
+From the per-round records: in each of the 4 rounds with an applied pause, both pause requests returned `200` (so 8 pauses applied in all, the second of each pair
+only updating the expected return) and the 10 call-next requests all returned `409 SESSION_NOT_CALLABLE`; in each of the 16 other rounds one call-next won and
+all 11 other requests (both pauses and the 9 other calls) returned `409 DOCTOR_OCCUPIED`. In the 4 applied-pause rounds 6 further calls each (24 in total) were refused
+`SESSION_NOT_CALLABLE`. 0 5xx. The 16 / 4 split is one run of a randomised race and is not a stable property.
+
+What this does not show: a pause is never observed racing a `called` patient that is started in the same instant (the transition race covers start, complete and skip against call-next,
+not against pause), and the 2-minute called-timeout interacting with a pause is covered by API tests, not here.
