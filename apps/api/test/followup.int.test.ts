@@ -177,7 +177,7 @@ describe('FR-11 overdue and lifecycle', () => {
     const ack = await followup.post(`/follow-up-tasks/${task.id}/acknowledge`, {});
     expect(ack.body).toMatchObject({ status: 'acknowledged', overdue: true });
 
-    const done = await followup.post(`/follow-up-tasks/${task.id}/resolve`, { disposition: 'advice_given', outcomeNote: 'Rang the patient, advised rest' });
+    const done = await followup.post(`/follow-up-tasks/${task.id}/resolve`, { disposition: 'advice_given', outcomeNote: 'Rang the patient, advised rest', patientReply: 'Please rest and drink fluids.' });
     expect(done.status).toBe(200);
     expect(done.body).toMatchObject({ status: 'resolved', disposition: 'advice_given', overdue: false });
     expect((await doctor1.get(`/follow-up-tasks?owner=all&overdue=true&patientId=${p}`)).body).toEqual([]);

@@ -249,11 +249,11 @@ describe('FR-11 ownership: escalation owners, default owners, owner-only resolve
 
   it('resolve and cancel need the owner: another follow-up user and the doctor get 403, the owner and an admin succeed', async () => {
     const { task } = await ownedTask();
-    expect((await followup2.post(`/follow-up-tasks/${task.id}/resolve`, { disposition: 'advice_given', outcomeNote: 'Not mine to close' })).status).toBe(403);
+    expect((await followup2.post(`/follow-up-tasks/${task.id}/resolve`, { disposition: 'advice_given', outcomeNote: 'Not mine to close', patientReply: 'We have reviewed your question.' })).status).toBe(403);
     expect((await followup2.post(`/follow-up-tasks/${task.id}/cancel`, { reason: 'Not mine to cancel' })).status).toBe(403);
     expect((await doctor1.post(`/follow-up-tasks/${task.id}/cancel`, { reason: 'Doctor is not the owner' })).status).toBe(403);
     expect((await t.pool.query(`SELECT status FROM follow_up_tasks WHERE id = $1`, [task.id])).rows[0]!.status).toBe('open');
-    expect((await followup.post(`/follow-up-tasks/${task.id}/resolve`, { disposition: 'advice_given', outcomeNote: 'Rang and advised' })).status).toBe(200);
+    expect((await followup.post(`/follow-up-tasks/${task.id}/resolve`, { disposition: 'advice_given', outcomeNote: 'Rang and advised', patientReply: 'Please rest and drink fluids.' })).status).toBe(200);
 
     const second = (await ownedTask()).task;
     expect((await admin.post(`/follow-up-tasks/${second.id}/cancel`, { reason: 'Admin cleans up' })).status).toBe(200);
@@ -276,7 +276,7 @@ describe('FR-11 ownership: escalation owners, default owners, owner-only resolve
     const { task } = await ownedTask();
     const note = `${'Long outcome note. '.repeat(20)}END`;
     expect(note.length).toBeGreaterThan(300);
-    expect((await followup.post(`/follow-up-tasks/${task.id}/resolve`, { disposition: 'advice_given', outcomeNote: note })).status).toBe(200);
+    expect((await followup.post(`/follow-up-tasks/${task.id}/resolve`, { disposition: 'advice_given', outcomeNote: note, patientReply: 'Please rest and drink fluids.' })).status).toBe(200);
     const rows = await auditOf(task.id, 'follow_up.resolve');
     expect(rows[0]!.reason).toHaveLength(200);
     expect(note.startsWith(rows[0]!.reason as string)).toBe(true);
@@ -301,7 +301,9 @@ describe('FR-11 ownership: escalation owners, default owners, owner-only resolve
     const me = (await followup.get('/me')).body.userId as string;
     const q = buildTaskListQuery(new Date(), { scopeDoctors: [doctorId(1)], owner: 'me', userId: me, status: 'open' });
     expect(q.text).toMatch(/t\.owner_id = \$1 AND t\.status = \$2/);
-    expect(q.text).toMatch(/ORDER BY t\.due_at, t\.id$/);
+    // Urgent (red-flag) tasks first, then due time (PR-13); the owner index still serves the filter, and one owner's
+    // open tasks are a handful of rows to sort.
+    expect(q.text).toMatch(/ORDER BY t\.urgent DESC, t\.due_at, t\.id$/);
     const c = await t.pool.connect();
     try {
       await c.query('BEGIN');
