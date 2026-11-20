@@ -12,8 +12,9 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
 import { expect, test, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
-import { login } from '../support/client.js';
 import { stableId } from '../../db/seed/seed.js';
+import { login } from '../support/client.js';
+import { createSession, istDate, labelWord, resetToday, type FixtureSession } from './fixtures.js';
 
 const SHOTS = path.resolve(import.meta.dirname, '../../docs/evidence/screenshots');
 const RAW = path.resolve(import.meta.dirname, '../../docs/evidence/e2e-full-visit.raw.json');
@@ -61,56 +62,18 @@ async function loginByKeyboard(page: Page, email: string): Promise<void> {
   await page.keyboard.press('Enter');
 }
 
-interface Fixture {
-  sessionId: string;
-  startsAt: string;
-  roomLabel: string;
-}
-
-const istDate = (d: Date): string =>
-  new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(d);
+type Fixture = FixtureSession;
 
 /**
- * Fixture (API + SQL only, before any UI step): one clean TODAY session for the doctor. The seed already has the
- * doctor's morning and afternoon sessions today, so those are closed (SQL) and a fresh "evening" session is created
- * that started 16 to 17 minutes ago: its first slot is past the 15-minute grace (not bookable), the second slot is
- * 3 to 4 minutes in the future (the patient gets it) and is already eligible (early eligibility is 10 minutes).
+ * Fixture (API + SQL only, before any UI step): one clean TODAY session for the doctor, built by the shared helper
+ * (fixtures.ts): the day's other sessions are closed, the seed's still-booked appointments of today are cancelled,
+ * and a fresh session labelled by `sessionLabelFor` (D-037) that started 12 minutes ago is created and opened.
+ * Its first slot is past the 15-minute grace (not bookable), the next slot is about 8 minutes ahead (the patient gets
+ * it) and is already eligible (early eligibility is 10 minutes), so call-next can allocate it at once.
  */
 async function prepareFixture(): Promise<Fixture> {
-  const pool = new pg.Pool({ connectionString: DB(), max: 2 });
-  try {
-    const admin = await login(API(), 'admin@hqms.test');
-    const startMs = Math.floor((Date.now() - 16 * 60_000) / 60_000) * 60_000;
-    const date = istDate(new Date(startMs));
-    await pool.query(`UPDATE sessions SET status = 'closed' WHERE doctor_id = $1 AND session_date = $2`, [
-      stableId(`doctor:${DOCTOR_NUMBER}`),
-      date,
-    ]);
-    const res = await admin.post(
-      '/sessions',
-      {
-        doctorId: stableId(`doctor:${DOCTOR_NUMBER}`),
-        sessionDate: date,
-        label: 'evening',
-        startsAt: new Date(startMs).toISOString(),
-        endsAt: new Date(startMs + 4 * 3_600_000).toISOString(),
-        bookedCapacity: 10,
-        walkinCapacity: 5,
-      },
-      null,
-    );
-    if (res.status !== 201) throw new Error(`fixture session: ${res.status} ${JSON.stringify(res.body)}`);
-    const opened = await admin.post(`/sessions/${res.body.id}/open`, {});
-    if (opened.status !== 200) throw new Error(`fixture open: ${opened.status} ${JSON.stringify(opened.body)}`);
-    return { sessionId: res.body.id, startsAt: new Date(startMs).toISOString(), roomLabel: 'OPD 1' };
-  } finally {
-    await pool.end();
-  }
+  await resetToday();
+  return createSession(DOCTOR_NUMBER, await login(API(), 'admin@hqms.test'));
 }
 
 /** Track failures on a page: any 5xx response and any uncaught page error. 4xx responses are listed separately. */
@@ -173,8 +136,9 @@ test('book -> check in -> call -> start -> complete, keyboard only, real stack',
   await patient.keyboard.press('Enter');
 
   await expect(patient.getByRole('heading', { name: 'Choose a session' })).toBeFocused();
-  await expect(patient.getByRole('radio', { name: /Evening/ })).toBeEnabled();
-  await chooseRadio(patient, 'Session', /Evening/);
+  const sessionOption = new RegExp(labelWord(fx.label));
+  await expect(patient.getByRole('radio', { name: sessionOption })).toBeEnabled();
+  await chooseRadio(patient, 'Session', sessionOption);
   await shot(patient, '01-patient-choose-session-390');
   await patient.keyboard.press('Enter');
 
@@ -209,14 +173,18 @@ test('book -> check in -> call -> start -> complete, keyboard only, real stack',
       await doctorSelect.click();
       await reception.getByRole('option', { name: /Suresh Hegde/ }).click();
     }
-    await reception.getByRole('tab', { name: /Evening/ }).click();
+    const sessionTab = reception.getByRole('tab', { name: fx.tabName });
+    await sessionTab.click();
     await expect(reception.getByRole('option', { name: new RegExp(PATIENT_NAME) })).toBeVisible();
 
-    await reception.getByRole('tab', { name: /Evening/ }).evaluate((el) => (el as HTMLElement).blur());
+    await sessionTab.evaluate((el) => (el as HTMLElement).blur());
     await reception.keyboard.press('/');
     await expect(reception.getByRole('combobox', { name: 'Find an arrival' })).toBeFocused();
     await reception.keyboard.type('Ramesh');
     await expect(reception.getByRole('listbox', { name: 'Arrivals' }).getByRole('option')).toHaveCount(1);
+    // Enter is ignored while the debounced patient search for the typed text is still running (the panel says
+    // "Searching for ..."), so wait until the panel says Enter will check in.
+    await expect(reception.getByText('Press Enter in the search box to check in.', { exact: true }).first()).toBeVisible();
     await reception.keyboard.press('Enter');
     const outcome = reception.getByTestId('arrival-outcome');
     await expect(outcome).toContainText('Checked in');

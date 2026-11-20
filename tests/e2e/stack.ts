@@ -3,8 +3,10 @@
  *
  *  1. recreate the scratch database `hqms_e2e_test`, migrate and seed it (real PostgreSQL);
  *  2. build and start the API bundle (`apps/api/dist/main.js`);
- *  3. start the Vite dev server of apps/web with its `/api` proxy pointed at that API;
- *  4. wait until both answer, export their URLs to the specs through process.env, and stop both on teardown.
+ *  3. start the worker bundle (`apps/worker/dist/main.js`, fake notification provider) so the outbox fan-out,
+ *     notifications and deliver_notification jobs run for real;
+ *  4. start the Vite dev server of apps/web with its `/api` proxy pointed at that API;
+ *  5. wait until they answer, export their URLs to the specs through process.env, and stop all three on teardown.
  *
  * Ports are fixed (and overridable) because Playwright re-reads the config in every worker.
  */
@@ -22,6 +24,8 @@ const repoRoot = resolve(here, '..', '..');
 export const E2E_API_PORT = Number(process.env['E2E_API_PORT'] ?? 3188);
 export const E2E_WEB_PORT = Number(process.env['E2E_WEB_PORT'] ?? 5188);
 const DB_NAME = process.env['E2E_DB_NAME'] ?? 'hqms_e2e_test';
+/** Worker poll interval for the harness (short, so outbox fan-out and notification jobs land within a second or two). */
+const WORKER_POLL_MS = process.env['E2E_WORKER_POLL_MS'] ?? '200';
 const ADMIN_URL = process.env['TEST_ADMIN_DATABASE_URL'] ?? 'postgres://postgres:postgres@localhost:5432/postgres';
 
 async function recreateDatabase(): Promise<string> {
@@ -52,6 +56,13 @@ function buildApi(): void {
   execFileSync('pnpm', ['--filter', '@hqms/api', 'build'], { cwd: repoRoot, stdio: 'pipe' });
   if (!existsSync(resolve(repoRoot, 'apps/api/dist/main.js')))
     throw new Error('apps/api/dist/main.js is missing after the build');
+}
+
+function buildWorker(): void {
+  if (process.env['SKIP_API_BUILD'] === '1' && existsSync(resolve(repoRoot, 'apps/worker/dist/main.js'))) return;
+  execFileSync('pnpm', ['--filter', '@hqms/worker', 'build'], { cwd: repoRoot, stdio: 'pipe' });
+  if (!existsSync(resolve(repoRoot, 'apps/worker/dist/main.js')))
+    throw new Error('apps/worker/dist/main.js is missing after the build');
 }
 
 async function waitFor(url: string, child: ChildProcess, logs: string[], what: string, ms = 60_000): Promise<void> {
@@ -98,6 +109,7 @@ async function stop(child: ChildProcess): Promise<void> {
 export default async function globalSetup(): Promise<() => Promise<void>> {
   const databaseUrl = await recreateDatabase();
   buildApi();
+  buildWorker();
 
   const apiUrl = `http://127.0.0.1:${E2E_API_PORT}`;
   const webUrl = `http://127.0.0.1:${E2E_WEB_PORT}`;
@@ -121,6 +133,20 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   });
   const apiLogs = collect(api);
 
+  const worker = spawn(process.execPath, ['dist/main.js'], {
+    cwd: resolve(repoRoot, 'apps/worker'),
+    env: {
+      ...process.env,
+      DATABASE_URL: databaseUrl,
+      NODE_ENV: 'test',
+      NOTIFICATION_PROVIDER: 'fake',
+      WORKER_POLL_MS,
+      WORKER_ID: 'e2e-worker',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const workerLogs = collect(worker);
+
   const web = spawn(
     process.execPath,
     [
@@ -138,8 +164,10 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   try {
     await waitFor(`${apiUrl}/health`, api, apiLogs, 'API');
     await waitFor(`${webUrl}/login`, web, webLogs, 'Vite dev server');
+    await new Promise((r) => setTimeout(r, 300));
+    if (worker.exitCode !== null) throw new Error(`worker exited early (code ${worker.exitCode}):\n${workerLogs.join('')}`);
   } catch (err) {
-    await Promise.all([stop(api), stop(web)]);
+    await Promise.all([stop(api), stop(web), stop(worker)]);
     throw err;
   }
 
@@ -148,8 +176,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   process.env['E2E_DATABASE_URL'] = databaseUrl;
 
   return async () => {
-    await Promise.all([stop(api), stop(web)]);
-    const bad = apiLogs
+    await Promise.all([stop(api), stop(web), stop(worker)]);
+    const bad = [...apiLogs, ...workerLogs]
       .join('')
       .split('\n')
       .filter((l) => /ERROR|Unhandled|deadlock/i.test(l));
