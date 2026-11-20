@@ -405,14 +405,16 @@ test.describe('my visit on a phone', () => {
     await expect(page.getByTestId('position')).toContainText('Number 2');
   });
 
-  test('estimate paused when the ETA is withheld', async ({ page }) => {
+  test('estimate paused when the ETA is withheld: the away banner carries the reason, once', async ({ page }) => {
     const mock = await setup(page, 'patient', { view: 'patient', status: 'paused' });
     mock.world.patient.eta = ETA_WITHHELD;
     await page.goto(`/patient/visit/${SESSION_ID}`);
-    await expect(page.getByTestId('eta')).toContainText('Estimate paused');
-    await expect(page.getByTestId('eta')).toContainText("The doctor has paused this session. We'll show a new estimate when it resumes.");
-    await expect(page.getByTestId('eta')).not.toContainText('about');
-    await expect(page.getByRole('status').filter({ hasText: 'paused this session' })).toBeVisible();
+    const banner = page.getByTestId('availability-banner');
+    await expect(banner).toContainText('has stepped away');
+    await expect(banner).toContainText('Your place in the queue is kept.');
+    await expect(banner).toContainText('Doctor paused (unknown duration)');
+    await expect(page.getByTestId('eta')).toHaveCount(0);
+    await expect(page.getByText('Estimate paused')).toHaveCount(0);
     await shot(page, 'myvisit-withheld-390');
   });
 

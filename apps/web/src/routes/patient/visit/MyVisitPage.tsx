@@ -6,6 +6,7 @@ import { PatientPage } from '@/components/layout/PatientPage';
 import { EmptyState, ErrorState, GroupTag, SkeletonRows, StaleBanner, TokenText } from '@/components/queue';
 import { GROUPS } from '@/components/queue/group';
 import { AvailabilityBanner } from '@/components/scheduling/AvailabilityBanner';
+import { BookedAvailability } from '@/components/scheduling/BookedAvailability';
 import { CancelDialog } from '@/components/scheduling/CancelDialog';
 import { Button } from '@/components/ui/button';
 import { ApiRequestError } from '@/lib/api';
@@ -68,6 +69,22 @@ function Panel({ children, className, edge }: { children: ReactNode; className?:
   return <section className={cn('rounded-xl border border-rule bg-surface p-5', edge && `border-l-[6px] ${edge}`, className)}>{children}</section>;
 }
 
+/** Before check-in there is no token or place yet: say so, and say what to do. */
+function NotCheckedIn() {
+  return (
+    <EmptyState
+      title="You have not checked in yet"
+      action={
+        <Button asChild size="lg" variant="outline">
+          <Link to="/patient/visits">See my visits</Link>
+        </Button>
+      }
+    >
+      Check in at reception when you arrive. Your token, your place in the queue and the estimated wait appear here after you check in.
+    </EmptyState>
+  );
+}
+
 function VisitBody({
   snapshot,
   status,
@@ -84,6 +101,9 @@ function VisitBody({
 }) {
   const mine = snapshot.myEntry;
   const sessionNote = SESSION_NOTE[snapshot.status];
+  // One message set per situation (PR-11): the banner speaks for the doctor, so the panels below must not contradict it.
+  const doctorGone = snapshot.availability.state === 'unavailable';
+  const doctorAway = snapshot.availability.state === 'away';
   return (
     <div className="flex flex-col gap-4">
       <StaleBanner status={status === 'reconnecting' ? 'reconnecting' : 'live'} lastUpdated={lastUpdated} />
@@ -121,13 +141,19 @@ function VisitBody({
             <div className="mt-2 flex items-center gap-2">
               <GroupTag group={mine.group} showName />
             </div>
-            <h2 className="mt-4 text-xl font-bold" data-testid="visit-state">
-              {STATE_WORDS[mine.state].title}
-            </h2>
-            <p className="mt-1">{STATE_WORDS[mine.state].detail}</p>
+            {doctorGone && mine.state === 'waiting' ? (
+              <p className="mt-4 text-muted-foreground">Keep this token. Reception uses it to move you to another doctor.</p>
+            ) : (
+              <>
+                <h2 className="mt-4 text-xl font-bold" data-testid="visit-state">
+                  {STATE_WORDS[mine.state].title}
+                </h2>
+                <p className="mt-1">{STATE_WORDS[mine.state].detail}</p>
+              </>
+            )}
           </Panel>
 
-          {mine.state === 'waiting' ? (
+          {mine.state === 'waiting' && !doctorGone ? (
             <Panel>
               <div className="grid gap-5 sm:grid-cols-2">
                 <div data-testid="position">
@@ -135,26 +161,18 @@ function VisitBody({
                   <p className="text-2xl font-bold tabular-nums">{mine.position !== null ? `Number ${mine.position}` : 'Not yet placed'}</p>
                   {mine.position !== null && mine.position > 1 ? (
                     <p className="mt-1 text-muted-foreground tabular-nums">{mine.position - 1} ahead of you</p>
-                  ) : mine.position === 1 ? (
+                  ) : mine.position === 1 && !doctorAway ? (
                     <p className="mt-1 text-muted-foreground">You are next.</p>
                   ) : null}
                 </div>
-                <EtaBlock eta={mine.eta} />
+                {/* While the doctor is away the banner carries the updated wait or the reason it is withheld. */}
+                {doctorAway ? null : <EtaBlock eta={mine.eta} />}
               </div>
             </Panel>
           ) : null}
         </>
       ) : (
-        <EmptyState
-          title="You have not checked in for this session"
-          action={
-            <Button asChild size="lg" variant="outline">
-              <Link to="/patient/visits">See my visits</Link>
-            </Button>
-          }
-        >
-          Check in at the front desk when you arrive. Your token and place in the queue appear here as soon as you do.
-        </EmptyState>
+        <NotCheckedIn />
       )}
 
       <Panel>
@@ -184,6 +202,12 @@ export default function MyVisitPage() {
     <PatientPage title="My visit">
       {query.isPending ? (
         <SkeletonRows count={4} />
+      ) : !snapshot && notFound && booked ? (
+        // The server has no queue entry for this patient yet (booked, not arrived): not an error.
+        <div className="flex flex-col gap-4">
+          <BookedAvailability appointment={booked} onCancel={setCancelling} />
+          <NotCheckedIn />
+        </div>
       ) : !snapshot ? (
         <ErrorState
           title={notFound ? 'We could not find your visit in this session' : 'Your visit could not be loaded'}
