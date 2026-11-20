@@ -36,7 +36,7 @@ export const ALTERNATIVE_CANDIDATE_CAP = 20;
 export async function findAlternatives(db: Queryable, q: AlternativeQuery): Promise<AlternativeSession[]> {
   const records = await listSessionRecords(db, { from: q.today, to: addDays(q.today, 7), department: q.department });
   const activeDoctors = new Set((await listDoctors(db, { activeOnly: true })).map((d) => d.id));
-  const inScope = q.scopeDoctorIds == null ? null : new Set(q.scopeDoctorIds);
+  const inScope = q.scopeDoctorIds ? new Set(q.scopeDoctorIds) : null;
   const candidates = records
     .filter(
       ({ session: s }) =>
