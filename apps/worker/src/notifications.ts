@@ -1,6 +1,8 @@
 import { NOTIFICATION_LINKS, type NotificationSeverity } from '@hqms/contracts';
 import type { Tx } from '@hqms/db';
-import type { OutboxEventRow } from './outbox.js';
+import type { OutboxEventRow, RenderedNotification } from './types.js';
+
+export type { RenderedNotification } from './types.js';
 
 /*
  * Fan-out renderers (B2, D-034): one committed domain event -> many recipients.
@@ -9,23 +11,6 @@ import type { OutboxEventRow } from './outbox.js';
  * reason (it is not in the event) and never anything clinical. The words are fixed here so the same event always
  * reads the same; redelivery is made harmless by the unique keys on notifications and notification_deliveries.
  */
-
-/** One recipient of one event: an in-app notice for a login, and/or outbound addresses. */
-export interface RenderedNotification {
-  /** The login that gets the in-app notice. Null for a patient without a login (outbound only). */
-  recipientUserId: string | null;
-  /** Set for patients; staff rows leave it out. */
-  patientId?: string | null;
-  kind: string;
-  body: string;
-  /** In-app path to open (NOTIFICATION_LINKS). */
-  link?: string | null;
-  severity?: NotificationSeverity;
-  /** Phone number to text, if the patient has one on file. */
-  sms?: string | null;
-  /** Email address to write to (the patient's login email). */
-  email?: string | null;
-}
 
 const clockFmt = new Intl.DateTimeFormat('en-IN', {
   timeZone: 'Asia/Kolkata',
