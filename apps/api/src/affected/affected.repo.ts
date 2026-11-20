@@ -81,6 +81,75 @@ export async function findAlternatives(db: Queryable, q: AlternativeQuery): Prom
   return out;
 }
 
+export interface SessionAlternativeQuery {
+  sourceDoctorId: string;
+  department: string;
+  now: Date;
+  /** Hospital-local calendar date of `now` (YYYY-MM-DD). */
+  today: string;
+  minArrivalWindowMin: number;
+  /** Doctors the caller may see (reception: their assignments); null = every doctor (admin). */
+  scopeDoctorIds: readonly string[] | null;
+  limit: number;
+}
+
+/**
+ * PR-23: sessions that can take a patient who cannot be seen by `sourceDoctorId` right now (walk-in places full, or the
+ * doctor unavailable). Today's sessions only, not yet ended, of OTHER active doctors of the same department inside the
+ * caller's scope, status scheduled/open/paused (an away doctor is expected back). A session qualifies with a free
+ * walk-in place, or with a free booked place that a booking could still be given a slot for (D-035). Most free walk-in
+ * places first, then earliest start. A plain read, like findAlternatives.
+ */
+export async function findSessionAlternatives(db: Queryable, q: SessionAlternativeQuery): Promise<AlternativeSession[]> {
+  const records = await listSessionRecords(db, { from: q.today, to: q.today, department: q.department });
+  const activeDoctors = new Set((await listDoctors(db, { activeOnly: true })).map((d) => d.id));
+  const inScope = q.scopeDoctorIds === null ? null : new Set(q.scopeDoctorIds);
+  const candidates = records.filter(
+    ({ session: s }) =>
+      s.doctorId !== q.sourceDoctorId &&
+      activeDoctors.has(s.doctorId) &&
+      (inScope === null || inScope.has(s.doctorId)) &&
+      (s.status === 'scheduled' || s.status === 'open' || s.status === 'paused') &&
+      new Date(s.endsAt).getTime() > q.now.getTime() &&
+      (s.capacity.walkinAvailable > 0 || s.capacity.bookedAvailable > 0),
+  );
+  const rules = new Map<string, SlotRule>();
+  const out: AlternativeSession[] = [];
+  for (const { session: s, policyId } of candidates) {
+    let rule = rules.get(policyId);
+    if (!rule) {
+      const policy = await getPolicyById(db, policyId);
+      if (!policy) continue;
+      rule = { lateGraceMin: policy.lateGraceMin, minArrivalWindowMin: q.minArrivalWindowMin };
+      rules.set(policyId, rule);
+    }
+    const nextSlotAt = s.capacity.bookedAvailable > 0 ? await nextAssignableSlot(db, s, q.now, rule) : null;
+    if (s.capacity.walkinAvailable === 0 && nextSlotAt === null) continue;
+    out.push({
+      sessionId: s.id,
+      doctorId: s.doctorId,
+      doctorName: s.doctorName,
+      department: s.department,
+      room: s.room,
+      sessionDate: s.sessionDate,
+      label: s.label,
+      startsAt: s.startsAt,
+      endsAt: s.endsAt,
+      status: s.status,
+      nextSlotAt,
+      bookedAvailable: nextSlotAt === null ? 0 : s.capacity.bookedAvailable,
+      walkinAvailable: s.capacity.walkinAvailable,
+    });
+  }
+  out.sort(
+    (a, b) =>
+      b.walkinAvailable - a.walkinAvailable ||
+      new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime() ||
+      a.sessionId.localeCompare(b.sessionId),
+  );
+  return out.slice(0, q.limit);
+}
+
 /** Booked appointments of the session whose patients have not arrived. */
 export async function readNotArrived(db: Queryable, sessionId: string): Promise<AffectedAppointment[]> {
   const res = await db.query(

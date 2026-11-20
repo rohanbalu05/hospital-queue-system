@@ -38,6 +38,9 @@ beforeAll(async () => {
   admin = await loginAs(t.server, 'admin@hqms.test');
   reception = await loginAs(t.server, 'reception@hqms.test');
   reception3 = await loginAs(t.server, 'reception3@hqms.test');
+  // Files share one database and vitest orders them by past timing, so an earlier file may leave a called patient on
+  // a seeded doctor (pausing is refused while a patient is called). Clear them: test-only SQL, same as queue.int.test.
+  await t.pool.query(`UPDATE queue_entries SET state = 'skipped', skipped_at = now() WHERE state IN ('called','in_service')`);
 });
 afterAll(async () => {
   await t.close();

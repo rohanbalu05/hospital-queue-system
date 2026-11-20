@@ -23,6 +23,7 @@ import {
   doctorId,
   loginAs,
   makeSession,
+  makeSessionDirect,
   patientId,
 } from './helpers.js';
 
@@ -248,15 +249,9 @@ describe('FR-07 non-preemptive: one active allocation per doctor', () => {
 
   it('FR-07: overlapping sessions of one doctor share the allocation', async () => {
     const s1 = await mk(3);
-    // Second session of the same doctor, 11:00-15:00, overlapping the first (09:00-13:00).
-    const startsAt = `${s1.date}T11:00:00+05:30`;
-    const created = await admin.post(
-      '/sessions',
-      { doctorId: doctorId(3), sessionDate: s1.date, label: 'afternoon', startsAt, endsAt: `${s1.date}T15:00:00+05:30` },
-      null,
-    );
-    expect(created.status).toBe(201);
-    const s2: MadeSession = { id: created.body.id as string, date: s1.date, startsAt: new Date(startsAt).toISOString() };
+    // Second session of the same doctor, 11:00-15:00, overlapping the first (09:00-13:00). POST /sessions refuses this
+    // now (PR-41), but older databases may hold overlaps, so the fixture inserts it directly.
+    const s2 = await makeSessionDirect(t.pool, { doctor: 3, date: s1.date, from: '11:00', to: '15:00' });
 
     const w1 = await walkIn(s1, 11, 0);
     await walkIn(s2, 12, 125); // 11:05
@@ -273,14 +268,7 @@ describe('FR-07 non-preemptive: one active allocation per doctor', () => {
 
   it('D-015/D-025 check order: DOCTOR_OCCUPIED comes before selection, even when the session has no waiting entries', async () => {
     const s1 = await mk(6);
-    const startsAt = `${s1.date}T11:00:00+05:30`;
-    const created = await admin.post(
-      '/sessions',
-      { doctorId: doctorId(6), sessionDate: s1.date, label: 'afternoon', startsAt, endsAt: `${s1.date}T15:00:00+05:30` },
-      null,
-    );
-    expect(created.status).toBe(201);
-    const s2: MadeSession = { id: created.body.id as string, date: s1.date, startsAt: new Date(startsAt).toISOString() };
+    const s2 = await makeSessionDirect(t.pool, { doctor: 6, date: s1.date, from: '11:00', to: '15:00' });
 
     const w1 = await walkIn(s1, 17, 0);
     expect((await callNext(s1, doc(6), 5)).status).toBe(200); // W1 called in session 1; session 2 stays empty
@@ -310,13 +298,7 @@ describe('FR-07 non-preemptive: one active allocation per doctor', () => {
 
   it('20 concurrent call-next across both sessions: exactly one call, the rest DOCTOR_OCCUPIED, never two active rows', async () => {
     const s1 = await mk(4);
-    const startsAt = `${s1.date}T11:00:00+05:30`;
-    const created = await admin.post(
-      '/sessions',
-      { doctorId: doctorId(4), sessionDate: s1.date, label: 'afternoon', startsAt, endsAt: `${s1.date}T15:00:00+05:30` },
-      null,
-    );
-    const s2: MadeSession = { id: created.body.id as string, date: s1.date, startsAt: new Date(startsAt).toISOString() };
+    const s2 = await makeSessionDirect(t.pool, { doctor: 4, date: s1.date, from: '11:00', to: '15:00' });
     await walkIn(s1, 13, 0);
     await walkIn(s1, 14, 1);
     await walkIn(s2, 15, 121);

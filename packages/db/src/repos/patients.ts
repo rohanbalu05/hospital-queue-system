@@ -50,6 +50,39 @@ export async function searchPatients(db: Queryable, q: string, limit = 20): Prom
   return rows.map(mapPatient);
 }
 
+/** Last 10 digits of a phone number (country code, leading zero, spaces and punctuation ignored); '' when none. */
+export function normalisePhone(phone: string | null | undefined): string {
+  return (phone ?? '').replace(/\D/g, '').slice(-10);
+}
+
+/**
+ * PR-22: existing patients a new registration may duplicate. With a phone: the same normalised phone (last 10 digits).
+ * Without one: the same lower(trim(full_name)). Oldest first, at most `limit`. The caller decides what to do with them.
+ */
+export async function findPossibleDuplicates(
+  db: Queryable,
+  q: { phone?: string | null; fullName: string; limit?: number },
+): Promise<Patient[]> {
+  const limit = q.limit ?? 10;
+  const digits = normalisePhone(q.phone);
+  const hasPhone = (q.phone ?? '').trim() !== '';
+  if (hasPhone && digits === '') return [];
+  const rows = hasPhone
+    ? await many(
+        db,
+        `${SELECT_PATIENT}
+          WHERE right(regexp_replace(coalesce(p.phone, ''), '\\D', '', 'g'), 10) = $1
+          ORDER BY p.created_at, p.id LIMIT $2`,
+        [digits, limit],
+      )
+    : await many(
+        db,
+        `${SELECT_PATIENT} WHERE lower(btrim(p.full_name)) = lower(btrim($1)) ORDER BY p.created_at, p.id LIMIT $2`,
+        [q.fullName, limit],
+      );
+  return rows.map(mapPatient);
+}
+
 export interface CreatePatientInput {
   fullName: string;
   phone?: string | null;

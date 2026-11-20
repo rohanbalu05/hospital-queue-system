@@ -1,3 +1,4 @@
+import type { NotificationSeverity } from '@hqms/contracts';
 import type { Pool } from 'pg';
 import type { Logger } from './log.js';
 
@@ -54,4 +55,33 @@ export class PermanentJobError extends Error {
     super(message);
     this.name = 'PermanentJobError';
   }
+}
+
+export interface OutboxEventRow {
+  position: number;
+  id: string;
+  eventType: string;
+  entityType: string;
+  entityId: string;
+  entityVersion: number;
+  sessionId: string | null;
+  patientId: string | null;
+  payload: Record<string, unknown>;
+}
+
+/** One recipient of one event: an in-app notice for a login, and/or outbound addresses. */
+export interface RenderedNotification {
+  /** The login that gets the in-app notice. Null for a patient without a login (outbound only). */
+  recipientUserId: string | null;
+  /** Set for patients; staff rows leave it out. */
+  patientId?: string | null;
+  kind: string;
+  body: string;
+  /** In-app path to open (NOTIFICATION_LINKS). */
+  link?: string | null;
+  severity?: NotificationSeverity;
+  /** Phone number to text, if the patient has one on file. */
+  sms?: string | null;
+  /** Email address to write to (the patient's login email). */
+  email?: string | null;
 }

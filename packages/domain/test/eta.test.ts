@@ -198,8 +198,9 @@ describe('projectEta: ok estimates', () => {
     const eta = projectEta(
       base({ targetEntryId: 'A2', entries, now: at(10), session: { status: 'paused', pauseUntil: at(40) } }),
     );
-    // A1 starts at 40, A2 at 52: offset 42 min -> 29.4 -> 29, 54.6 -> 55.
-    expect(eta).toMatchObject({ status: 'ok', lowMinutes: 29, highMinutes: 55 });
+    // A1 starts at 40, A2 at 52: offset 42 min -> 29.4 -> 29, 54.6 -> 55. The doctor is back in 30 min, so the low
+    // bound is lifted from 29 to 30 (PR-10).
+    expect(eta).toMatchObject({ status: 'ok', lowMinutes: 30, highMinutes: 55 });
     expect(eta.note).toMatch(/known pause/);
   });
 

@@ -12,6 +12,9 @@ import { assertVersion, runCommand } from '../queue/command.js';
 import type { AcknowledgeTaskRequestDto, CancelTaskRequestDto, FollowUpListQueryDto } from './dto.js';
 import { listTasks, listTasksOfPatient, lockTask, pickOwner, readTask } from './followup.repo.js';
 
+/** Dispositions that tell the patient something, so the patient must be given a reply (PR-14). */
+const REPLY_REQUIRED = new Set(['advice_given', 'referred']);
+
 const KIND_SUMMARY: Record<string, string> = {
   post_visit: 'The care team will follow up with you after your visit.',
   assistant_escalation: 'The care team will answer your question.',
@@ -117,7 +120,7 @@ export class FollowUpService {
         patientId: body.patientId,
         payload: { kind: body.kind, ownerId },
       });
-      const task = await readTask(tx, id, this.clock.now());
+      const task = await readTask(tx, id, this.clock.now(), this.access.doctorScope(user));
       if (!task) throw notFound('Follow-up task');
       return { status: 201, body: task };
     });
@@ -142,7 +145,9 @@ export class FollowUpService {
     const { user } = ctx;
     if (!user.patientId) throw notFound('Patient');
     const tasks = await listTasksOfPatient(this.pool, user.patientId, this.clock.now());
-    return tasks.map((t) => ({
+    // Field by field: staff titles, notes, owner names, MRN and phone never reach the patient. The reply is the one
+    // thing staff wrote FOR the patient (PR-14).
+    return tasks.map(({ task: t, repliedAt }) => ({
       id: t.id,
       kind: t.kind,
       summary: KIND_SUMMARY[t.kind] ?? 'The care team will follow up with you.',
@@ -152,11 +157,14 @@ export class FollowUpService {
       returnAppointmentId: t.returnAppointmentId,
       createdAt: t.createdAt,
       resolvedAt: t.resolvedAt,
+      reply: t.patientReply ?? null,
+      repliedAt,
+      urgent: t.urgent ?? false,
     }));
   }
 
   async get(ctx: RequestCtx, id: string): Promise<FollowUpTask> {
-    const task = await readTask(this.pool, id, this.clock.now());
+    const task = await readTask(this.pool, id, this.clock.now(), this.access.doctorScope(ctx.user));
     if (!task) throw notFound('Follow-up task');
     await this.scope.assertAccess(ctx.user, task.patientId);
     return task;
@@ -204,7 +212,7 @@ export class FollowUpService {
         patientId: task.patientId,
         payload: { ownerId },
       });
-      return { status: 200, body: await this.reread(tx, id) };
+      return { status: 200, body: await this.reread(tx, id, user) };
     });
   }
 
@@ -222,6 +230,9 @@ export class FollowUpService {
     }
     if (body.disposition === 'return_booked' && !body.returnAppointmentId) {
       throw validationFailed('returnAppointmentId is required when disposition is return_booked');
+    }
+    if (REPLY_REQUIRED.has(body.disposition) && !body.patientReply) {
+      throw validationFailed('A reply for the patient is required when advice is given or the patient is referred');
     }
     return runCommand(this.pool, ctx, 'follow_up.resolve', key, { id, body }, async (tx) => {
       const now = this.clock.now();
@@ -251,9 +262,10 @@ export class FollowUpService {
       await tx.query(
         `UPDATE follow_up_tasks
             SET status = 'resolved', disposition = $2, outcome_note = $3, resolved_at = $4, resolved_by = $5,
-                owner_id = COALESCE(owner_id, $5), return_appointment_id = $6, version = version + 1, updated_at = $4
+                owner_id = COALESCE(owner_id, $5), return_appointment_id = $6, version = version + 1, updated_at = $4,
+                patient_reply = $7::text, patient_reply_at = CASE WHEN $7::text IS NULL THEN NULL ELSE $4::timestamptz END
           WHERE id = $1`,
-        [id, body.disposition, body.outcomeNote.trim(), now, user.userId, returnAppointmentId],
+        [id, body.disposition, body.outcomeNote.trim(), now, user.userId, returnAppointmentId, body.patientReply?.trim() || null],
       );
       await writeAudit(tx, {
         actorId: user.userId,
@@ -262,7 +274,8 @@ export class FollowUpService {
         entityType: 'follow_up_task',
         entityId: id,
         previous: { status: task.status },
-        next: { status: 'resolved', disposition: body.disposition, returnAppointmentId },
+        // The reply text is the patient's to read: audit and outbox only say that there is one.
+        next: { status: 'resolved', disposition: body.disposition, returnAppointmentId, hasReply: Boolean(body.patientReply) },
         reason: body.outcomeNote.trim().slice(0, AUDIT_REASON_MAX),
         correlationId: ctx.correlationId,
       });
@@ -272,9 +285,9 @@ export class FollowUpService {
         entityId: id,
         entityVersion: task.version + 1,
         patientId: task.patientId,
-        payload: { disposition: body.disposition },
+        payload: { disposition: body.disposition, hasReply: Boolean(body.patientReply) },
       });
-      return { status: 200, body: await this.reread(tx, id) };
+      return { status: 200, body: await this.reread(tx, id, user) };
     });
   }
 
@@ -318,12 +331,12 @@ export class FollowUpService {
         patientId: task.patientId,
         payload: { cancelled: true },
       });
-      return { status: 200, body: await this.reread(tx, id) };
+      return { status: 200, body: await this.reread(tx, id, user) };
     });
   }
 
-  private async reread(tx: Tx, id: string): Promise<FollowUpTask> {
-    const task = await readTask(tx, id, this.clock.now());
+  private async reread(tx: Tx, id: string, user: AuthUser): Promise<FollowUpTask> {
+    const task = await readTask(tx, id, this.clock.now(), this.access.doctorScope(user));
     if (!task) throw notFound('Follow-up task');
     return task;
   }
