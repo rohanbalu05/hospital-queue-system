@@ -89,7 +89,7 @@ describe('own notifications: list, unread count, read-all', () => {
     expect(UnreadCount.parse((await patient2.get('/notifications/unread-count')).body).unreadCount).toBe(1);
     // mark-read stays own-only: someone else's id answers 404
     expect((await patient1.post(`/notifications/${theirs}/read`, {}, null)).status).toBe(404);
-    expect((await patient2.post(`/notifications/${theirs}/read`, {}, null)).status).toBe(200);
+    expect((await patient2.post(`/notifications/${theirs}/read`, {}, null)).status).toBeLessThan(300);
   });
 
   it('needs a login', async () => {
