@@ -6,6 +6,7 @@ import {
   SessionAvailability,
   StepAwayRequest,
   deriveAvailability,
+  sessionLabelFor,
   type AvailabilitySource,
 } from '../src/index.js';
 
@@ -77,5 +78,17 @@ describe('new request and response schemas', () => {
       Notification.parse({ id: '6f1c7a3e-1b2c-4d5e-8f90-1a2b3c4d5e6f', kind: 'SessionPaused', body: 'x', createdAt: now.toISOString(), readAt: null }),
     ).toBeTruthy();
     expect(AffectedPatients.shape.notArrived).toBeTruthy();
+  });
+});
+
+describe('sessionLabelFor (D-037)', () => {
+  it('labels by IST start time', () => {
+    expect(sessionLabelFor('2026-11-20T04:30:00.000Z')).toBe('morning'); // 10:00 IST
+    expect(sessionLabelFor('2026-11-19T23:30:00.000Z')).toBe('morning'); // 05:00 IST
+    expect(sessionLabelFor('2026-11-20T06:30:00.000Z')).toBe('afternoon'); // 12:00 IST
+    expect(sessionLabelFor('2026-11-20T11:29:00.000Z')).toBe('afternoon'); // 16:59 IST
+    expect(sessionLabelFor('2026-11-20T11:30:00.000Z')).toBe('evening'); // 17:00 IST
+    expect(sessionLabelFor('2026-11-20T15:30:00.000Z')).toBe('night'); // 21:00 IST
+    expect(sessionLabelFor('2026-11-20T20:30:00.000Z')).toBe('night'); // 02:00 IST
   });
 });

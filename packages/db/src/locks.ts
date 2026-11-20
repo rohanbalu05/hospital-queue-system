@@ -19,7 +19,7 @@ export interface SessionLockRow {
   doctorId: string;
   policyId: string;
   sessionDate: string;
-  label: 'morning' | 'afternoon' | 'evening';
+  label: 'morning' | 'afternoon' | 'evening' | 'night';
   startsAt: string;
   endsAt: string;
   slotMinutes: number;

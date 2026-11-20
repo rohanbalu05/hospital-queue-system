@@ -207,3 +207,12 @@ lifecycle), worker+api-fixes (`apps/worker`, `packages/providers`, `apps/api/src
 ui-staff (`apps/web/src/routes/{doctor,reception,display,admin}`, `apps/web/src/live`, `apps/web/src/api/queue`),
 ui-patient (`apps/web/src/routes/patient`, `apps/web/src/components/{notifications,layout}`, `apps/web/src/lib`,
 other `apps/web/src/api/*`).
+
+## D-037 Sessions are labelled by the time of day they run; the demo always has a running session (B5)
+- Migration 0009 adds the `night` label. `sessionLabelFor(startsAt)` (contracts) labels by IST start: 05:00-11:59 morning,
+  12:00-16:59 afternoon, 17:00-20:59 evening, 21:00-04:59 night. The old demo helper created an "Evening" session at
+  any hour outside the seeded windows (an "Evening" session at 08:45 or 10 am was a review finding).
+- `scripts/demo-session-now.mjs` (run by both launchers) ensures `doctor@hqms.test` has a session running now: a seeded
+  session that covers now with time left is opened; one starting within 30 min is opened early; otherwise a session is
+  created from now (minus 5 min) for up to 3 h, ending before the doctor's next session so sessions never overlap, labelled
+  with `sessionLabelFor`, and opened.
