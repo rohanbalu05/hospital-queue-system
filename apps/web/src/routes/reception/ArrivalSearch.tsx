@@ -176,7 +176,7 @@ export function ArrivalSearch(p: ArrivalSearchProps) {
                     {a ? (
                       <span className="flex shrink-0 flex-col items-end gap-0.5">
                         <GroupTag group="A" />
-                        <StatusWord status={a.status} className="text-xs" />
+                        <StatusWord status={a.status} transferredTo={a.transferredTo} showToken className="text-xs" />
                       </span>
                     ) : (
                       <span className="shrink-0 text-xs text-muted-foreground">No appointment</span>

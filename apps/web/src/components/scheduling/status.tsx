@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { AppointmentStatus } from '@hqms/contracts';
+import type { Appointment, AppointmentStatus } from '@hqms/contracts';
 import { cn } from '@/lib/utils';
 
 const WORDS: Record<AppointmentStatus, { word: string; className: string }> = {
@@ -11,8 +11,30 @@ const WORDS: Record<AppointmentStatus, { word: string; className: string }> = {
   rescheduled: { word: 'Rescheduled', className: 'text-muted-foreground' },
 };
 
-/** Status is always a word. Colour only reinforces it (done = green). */
-export function StatusWord({ status, className }: { status: AppointmentStatus; className?: string }) {
+/**
+ * Status is always a word. Colour only reinforces it (done = green).
+ * A checked-in patient reception moved to another doctor is no longer "Checked in" here: the original appointment reads
+ * "Moved to Dr. Y" (staff also see the new token), in a neutral tone.
+ */
+export function StatusWord({
+  status,
+  transferredTo,
+  showToken = false,
+  className,
+}: {
+  status: AppointmentStatus;
+  transferredTo?: Appointment['transferredTo'];
+  showToken?: boolean;
+  className?: string;
+}) {
+  if (transferredTo && status === 'checked_in') {
+    return (
+      <span className={cn('font-bold text-muted-foreground', className)}>
+        Moved to {transferredTo.doctorName}
+        {showToken ? ` (${transferredTo.token})` : ''}
+      </span>
+    );
+  }
   const m = WORDS[status];
   return <span className={cn('font-bold', m.className, className)}>{m.word}</span>;
 }

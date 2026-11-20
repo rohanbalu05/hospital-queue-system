@@ -102,7 +102,7 @@ function AppointmentCard({ a, visit, onCancel }: { a: Appointment; visit: MyToda
             </p>
           ) : null}
         </div>
-        <StatusWord status={a.status} className="shrink-0" />
+        <StatusWord status={a.status} transferredTo={a.transferredTo} className="shrink-0" />
       </div>
       {booked ? (
         <BookedAvailability appointment={a} onCancel={onCancel} className="mt-4" />
