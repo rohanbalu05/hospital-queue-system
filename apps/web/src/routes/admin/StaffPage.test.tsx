@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- tests index fixture arrays they just built */
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -5,13 +6,25 @@ import type { StaffMember } from '@hqms/contracts';
 import { Providers, stubApi, testQueryClient, uuid, type Handler } from '@/lib/testing';
 import StaffPage from './StaffPage';
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  // stubApi stubs fetch per test; ResizeObserver is stubbed once in beforeAll and must survive.
+  vi.stubGlobal('fetch', undefined);
+});
 
 beforeAll(() => {
   Element.prototype.hasPointerCapture = () => false;
   Element.prototype.setPointerCapture = () => undefined;
   Element.prototype.releasePointerCapture = () => undefined;
   Element.prototype.scrollIntoView = () => undefined;
+  // Radix Checkbox and Radio measure themselves.
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
 });
 
 const DOCTORS = [
