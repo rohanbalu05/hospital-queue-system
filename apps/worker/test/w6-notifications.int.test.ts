@@ -102,7 +102,7 @@ describe('FollowUpResolved with a patient reply (PR-14)', () => {
     ).rows[0].id as string;
     return { id, p };
   }
-  const resolved = (id: string, patientId: string, payload: Record<string, unknown>) =>
+  const resolved = (id: string, patientId: string, payload: Record<string, string | number | boolean | null>) =>
     emit({ eventType: 'FollowUpResolved', entityType: 'follow_up_task', entityId: id, entityVersion: 2, patientId, payload });
 
   it('tells the patient a reply is waiting: in-app only, link to Follow-ups, never the reply text', async () => {
