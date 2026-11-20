@@ -1,11 +1,15 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { Eta, PatientQueueSnapshot, QueueEntryState } from '@hqms/contracts';
+import type { Appointment, Eta, PatientQueueSnapshot, QueueEntryState } from '@hqms/contracts';
+import { useAppointmentsQuery } from '@/api';
 import { PatientPage } from '@/components/layout/PatientPage';
 import { EmptyState, ErrorState, GroupTag, SkeletonRows, StaleBanner, TokenText } from '@/components/queue';
 import { GROUPS } from '@/components/queue/group';
+import { AvailabilityBanner } from '@/components/scheduling/AvailabilityBanner';
+import { CancelDialog } from '@/components/scheduling/CancelDialog';
 import { Button } from '@/components/ui/button';
 import { ApiRequestError } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { formatIST, formatMinuteRange } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useLiveQueue } from '@/live';
@@ -54,9 +58,8 @@ export function EtaBlock({ eta }: { eta: Eta }) {
   );
 }
 
+/** Doctor away or unavailable is the availability banner's job; these cover the rest of the session lifecycle. */
 const SESSION_NOTE: Partial<Record<PatientQueueSnapshot['status'], string>> = {
-  paused: 'The doctor has paused this session. Your place in the queue is kept.',
-  unavailable: 'The doctor is not available for this session. Please check with the front desk.',
   closed: 'This session has closed.',
   scheduled: 'This session has not started yet.',
 };
@@ -65,12 +68,43 @@ function Panel({ children, className, edge }: { children: ReactNode; className?:
   return <section className={cn('rounded-xl border border-rule bg-surface p-5', edge && `border-l-[6px] ${edge}`, className)}>{children}</section>;
 }
 
-function VisitBody({ snapshot, status, lastUpdated }: { snapshot: PatientQueueSnapshot; status: 'live' | 'stale' | 'reconnecting'; lastUpdated: number | null }) {
+function VisitBody({
+  snapshot,
+  status,
+  lastUpdated,
+  booked,
+  onCancel,
+}: {
+  snapshot: PatientQueueSnapshot;
+  status: 'live' | 'stale' | 'reconnecting';
+  lastUpdated: number | null;
+  /** This patient's booked appointment in the session, when they have not arrived yet. */
+  booked: Appointment | undefined;
+  onCancel: (a: Appointment) => void;
+}) {
   const mine = snapshot.myEntry;
   const sessionNote = SESSION_NOTE[snapshot.status];
   return (
     <div className="flex flex-col gap-4">
       <StaleBanner status={status === 'reconnecting' ? 'reconnecting' : 'live'} lastUpdated={lastUpdated} />
+      <AvailabilityBanner
+        availability={snapshot.availability}
+        doctorName={snapshot.doctorName}
+        placement={mine ? 'in_queue' : 'booked'}
+        eta={mine?.eta ?? null}
+        actions={
+          snapshot.availability.state === 'unavailable' && !mine && booked ? (
+            <>
+              <Button asChild size="lg">
+                <Link to={`/patient/visits?rebook=${booked.id}`}>Rebook with another doctor</Link>
+              </Button>
+              <Button variant="outline" size="lg" onClick={() => onCancel(booked)}>
+                Cancel appointment
+              </Button>
+            </>
+          ) : null
+        }
+      />
       {sessionNote ? (
         <p role="status" className="rounded-md border border-l-[3px] border-rule border-l-ink bg-surface px-4 py-3">
           {sessionNote}
@@ -140,6 +174,11 @@ export default function MyVisitPage() {
   const { sessionId = null } = useParams();
   const { query, snapshot, status, lastUpdated } = useLiveQueue(sessionId);
   const notFound = query.error instanceof ApiRequestError && (query.error.status === 404 || query.error.status === 403);
+  const { me } = useAuth();
+  const patientId = me?.patientId ?? undefined;
+  const appointments = useAppointmentsQuery({ patientId }, { enabled: Boolean(patientId) });
+  const booked = (appointments.data ?? []).find((a) => a.sessionId === sessionId && a.status === 'booked');
+  const [cancelling, setCancelling] = useState<Appointment | null>(null);
 
   return (
     <PatientPage title="My visit">
@@ -155,8 +194,9 @@ export default function MyVisitPage() {
       ) : snapshot.view !== 'patient' ? (
         <ErrorState title="This page is for patients" hint="Sign in with a patient account to see your visit." />
       ) : (
-        <VisitBody snapshot={snapshot} status={status} lastUpdated={lastUpdated} />
+        <VisitBody snapshot={snapshot} status={status} lastUpdated={lastUpdated} booked={booked} onCancel={setCancelling} />
       )}
+      <CancelDialog appointment={cancelling} onClose={() => setCancelling(null)} />
     </PatientPage>
   );
 }

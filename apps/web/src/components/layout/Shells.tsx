@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { LogOut } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { ROLE_LABEL, useAuth } from '@/lib/auth';
 import { HOSPITAL_NAME, HOSPITAL_SHORT_NAME } from '@/lib/config';
@@ -33,6 +34,7 @@ function TopBar({ compact }: { compact: boolean }) {
               <span className="ml-2 rounded-xs bg-white/15 px-1.5 py-0.5 text-xs font-bold">{ROLE_LABEL[me.role]}</span>
             </p>
           ) : null}
+          {me ? <NotificationBell compact={compact} /> : null}
           <Button
             variant="outline"
             size={compact ? 'default' : 'lg'}
