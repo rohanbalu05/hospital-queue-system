@@ -1,0 +1,168 @@
+{
+  "spec": "availability-unavailable",
+  "fixture": {
+    "doctorA": {
+      "sessionId": "54080fea-3c56-4872-b75c-66e9886e816d",
+      "doctorNumber": 1,
+      "doctorName": "Dr. Suresh Hegde",
+      "label": "morning",
+      "startsAt": "2026-11-20T04:27:00.000Z",
+      "endsAt": "2026-11-20T08:27:00.000Z",
+      "tabName": "Morning 9:57 am",
+      "roomLabel": "OPD 1"
+    },
+    "doctorB": {
+      "sessionId": "e92248d5-2e36-4336-a560-9f37143d2d63",
+      "doctorNumber": 2,
+      "doctorName": "Dr. Lakshmi Narayan",
+      "label": "morning",
+      "startsAt": "2026-11-20T04:27:00.000Z",
+      "endsAt": "2026-11-20T08:27:00.000Z",
+      "tabName": "Morning 9:57 am",
+      "roomLabel": "OPD 2"
+    },
+    "tokens": {
+      "queuedAppointment": "A-001",
+      "walkin": "W-001"
+    },
+    "reason": "Called to emergency theatre"
+  },
+  "rebook": {
+    "nextSlotShownForDoctorB": "10:17 am",
+    "optionsShown": 6,
+    "notificationText": "New Action needed just now, 10:09 am Dr. Suresh Hegde is not available for the rest of today's morning session. Please rebook with another General Medicine doctor or cancel your 10:37 am appointment. Open Mark as read"
+  },
+  "reception": {
+    "newTokens": {
+      "Farida Begum": "A-001",
+      "Anitha Shankar": "W-001"
+    }
+  },
+  "timingsMs": {
+    "unavailableToDoctorStripMs": 341,
+    "unavailableToDisplayMs": 710,
+    "unavailableToBookedBellMs": 1463,
+    "rebookClickToConfirmedMs": 57,
+    "affectedListDroppedRebookedPatientAfterMs": 16409,
+    "moveClickToResultsMs": 74
+  },
+  "databaseAfter": {
+    "sessionAStatus": "unavailable",
+    "oldAppointmentStatus": "rescheduled",
+    "newAppointment": {
+      "status": "booked",
+      "scheduledAt": "2026-11-20T04:47:00.000Z"
+    },
+    "visitsOfMovedPatients": [
+      {
+        "full_name": "Anitha Shankar",
+        "kind": "walkin",
+        "status": "transferred",
+        "session_id": "54080fea-3c56-4872-b75c-66e9886e816d",
+        "token": "W-001",
+        "state": "cancelled"
+      },
+      {
+        "full_name": "Anitha Shankar",
+        "kind": "transfer",
+        "status": "open",
+        "session_id": "e92248d5-2e36-4336-a560-9f37143d2d63",
+        "token": "W-001",
+        "state": "waiting"
+      },
+      {
+        "full_name": "Farida Begum",
+        "kind": "appointment",
+        "status": "transferred",
+        "session_id": "54080fea-3c56-4872-b75c-66e9886e816d",
+        "token": "A-001",
+        "state": "cancelled"
+      },
+      {
+        "full_name": "Farida Begum",
+        "kind": "transfer",
+        "status": "open",
+        "session_id": "e92248d5-2e36-4336-a560-9f37143d2d63",
+        "token": "A-001",
+        "state": "waiting"
+      }
+    ],
+    "outboxEvents": [
+      "SessionUnavailable",
+      "AppointmentRescheduled",
+      "QueuePatientTransferred",
+      "QueuePatientTransferred"
+    ],
+    "deliveriesByEventChannelRecipientStatus": [
+      {
+        "event_type": "AppointmentBooked",
+        "channel": "in_app",
+        "recipient": "patient",
+        "status": "sent",
+        "n": 2
+      },
+      {
+        "event_type": "AppointmentRescheduled",
+        "channel": "in_app",
+        "recipient": "patient",
+        "status": "sent",
+        "n": 1
+      },
+      {
+        "event_type": "QueuePatientTransferred",
+        "channel": "in_app",
+        "recipient": "patient",
+        "status": "sent",
+        "n": 2
+      },
+      {
+        "event_type": "QueuePatientTransferred",
+        "channel": "sms",
+        "recipient": "patient",
+        "status": "sent",
+        "n": 2
+      },
+      {
+        "event_type": "ReservationReleased",
+        "channel": "in_app",
+        "recipient": "patient",
+        "status": "sent",
+        "n": 1
+      },
+      {
+        "event_type": "SessionUnavailable",
+        "channel": "email",
+        "recipient": "patient",
+        "status": "sent",
+        "n": 3
+      },
+      {
+        "event_type": "SessionUnavailable",
+        "channel": "in_app",
+        "recipient": "patient",
+        "status": "sent",
+        "n": 3
+      },
+      {
+        "event_type": "SessionUnavailable",
+        "channel": "in_app",
+        "recipient": "staff",
+        "status": "sent",
+        "n": 2
+      },
+      {
+        "event_type": "SessionUnavailable",
+        "channel": "sms",
+        "recipient": "patient",
+        "status": "sent",
+        "n": 3
+      }
+    ],
+    "deliveriesNotSent": 0
+  },
+  "fourXxResponsesSeenByBrowsers": {
+    "401 GET /api/me": 9
+  },
+  "fiveXxResponses": [],
+  "pageErrors": []
+}

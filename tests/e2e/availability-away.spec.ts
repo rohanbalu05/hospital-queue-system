@@ -14,7 +14,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { ApiClient, login } from '../support/client.js';
+import { type ApiClient, login } from '../support/client.js';
 import {
   API,
   EVIDENCE,
@@ -30,6 +30,7 @@ import {
   patientEmail,
   pressByKeyboard,
   resetToday,
+  selectReceptionSession,
   shot,
   summariseFourXx,
   tabTo,
@@ -63,7 +64,9 @@ async function closeBell(page: Page): Promise<void> {
   await expect(page.getByRole('dialog', { name: 'Notifications' })).toHaveCount(0);
 }
 
-test('away -> patient, display, reception and admin log all follow -> back -> same order continues', async ({ browser }) => {
+test('away -> patient, display, reception and admin log all follow -> back -> same order continues', async ({
+  browser,
+}) => {
   test.setTimeout(240_000);
   await resetToday();
   const admin = await login(API(), 'admin@hqms.test');
@@ -74,7 +77,7 @@ test('away -> patient, display, reception and admin log all follow -> back -> sa
 
   // ---------------------------------------------------------------- fixture (API only): who is in the room
   const apptP = await bookAs(P_APPT, fx.sessionId); // the session's first bookable slot, a few minutes ahead and already eligible
-  const apptB = await bookAs(P_BOOKED, fx.sessionId); // the next slot, 20 minutes later; this patient has not arrived
+  await bookAs(P_BOOKED, fx.sessionId); // the next slot, 20 minutes later; this patient has not arrived
   const inP = await checkIn(reception, apptP.id);
   const w1 = await admitWalkIn(reception, fx.sessionId, P_WALK1);
   const w2 = await admitWalkIn(reception, fx.sessionId, P_WALK2);
@@ -143,18 +146,11 @@ test('away -> patient, display, reception and admin log all follow -> back -> sa
     await expect(display.getByTestId('display-column')).toHaveCount(1);
 
     await loginByKeyboard(recep, 'reception2@hqms.test');
-    await expect(recep.getByRole('heading', { name: 'Reception desk', level: 1 })).toBeVisible();
-    const doctorSelect = recep.getByRole('combobox', { name: 'Doctor' });
-    if (!(await doctorSelect.innerText()).includes(fx.doctorName)) {
-      await doctorSelect.click();
-      await recep.getByRole('option', { name: new RegExp(fx.doctorName) }).click();
-    }
-    await recep.getByRole('tab', { name: fx.tabName }).click();
-    await expect(recep.getByText(/Last updated/)).toBeVisible();
+    await selectReceptionSession(recep, fx);
     await expect(recep.getByTestId('availability-strip')).toHaveCount(0);
 
     await loginByKeyboard(recepNarrow, 'reception2@hqms.test');
-    await expect(recepNarrow.getByRole('heading', { name: 'Reception desk', level: 1 })).toBeVisible();
+    await selectReceptionSession(recepNarrow, fx);
     await loginByKeyboard(doctorNarrow, 'doctor@hqms.test');
     await expect(doctorNarrow.getByRole('heading', { name: 'Doctor console', level: 1 })).toBeVisible();
 
@@ -173,10 +169,14 @@ test('away -> patient, display, reception and admin log all follow -> back -> sa
 
     // Who is next before the doctor steps away: the head of "Waiting, in call order" (the policy's projected order).
     const waiting = doctor.getByRole('region', { name: 'Waiting, in call order' });
-    const waitingTokensBefore = await waiting.locator('[data-token]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset['token'] ?? ''));
+    const waitingTokensBefore = await waiting
+      .locator('[data-token]')
+      .evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset['token'] ?? ''));
     expect(waitingTokensBefore).toEqual([tokens.walk1, tokens.walk2]);
     const nextBefore = waitingTokensBefore[0] as string;
-    const decisionsBefore = await pool.query(`SELECT count(*)::int AS n FROM queue_decisions WHERE session_id = $1`, [fx.sessionId]);
+    const decisionsBefore = await pool.query(`SELECT count(*)::int AS n FROM queue_decisions WHERE session_id = $1`, [
+      fx.sessionId,
+    ]);
 
     // -------------------------------------------------------------- 3. Step away (Break, 15 min), keyboard only
     await pressByKeyboard(doctor, doctor.getByRole('button', { name: 'Step away', exact: true }));
@@ -220,7 +220,9 @@ test('away -> patient, display, reception and admin log all follow -> back -> sa
 
     // -------------------------------------------------------------- 5. patient, display, reception follow without a reload
     const banner = patient.getByTestId('availability-banner');
-    timings['awayToPatientBannerMs'] = await seenAfter(tAway, () => expect(banner).toHaveAttribute('data-state', 'away'));
+    timings['awayToPatientBannerMs'] = await seenAfter(tAway, () =>
+      expect(banner).toHaveAttribute('data-state', 'away'),
+    );
     await expect(banner).toContainText(`expected back about ${backClock}`);
     await expect(banner).toContainText('Your place in the queue is kept');
     await expect(banner).toContainText(/Updated wait: about|new estimate|estimate/);
@@ -241,16 +243,19 @@ test('away -> patient, display, reception and admin log all follow -> back -> sa
     timings['awayToDisplayBannerMs'] = await seenAfter(tAway, () => expect(displayBanner).toBeVisible());
     await expect(displayBanner).toHaveAttribute('data-state', 'away');
     // The display names the doctor by surname (D-028 privacy short label): "Dr. Hegde · General Medicine is temporarily away ...".
-    await expect(displayBanner).toContainText(new RegExp(`Dr\\. Hegde.* is temporarily away, expected back about ${backClock}`));
+    await expect(displayBanner).toContainText(
+      new RegExp(`Dr\\. Hegde.* is temporarily away, expected back about ${backClock}`),
+    );
     await shot(display, '23-display-away-1920');
 
     const recepStrip = recep.getByTestId('availability-strip');
-    timings['awayToReceptionStripMs'] = await seenAfter(tAway, () => expect(recepStrip).toHaveAttribute('data-state', 'away'));
+    timings['awayToReceptionStripMs'] = await seenAfter(tAway, () =>
+      expect(recepStrip).toHaveAttribute('data-state', 'away'),
+    );
     await expect(recepStrip).toContainText(`${fx.doctorName} is away`);
     await expect(recepStrip).toContainText(`expected back about ${backClock}`);
     await expect(recep.getByRole('button', { name: /Affected patients/ })).toBeVisible();
     await shot(recep, '24-reception-away-1440', true);
-    await recepNarrow.getByRole('tab', { name: fx.tabName }).click();
     await expect(recepNarrow.getByTestId('availability-strip')).toContainText(`${fx.doctorName} is away`);
     await shot(recepNarrow, '24-reception-away-390', true);
 
@@ -258,6 +263,7 @@ test('away -> patient, display, reception and admin log all follow -> back -> sa
     const bell = patient.getByTestId('notification-bell');
     await expect(bell).toHaveAttribute('aria-label', /Notifications, \d+ unread/, { timeout: 25_000 });
     timings['awayToPatientBellMs'] = Date.now() - tAway;
+    const unreadAfterAway = Number(/(\d+) unread/.exec((await bell.getAttribute('aria-label')) ?? '')?.[1] ?? 0);
     const sheet = await openBell(patient);
     const awayNote = sheet.getByTestId('notification').filter({ hasText: 'stepped away' }).first();
     await expect(awayNote).toBeVisible();
@@ -267,18 +273,26 @@ test('away -> patient, display, reception and admin log all follow -> back -> sa
     const awayNoteText = (await awayNote.innerText()).replace(/\s+/g, ' ');
     await shot(patient, '25-patient-notifications-390');
     await closeBell(patient);
-    await expect(patientWide.getByTestId('notification-bell')).toHaveAttribute('aria-label', /Notifications, \d+ unread/, { timeout: 25_000 });
+    await expect(patientWide.getByTestId('notification-bell')).toHaveAttribute(
+      'aria-label',
+      /Notifications, \d+ unread/,
+      { timeout: 25_000 },
+    );
     const wideSheet = await openBell(patientWide);
     await expect(wideSheet.getByTestId('notification').filter({ hasText: 'stepped away' }).first()).toBeVisible();
     await shot(patientWide, '25-patient-notifications-1440');
     await closeBell(patientWide);
     // The booked patient was told too, in the booked wording.
-    await expect(booked.getByTestId('notification-bell')).toHaveAttribute('aria-label', /Notifications, \d+ unread/, { timeout: 25_000 });
+    await expect(booked.getByTestId('notification-bell')).toHaveAttribute('aria-label', /Notifications, \d+ unread/, {
+      timeout: 25_000,
+    });
     const bookedSheet = await openBell(booked);
     await expect(bookedSheet.getByTestId('notification').filter({ hasText: 'running behind' }).first()).toBeVisible();
     await closeBell(booked);
     // Reception staff are told in-app as well.
-    await expect(recep.getByTestId('notification-bell')).toHaveAttribute('aria-label', /Notifications, \d+ unread/, { timeout: 25_000 });
+    await expect(recep.getByTestId('notification-bell')).toHaveAttribute('aria-label', /Notifications, \d+ unread/, {
+      timeout: 25_000,
+    });
 
     // -------------------------------------------------------------- 7. Admin > Notifications sent: in-app plus SMS rows, fake provider, sent
     await loginByKeyboard(adminPage, 'admin@hqms.test');
@@ -326,27 +340,38 @@ test('away -> patient, display, reception and admin log all follow -> back -> sa
     await shot(doctorNarrow, '27-doctor-back-390', true);
 
     // Patient: the away banner is gone and a short "is back" confirmation replaces it; reception and display clear too.
-    timings['backToPatientMs'] = await seenAfter(tBack, () => expect(patient.getByTestId('availability-banner')).toHaveAttribute('data-state', 'back'));
+    timings['backToPatientMs'] = await seenAfter(tBack, () =>
+      expect(patient.getByTestId('availability-banner')).toHaveAttribute('data-state', 'back'),
+    );
     await expect(patient.getByTestId('availability-banner')).toContainText(`${fx.doctorName} is back`);
     await expect(patient.getByText('has stepped away')).toHaveCount(0);
     await shot(patient, '28-patient-back-390', true);
     await expect(patientWide.getByTestId('availability-banner')).toHaveAttribute('data-state', 'back');
     await shot(patientWide, '28-patient-back-1440', true);
-    timings['backToDisplayMs'] = await seenAfter(tBack, () => expect(column.getByTestId('display-banner')).toHaveCount(0));
+    timings['backToDisplayMs'] = await seenAfter(tBack, () =>
+      expect(column.getByTestId('display-banner')).toHaveCount(0),
+    );
     await shot(display, '29-display-back-1920');
-    timings['backToReceptionMs'] = await seenAfter(tBack, () => expect(recep.getByTestId('availability-strip')).toHaveCount(0));
+    timings['backToReceptionMs'] = await seenAfter(tBack, () =>
+      expect(recep.getByTestId('availability-strip')).toHaveCount(0),
+    );
     await shot(recep, '29-reception-back-1440', true);
     await expect(recepNarrow.getByTestId('availability-strip')).toHaveCount(0);
     await shot(recepNarrow, '29-reception-back-390', true);
 
     // The patient is told about the return (worker fan-out again).
-    await expect.poll(async () => (await patient.getByTestId('notification-bell').getAttribute('aria-label')) ?? '', { timeout: 25_000 }).toMatch(/Notifications, 2 unread/);
+    const unreadOf = async (): Promise<number> =>
+      Number(
+        /(\d+) unread/.exec((await patient.getByTestId('notification-bell').getAttribute('aria-label')) ?? '')?.[1] ??
+          0,
+      );
+    await expect.poll(unreadOf, { timeout: 25_000 }).toBeGreaterThan(unreadAfterAway);
     const sheet2 = await openBell(patient);
     const backNote = sheet2.getByTestId('notification').filter({ hasText: 'is back' }).first();
     await expect(backNote).toBeVisible();
     await expect(backNote).toContainText('Your place in the queue is unchanged');
     timings['backToPatientBellMs'] = Date.now() - tBack;
-    await shot(patient, '30-patient-notifications-back-390');
+    await shot(patient, '29-patient-notifications-back-390');
     await closeBell(patient);
 
     // -------------------------------------------------------------- 9. same order: Call next calls who was next before
@@ -356,12 +381,24 @@ test('away -> patient, display, reception and admin log all follow -> back -> sa
     await expect(doctor.getByTestId('now-active')).toContainText(nextBefore);
     await expect(doctor.getByTestId('now-active')).toContainText(NAME[P_WALK1] as string);
     await expect(doctor.getByTestId('decision')).toBeVisible();
-    await shot(doctor, '31-doctor-called-after-back-1440', true);
+    await shot(doctor, '29-doctor-called-after-back-1440', true);
     await expect(patient.getByTestId('visit-state')).toHaveText('It is your turn');
-    await shot(patient, '31-patient-called-after-back-390', true);
+    await shot(patient, '29-patient-called-after-back-390', true);
+
+    // Leave the room tidy for the next spec: start and complete the called patient, keyboard only.
+    await expect(doctor.getByRole('button', { name: 'Start', exact: true })).toBeFocused();
+    await doctor.keyboard.press('Enter');
+    await expect(doctor.getByTestId('now-state')).toContainText('In service');
+    await doctor.keyboard.press('Enter');
+    await expect(doctor.getByText('No patient with you')).toBeVisible();
+    await expect(patient.getByTestId('visit-state')).toHaveText('Your visit is complete');
+    await shot(patient, '29-patient-completed-390', true);
 
     // -------------------------------------------------------------- 10. what the database says
-    const session = await pool.query(`SELECT status, paused_at, pause_until, pause_reason FROM sessions WHERE id = $1`, [fx.sessionId]);
+    const session = await pool.query(
+      `SELECT status, paused_at, pause_until, pause_reason FROM sessions WHERE id = $1`,
+      [fx.sessionId],
+    );
     expect(session.rows[0].status).toBe('open');
     const decisions = await pool.query<{ token: string; reason: string }>(
       `SELECT q.token, d.reason FROM queue_decisions d JOIN queue_entries q ON q.id = d.queue_entry_id
@@ -377,11 +414,14 @@ test('away -> patient, display, reception and admin log all follow -> back -> sa
     const sessionOps = ops.rows.map((r) => `${r.operation} (${r.actor_role})`);
     expect(sessionOps).toEqual(expect.arrayContaining(['session.pause (doctor)', 'session.resume (doctor)']));
     const events = await pool.query<{ event_type: string }>(
-      `SELECT event_type FROM outbox_events WHERE session_id = $1 AND event_type IN ('SessionPaused','SessionResumed') ORDER BY id`,
+      `SELECT event_type FROM outbox_events WHERE session_id = $1 AND event_type IN ('SessionPaused','SessionResumed') ORDER BY position`,
       [fx.sessionId],
     );
     expect(events.rows.map((r) => r.event_type)).toEqual(['SessionPaused', 'SessionResumed']);
-    const undelivered = await pool.query(`SELECT count(*)::int AS n FROM notification_deliveries WHERE session_id = $1 AND status <> 'sent'`, [fx.sessionId]);
+    const undelivered = await pool.query(
+      `SELECT count(*)::int AS n FROM notification_deliveries WHERE session_id = $1 AND status <> 'sent'`,
+      [fx.sessionId],
+    );
     expect(undelivered.rows[0].n).toBe(0);
     const deliveriesAll = await pool.query<{ event_type: string; channel: string; recipient: string; n: number }>(
       `SELECT e.event_type, d.channel,
@@ -397,7 +437,13 @@ test('away -> patient, display, reception and admin log all follow -> back -> sa
       `${JSON.stringify(
         {
           spec: 'availability-away',
-          fixture: { ...fx, tokens, awayUntilShownInDialog: backClock, expectedBackClockForThisRun: backClock, nowClock: clock(new Date()) },
+          fixture: {
+            ...fx,
+            tokens,
+            awayUntilShownInDialog: backClock,
+            expectedBackClockForThisRun: backClock,
+            nowClock: clock(new Date()),
+          },
           waitingOrderBeforeAway: waitingTokensBefore,
           calledAfterBack: nextBefore,
           patientBannerText: bannerText,
