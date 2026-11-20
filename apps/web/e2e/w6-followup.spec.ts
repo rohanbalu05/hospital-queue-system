@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { setupW3, shot } from './w3-helpers';
 import { T_NO_VISIT, T_RECOVERY, T_URGENT, applyW6 } from './w6-followup-mocks';
 
-async function open(page: import('@playwright/test').Page, path: string) {
+async function open(page: Page, path: string) {
   const world = await setupW3(page, 'followup');
   await applyW6(page, world.w3);
   await page.goto(path);

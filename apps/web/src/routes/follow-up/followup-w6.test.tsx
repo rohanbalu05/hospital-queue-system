@@ -51,6 +51,11 @@ const task = (over: Partial<FollowUpTaskView> = {}): FollowUpTaskView => ({
   ...over,
 });
 
+const sentBody = (fetchMock: ReturnType<typeof vi.fn>) => {
+  const init = (fetchMock.mock.calls[0] as [string, RequestInit] | undefined)?.[1];
+  return JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+};
+
 const wrap = (ui: React.ReactNode) =>
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } })}>
@@ -104,9 +109,9 @@ describe('urgent tasks (PR-13)', () => {
 
   it('marks an urgent row with the word Urgent in the inbox table', () => {
     wrap(<TaskTable now={NOW} tasks={[task({ urgent: true }), task({ id: uuid(5), patientName: 'Lakshmi Narayanan' })]} />);
-    const rows = screen.getAllByTestId('task-row');
-    expect(within(rows[0]!).getByText('Urgent')).toBeVisible();
-    expect(within(rows[1]!).queryByText('Urgent')).toBeNull();
+    const [urgentRow, calmRow] = screen.getAllByTestId('task-row') as [HTMLElement, HTMLElement];
+    expect(within(urgentRow).getByText('Urgent')).toBeVisible();
+    expect(within(calmRow).queryByText('Urgent')).toBeNull();
   });
 });
 
@@ -148,7 +153,7 @@ describe('DispositionForm reply to the patient (PR-14)', () => {
     await user.type(screen.getByLabelText(/Outcome note/), 'Phone switched off, tried twice.');
     await user.click(screen.getByRole('button', { name: 'Resolve task' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string) as Record<string, unknown>;
+    const body = sentBody(fetchMock);
     expect(body.disposition).toBe('unreachable');
     expect(body).not.toHaveProperty('patientReply');
   });
@@ -163,7 +168,7 @@ describe('DispositionForm reply to the patient (PR-14)', () => {
     await user.type(screen.getByLabelText(/Outcome note/), 'Called 10:40, patient anxious.');
     await user.click(screen.getByRole('button', { name: 'Resolve task' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string) as Record<string, unknown>;
+    const body = sentBody(fetchMock);
     expect(body).toMatchObject({
       disposition: 'advice_given',
       outcomeNote: 'Called 10:40, patient anxious.',
