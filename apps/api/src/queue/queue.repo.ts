@@ -176,6 +176,9 @@ export interface SessionState {
   endsAt: string;
   status: 'scheduled' | 'open' | 'paused' | 'unavailable' | 'closed';
   pauseUntil: string | null;
+  /** When the current away/unavailable state began, and the staff-only free-text reason (D-032). */
+  pausedAt: string | null;
+  pauseReason: string | null;
   rotationPointer: number;
   queueVersion: number;
   policy: Policy;
@@ -184,7 +187,7 @@ export interface SessionState {
 
 export async function readSessionState(db: Queryable, sessionId: string): Promise<SessionState | null> {
   const res = await db.query(
-    `SELECT s.id, s.doctor_id, d.full_name, d.department, d.room, s.session_date, s.starts_at, s.ends_at, s.status, s.pause_until,
+    `SELECT s.id, s.doctor_id, d.full_name, d.department, d.room, s.session_date, s.starts_at, s.ends_at, s.status, s.pause_until, s.paused_at, s.pause_reason,
             s.rotation_pointer, s.queue_version, s.policy_id,
             c.booked_capacity, c.walkin_capacity, c.booked_reserved, c.walkin_used
        FROM sessions s
@@ -208,6 +211,8 @@ export async function readSessionState(db: Queryable, sessionId: string): Promis
     endsAt: new Date(r.ends_at).toISOString(),
     status: r.status,
     pauseUntil: r.pause_until,
+    pausedAt: r.paused_at,
+    pauseReason: r.pause_reason,
     rotationPointer: r.rotation_pointer,
     queueVersion: r.queue_version,
     policy: toDomainPolicy(policyRow),

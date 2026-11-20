@@ -319,20 +319,20 @@ describe('B1 call-next while away', () => {
     const w1 = await walkIn(s, 3, 2);
     await open(s, 3);
     // serve A1 so the pointer has moved on
-    t.clock.set(at(s, 4));
+    t.clock.set(at(s, 11));
     const first = CallNextResult.parse((await doctor.post(`/sessions/${s.id}/call-next`, {})).body);
     expect(first.entry!.id).toBe(a1.queueEntryId);
-    t.clock.set(at(s, 5));
+    t.clock.set(at(s, 12));
     expect((await doctor.post(`/visits/${first.entry!.visitId}/start`, {})).status).toBe(200);
-    t.clock.set(at(s, 9));
+    t.clock.set(at(s, 15));
     expect((await doctor.post(`/visits/${first.entry!.visitId}/complete`, {})).status).toBe(200);
 
     const before = await staffSnap(s);
     expect(before.waiting.map((e) => e.id)).toEqual([a2.queueEntryId, w1.queueEntryId]);
 
-    t.clock.set(at(s, 10));
-    expect((await doctor.post(`/sessions/${s.id}/pause`, { until: at(s, 40).toISOString(), reason: 'Phone call' })).status).toBe(200);
-    t.clock.set(at(s, 12));
+    t.clock.set(at(s, 16));
+    expect((await doctor.post(`/sessions/${s.id}/pause`, { until: at(s, 46).toISOString(), reason: 'Phone call' })).status).toBe(200);
+    t.clock.set(at(s, 18));
     const blocked = await doctor.post(`/sessions/${s.id}/call-next`, {});
     expect(blocked.status).toBe(409);
     expect(errorCode(blocked.body)).toBe('SESSION_NOT_CALLABLE');
@@ -340,12 +340,12 @@ describe('B1 call-next while away', () => {
     expect(away.rotationPointer).toBe(before.rotationPointer);
     expect(away.waiting.map((e) => e.id)).toEqual(before.waiting.map((e) => e.id));
 
-    t.clock.set(at(s, 20));
+    t.clock.set(at(s, 25));
     expect((await doctor.post(`/sessions/${s.id}/resume`, {})).status).toBe(200);
     const back = await staffSnap(s);
     expect(back.rotationPointer).toBe(before.rotationPointer);
     expect(back.waiting.map((e) => e.id)).toEqual(before.waiting.map((e) => e.id));
-    t.clock.set(at(s, 21));
+    t.clock.set(at(s, 26));
     const next = CallNextResult.parse((await doctor.post(`/sessions/${s.id}/call-next`, {})).body);
     expect(next.entry!.id).toBe(a2.queueEntryId); // the second A slot, exactly as before stepping away
     expect(next.decision.reason).toBe('ROTATION');
