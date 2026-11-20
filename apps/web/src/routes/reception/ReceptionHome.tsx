@@ -99,6 +99,9 @@ export default function ReceptionHome() {
   const debounced = useDebounced(query, 200);
   const patientsQ = usePatientSearchQuery(debounced);
   const searching = query.trim().length >= 2 && (debounced !== query || patientsQ.isFetching);
+  // The rows on screen belong to `debounced`, not to what is in the box right now. Until the results for the current
+  // text have arrived, no row is actionable: Enter and the buttons would otherwise act on a patient the typed query does not match.
+  const resultsCurrent = debounced === query && !(query.trim().length >= 2 && patientsQ.isFetching);
   const items = useMemo(() => buildItems(debounced, appointments ?? [], patientsQ.data), [debounced, appointments, patientsQ.data]);
 
   const [activeKey, setActiveKey] = useState<string | null>(null);
@@ -268,6 +271,7 @@ export default function ReceptionHome() {
   };
 
   const onEnter = () => {
+    if (!resultsCurrent) return;
     if (active && canCheckIn(active) && !late) doCheckIn(active);
   };
 
@@ -319,6 +323,7 @@ export default function ReceptionHome() {
             activeKey={active?.key ?? null}
             onActive={setActiveKey}
             onEnter={onEnter}
+            resultsCurrent={resultsCurrent}
             loading={sessionsQ.isPending || (session !== null && (apptQ.isPending || searching) && items.length === 0)}
             error={apptQ.isError && !apptQ.data ? apptQ.error : patientsQ.isError ? patientsQ.error : null}
             onRetry={() => {
@@ -333,9 +338,11 @@ export default function ReceptionHome() {
             item={active}
             session={session}
             knownToken={active?.appointment ? tokens[active.appointment.id] : undefined}
-            onCheckIn={() => active && doCheckIn(active)}
+            resultsCurrent={resultsCurrent}
+            searchText={query.trim()}
+            onCheckIn={() => resultsCurrent && active && doCheckIn(active)}
             checkInPending={checkIn.isPending}
-            onAdmit={() => active && doAdmit(active.patientId, active.name)}
+            onAdmit={() => resultsCurrent && active && doAdmit(active.patientId, active.name)}
             admitPending={admit.isPending}
             onRegister={doRegister}
             registerPending={register.isPending}

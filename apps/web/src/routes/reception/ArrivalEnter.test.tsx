@@ -130,9 +130,9 @@ describe('reception arrival search: Enter only acts on results for the current q
     expect(checkedIn).toEqual([]);
 
     // Once the results for "Ananya" are in, Enter checks in the row that matches it.
-    await waitFor(() => expect(screen.getByRole('option', { name: /Ananya Iyer/ })).toBeVisible(), { timeout: 3000 });
-    await waitFor(() => expect(screen.queryByRole('option', { name: /Harish Gowda/ })).toBeNull(), { timeout: 3000 });
-    await user.type(search, '{Enter}');
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Check in/ })).toBeEnabled(), { timeout: 3000 });
+    expect(screen.queryByRole('option', { name: /Harish Gowda/ })).toBeNull();
+    await user.keyboard('{Enter}');
     await waitFor(() => expect(checkedIn).toEqual([uid(0xb00 + 3)]), { timeout: 3000 });
   });
 
