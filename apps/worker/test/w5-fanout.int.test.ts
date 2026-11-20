@@ -112,13 +112,15 @@ async function scene(): Promise<Scene> {
   };
 }
 
-const sessionEvent = (
+const sessionEvent = async (
   sc: Scene,
   eventType: 'SessionPaused' | 'SessionResumed' | 'SessionUnavailable',
   payload: { pauseUntil?: string | null; update?: boolean } = {},
   status = eventType === 'SessionPaused' ? 'paused' : eventType === 'SessionResumed' ? 'open' : 'unavailable',
-) =>
-  emit({
+): Promise<{ id: string }> => {
+  // the fan-out skips an event the session no longer matches (D-039), so put the session in the state the event describes
+  await pool.query(`UPDATE sessions SET status = $2, pause_until = $3 WHERE id = $1`, [sc.w.sessionId, status, payload.pauseUntil ?? null]);
+  return emit({
     eventType,
     entityType: 'session',
     entityId: sc.w.sessionId,
@@ -126,6 +128,7 @@ const sessionEvent = (
     sessionId: sc.w.sessionId,
     payload: { queueVersion: 9, status, pauseUntil: payload.pauseUntil ?? null, update: payload.update ?? false, doctorId: sc.w.doctorId },
   });
+};
 
 const noteFor = async (eventId: string, userId: string) =>
   (await pool.query(`SELECT * FROM notifications WHERE event_id = $1 AND recipient_user_id = $2`, [eventId, userId])).rows[0];

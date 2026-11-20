@@ -22,7 +22,14 @@ export interface SendResult {
   providerMessageId: string;
 }
 
-/** SMS / email delivery (D-034). Called by the worker only, and never inside a database transaction. */
+/**
+ * SMS / email delivery (D-034). Called by the worker only, and never inside a database transaction.
+ *
+ * A real provider MUST de-duplicate on `idempotencyKey`: the worker may send again with the same key after a crash
+ * between the provider accepting the message and the worker recording that in the database (at-least-once delivery;
+ * the key is the delivery row id, stable across retries). A provider that cannot honour a key must not be used
+ * without its own de-duplication in front of it, or patients can receive the same notice twice.
+ */
 export interface NotificationProvider {
   readonly name: string;
   send(message: OutboundMessage): Promise<SendResult>;

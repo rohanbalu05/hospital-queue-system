@@ -131,6 +131,8 @@ export class AffectedService {
         now,
         today: localDate(now, this.config.hospitalTz),
         minArrivalWindowMin: this.config.minArrivalWindowMin,
+        // reception sees only the targets they can move patients to (same scope as GET /sessions/{id}/alternatives)
+        scopeDoctorIds: this.access.doctorScope(ctx.user),
       }),
     ]);
     return {
@@ -163,6 +165,22 @@ export class AffectedService {
     if (target.id === source.id) throw validationFailed('The target session is the session being moved from');
     assertAway(source.status);
     assertTargetOpen(target.status, target.endsAt, this.clock.now());
+
+    // Batch-level idempotency (D-039): the key is bound to the WHOLE request before any item runs, so reusing it for
+    // a different request is a 409 and never moves anything. Same request -> the items below replay as before.
+    await withTransaction(this.pool, async () => ({ status: 200, body: { batch: true } }), {
+      idempotency: {
+        actorId: user.userId,
+        operation: 'affected.move',
+        key,
+        requestHash: hashRequest({
+          source: source.id,
+          target: target.id,
+          appointmentIds: [...new Set(body.appointmentIds)].sort(),
+          queueEntryIds: [...new Set(body.queueEntryIds)].sort(),
+        }),
+      },
+    });
 
     const results: MoveOutcome[] = [];
     for (const id of new Set(body.appointmentIds)) {
