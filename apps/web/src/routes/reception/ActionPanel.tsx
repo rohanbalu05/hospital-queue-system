@@ -70,7 +70,7 @@ export function ActionPanel(p: ActionPanelProps) {
               <p className="text-muted-foreground tabular-nums">{[p.item.mrn, p.item.phone].filter(Boolean).join('  ') || 'No MRN or phone shown'}</p>
               {appt ? (
                 <p className="mt-1 tabular-nums">
-                  Appointment {formatIST(appt.scheduledAt)}, <StatusWord status={appt.status} />
+                  Appointment {formatIST(appt.scheduledAt)}, <StatusWord status={appt.status} transferredTo={appt.transferredTo} showToken />
                   {p.knownToken ? (
                     <>
                       , token <span className="font-bold">{p.knownToken.token}</span>
