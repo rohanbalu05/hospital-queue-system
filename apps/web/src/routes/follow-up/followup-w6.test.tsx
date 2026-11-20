@@ -231,7 +231,7 @@ describe('ReturnBookingDialog (PR-39)', () => {
   it('defaults the doctor to the task doctor (by name) instead of the first in the list, and says the real date range', async () => {
     const fetchMock = stub([session(1, '2026-11-12'), session(2, '2026-11-18')]);
     wrap(<ReturnBookingDialog open task={task({ sourceVisit: null })} onOpenChange={vi.fn()} onBooked={vi.fn()} />);
-    expect(await screen.findByRole('combobox', { name: 'Doctor' })).toHaveTextContent('Dr. Meenakshi Rao, General Medicine');
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Doctor' })).toHaveTextContent('Dr. Meenakshi Rao, General Medicine'));
     await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).includes(`doctorId=${DR_RAO}`))).toBe(true));
     expect(await screen.findByText('Sessions from Thu, 12 Nov to Wed, 18 Nov')).toBeVisible();
     expect(screen.queryByText(/next 14 days/)).toBeNull();
@@ -240,6 +240,6 @@ describe('ReturnBookingDialog (PR-39)', () => {
   it('keeps the source visit doctor when the API sends it', async () => {
     stub([]);
     wrap(<ReturnBookingDialog open task={task({ doctorName: null })} onOpenChange={vi.fn()} onBooked={vi.fn()} />);
-    expect(await screen.findByRole('combobox', { name: 'Doctor' })).toHaveTextContent('Dr. Meenakshi Rao');
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Doctor' })).toHaveTextContent('Dr. Meenakshi Rao'));
   });
 });
