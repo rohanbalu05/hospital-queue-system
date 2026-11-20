@@ -84,8 +84,12 @@ export async function loginAs(server: Server, email: string, password = PASSWORD
 export const doctorId = (n: number): string => stableId(`doctor:${n}`);
 export const patientId = (n: number): string => stableId(`patient:${n}`);
 
-/** One far-future date per call so sessions never collide on (doctor, starts_at). Hospital-local YYYY-MM-DD. */
-let dayCursor = Math.floor(Math.random() * 20_000);
+/**
+ * One far-future date per call so sessions never collide on (doctor, starts_at). Hospital-local YYYY-MM-DD.
+ * Every test file starts at its own random day; the space is ~5,000 years wide (up to year ~7000) so two files, each
+ * using a few dozen days, practically never overlap (a 20,000-day space collided in about half of the full runs).
+ */
+let dayCursor = Math.floor(Math.random() * 1_800_000);
 export function nextFutureDate(): string {
   dayCursor += 1;
   return new Date(Date.UTC(2040, 0, 1 + dayCursor)).toISOString().slice(0, 10);

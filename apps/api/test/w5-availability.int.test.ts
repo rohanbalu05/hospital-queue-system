@@ -281,6 +281,50 @@ describe('B1 availability on every read', () => {
     expect(await col()).toBeUndefined();
   });
 
+  it('with the display cache ON (D-030), a changed expected return or status is never served stale', async () => {
+    const s = await mk();
+    await open(s);
+    t.clock.set(at(s, 3));
+    expect((await doctor.post(`/sessions/${s.id}/pause`, { until: at(s, 20).toISOString() })).status).toBe(200);
+    process.env['DISPLAY_CACHE_MS'] = '600000';
+    const cached = await createTestApp();
+    delete process.env['DISPLAY_CACHE_MS'];
+    try {
+      cached.clock.set(at(s, 4));
+      const view = async () =>
+        DisplaySnapshot.parse((await request(cached.server).get('/display/sessions')).body).columns.find((c) => c.sessionId === s.id)!;
+      expect((await view()).availability.expectedBackAt).toBe(at(s, 20).toISOString());
+      expect((await view()).availability.expectedBackAt).toBe(at(s, 20).toISOString()); // served from the cache
+      t.clock.set(at(s, 5));
+      expect((await doctor.post(`/sessions/${s.id}/pause`, { until: at(s, 50).toISOString() })).status).toBe(200);
+      expect((await view()).availability.expectedBackAt).toBe(at(s, 50).toISOString());
+      expect((await doctor.post(`/sessions/${s.id}/resume`, {})).status).toBe(200);
+      expect((await view()).availability.state).toBe('available');
+      expect((await doctor.post(`/sessions/${s.id}/unavailable`, { reason: 'Gone home' })).status).toBe(200);
+      expect((await view()).availability.state).toBe('unavailable');
+    } finally {
+      await cached.close();
+    }
+  });
+
+  it('a replayed Idempotency-Key answers the stored response without a second change, audit row or event', async () => {
+    const s = await mk();
+    await open(s);
+    t.clock.set(at(s, 3));
+    const key = 'w5-step-away-replay-' + s.id;
+    const body = { until: at(s, 25).toISOString(), reason: 'Quick call' };
+    const first = await doctor.post(`/sessions/${s.id}/pause`, body, key);
+    const again = await doctor.post(`/sessions/${s.id}/pause`, body, key);
+    expect(first.status).toBe(200);
+    expect(again.status).toBe(200);
+    expect(again.body).toEqual(first.body);
+    expect(await count(t.pool, `SELECT 1 FROM audit_events WHERE entity_id = $1 AND operation = 'session.pause'`, [s.id])).toBe(1);
+    expect(await count(t.pool, `SELECT 1 FROM outbox_events WHERE session_id = $1 AND event_type = 'SessionPaused'`, [s.id])).toBe(1);
+    // the same key with a different body is a conflict
+    const other = await doctor.post(`/sessions/${s.id}/pause`, { until: at(s, 35).toISOString() }, key);
+    expect(other.status).toBe(409);
+  });
+
   it('available / overdue states follow the clock', async () => {
     const s = await mk();
     await walkIn(s, 1, 0);
