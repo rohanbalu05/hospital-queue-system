@@ -1,11 +1,5 @@
 import type { AffectedAppointment, AffectedQueueEntry, AlternativeSession } from '@hqms/contracts';
-import {
-  getPolicyById,
-  listDoctors,
-  listSessionRecords,
-  type Queryable,
-  type Tx,
-} from '@hqms/db';
+import { getPolicyById, listDoctors, listSessionRecords, type Queryable, type Tx } from '@hqms/db';
 import { one } from '../common/rows.js';
 import { nextAssignableSlot } from '../scheduling/shared.js';
 import type { SlotRule } from '../scheduling/shared.js';
@@ -175,11 +169,17 @@ export async function carryEntryState(tx: Tx, newEntryId: string, oldEntryId: st
 }
 
 /** Old entry ends as cancelled and its visit as transferred (the domain machines checked the transitions). */
-export async function retireTransferredEntry(tx: Tx, entryId: string, visitId: string): Promise<{ entryVersion: number }> {
+export async function retireTransferredEntry(
+  tx: Tx,
+  entryId: string,
+  visitId: string,
+): Promise<{ entryVersion: number }> {
   const e = await tx.query<{ version: number }>(
     `UPDATE queue_entries SET state = 'cancelled', version = version + 1, updated_at = now() WHERE id = $1 RETURNING version`,
     [entryId],
   );
-  await tx.query(`UPDATE visits SET status = 'transferred', version = version + 1, updated_at = now() WHERE id = $1`, [visitId]);
+  await tx.query(`UPDATE visits SET status = 'transferred', version = version + 1, updated_at = now() WHERE id = $1`, [
+    visitId,
+  ]);
   return { entryVersion: one(e.rows, 'UPDATE queue_entries').version };
 }

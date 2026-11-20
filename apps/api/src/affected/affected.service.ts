@@ -233,15 +233,22 @@ export class AffectedService {
           const now = this.clock.now();
           assertTargetOpen(tgt.status, tgt.endsAt, now);
           if (tgt.sessionDate !== src.sessionDate) {
-            throw conflict('CONFLICT', 'A patient who is already here can only be transferred to a session of the same day', {
-              sourceDate: src.sessionDate,
-              targetDate: tgt.sessionDate,
-            });
+            throw conflict(
+              'CONFLICT',
+              'A patient who is already here can only be transferred to a session of the same day',
+              {
+                sourceDate: src.sessionDate,
+                targetDate: tgt.sessionDate,
+              },
+            );
           }
           const entry = await lockEntry(tx, entryId);
           assertTransition('queueEntry', entry.state, 'cancelled');
           assertTransition('visit', entry.visitStatus as 'open', 'transferred');
-          if ((await hasLivePlace(tx, tgt.id, entry.patientId)) || (await hasActiveAppointment(tx, tgt.id, entry.patientId))) {
+          if (
+            (await hasLivePlace(tx, tgt.id, entry.patientId)) ||
+            (await hasActiveAppointment(tx, tgt.id, entry.patientId))
+          ) {
             throw conflict('CONFLICT', 'This patient already has a place or an appointment in the target session');
           }
           // The place: A -> booked (reserved then consumed, the patient is here), W -> walk-in (consumed on admit).
@@ -296,7 +303,13 @@ export class AffectedService {
             entityType: 'visit',
             entityId: visit.id,
             previous: { fromVisitId: entry.visitId, fromSessionId: src.id, token: entry.token },
-            next: { kind: 'transfer', group: entry.group, token: pos.token, sessionId: tgt.id, queueVersion: pos.queueVersion },
+            next: {
+              kind: 'transfer',
+              group: entry.group,
+              token: pos.token,
+              sessionId: tgt.id,
+              queueVersion: pos.queueVersion,
+            },
             policyVersion: policy?.version ?? null,
             correlationId: ctx.correlationId,
           });
@@ -392,7 +405,11 @@ function assertTargetOpen(status: string, endsAt: string, now: Date): void {
   }
 }
 
-function pick(locked: SessionLockRow[], sourceId: string, targetId: string): { src: SessionLockRow; tgt: SessionLockRow } {
+function pick(
+  locked: SessionLockRow[],
+  sourceId: string,
+  targetId: string,
+): { src: SessionLockRow; tgt: SessionLockRow } {
   const src = locked.find((s) => s.id.toLowerCase() === sourceId.toLowerCase());
   const tgt = locked.find((s) => s.id.toLowerCase() === targetId.toLowerCase());
   if (!src || !tgt) throw notFound('Session');

@@ -175,7 +175,9 @@ describe('B4.7 verifying a new version of an instruction', () => {
         up.body.id,
         text,
       ]);
-      await t.pool.query(`UPDATE documents SET status = 'ocr_ready', version = version + 1 WHERE id = $1`, [up.body.id]);
+      await t.pool.query(`UPDATE documents SET status = 'ocr_ready', version = version + 1 WHERE id = $1`, [
+        up.body.id,
+      ]);
       return up.body.id as string;
     }
     const d1 = await readyDocument('Take rest');

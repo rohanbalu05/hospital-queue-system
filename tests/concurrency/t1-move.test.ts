@@ -92,7 +92,8 @@ describe('T1 bulk move and transfer', () => {
 
       expect(a.moved + b.moved).toBe(2);
       for (const item of [...a.results, ...b.results]) {
-        if (item.outcome === 'skipped') expect(['CAPACITY_FULL', 'INVALID_TRANSITION', 'CONFLICT']).toContain(item.code);
+        if (item.outcome === 'skipped')
+          expect(['CAPACITY_FULL', 'INVALID_TRANSITION', 'CONFLICT']).toContain(item.code);
       }
 
       const cap = await capacityCounts(T.id);
