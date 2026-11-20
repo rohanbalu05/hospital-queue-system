@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- tests index rows they have just created */
 /* PR-13: red-flag symptom questions get fixed safety advice and an URGENT owned task, never a provider answer. */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { AssistantAnswer, ConversationMessage, FollowUpTask } from '@hqms/contracts';
+import { AssistantAnswer, ConversationMessage, type FollowUpTask } from '@hqms/contracts';
 import { type Client, createTestApp, linkPatient, loginAs, newLoginPatient, type TestApp } from './helpers.js';
 import { MemoryStorage, SpyLlm } from './fakes.js';
 
