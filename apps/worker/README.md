@@ -9,8 +9,8 @@ Documents: `OBJECT_STORAGE=local-disk|gcs`, `STORAGE_DIR=./var/storage`, `OCR_PR
 
 Separate document worker (report 6.2, bounded concurrency, no outbox loop): `pnpm --filter @hqms/worker start:documents`
 (`dev:documents` under tsx) = `WORKER_JOB_TYPES=ocr_document,reconcile_uploads WORKER_DISPATCH_OUTBOX=false`. Run it next to the
-main worker, which then should set `WORKER_JOB_TYPES=call_timeout,reservation_release,dispatch_outbox` so OCR never competes
-with queue timers.
+main worker, which then should set `WORKER_JOB_TYPES=call_timeout,reservation_release,deliver_notification` (the outbox dispatcher
+is the `WORKER_DISPATCH_OUTBOX` flag, on by default, not a job type) so OCR never competes with queue timers.
 
 ## Enqueueing (API side, inside the same transaction as the state change)
 
@@ -20,6 +20,7 @@ Use `enqueueJob(tx, { jobType, payload, runAt, dedupeKey })` from `@hqms/db`. A 
 | --------------------- | ------------------------------------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------- |
 | `call_timeout`        | `{ queueEntryId, calledAt }` (ISO instant, the entry's `called_at`) | `calledAt + policy.calledTimeoutSec` | `call_timeout:{queueEntryId}:{callCount}`                                                    |
 | `reservation_release` | `{ appointmentId }`                                                 | `scheduledAt + policy.lateGraceMin`  | `reservation_release:{appointmentId}` (a reschedule creates a new appointment, so a new job) |
+| `deliver_notification` | `{ deliveryId }` (SMS/email row of `notification_deliveries`)      | now                                  | `deliver_notification:{deliveryId}`; calls `NotificationProvider` (`NOTIFICATION_PROVIDER=fake`, `NOTIFICATION_TIMEOUT_SEC=30`) outside any transaction, records sent/failed |
 | `ocr_document`        | `{ documentId }`                                                    | now                                  | `ocr_document:{documentId}`; a controlled retry after `ocr_failed` uses `ocr_document:{documentId}:retry:{documentVersion}` |
 | `reconcile_uploads`   | `{}`                                                                | hourly                               | `reconcile_uploads:{yyyy-mm-dd-hh}` (UTC)                                                    |
 

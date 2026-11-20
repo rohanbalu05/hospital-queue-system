@@ -59,7 +59,7 @@ services:
     environment:
       <<: *app-env
       WORKER_POLL_MS: '1000'
-      WORKER_JOB_TYPES: call_timeout,reservation_release
+      WORKER_JOB_TYPES: call_timeout,reservation_release,deliver_notification
       WORKER_DISPATCH_OUTBOX: 'true'
     depends_on:
       api:
