@@ -115,17 +115,38 @@ suites, Semgrep).
 | `pnpm e2e` (real stack: Postgres, API, worker, web; nothing mocked) | 3 | pass, two consecutive runs |
 | `node --test scripts/demo-session-now.test.mjs` | 10 | pass |
 
+`docs/evidence/unit-tests.md` (regenerated at `6e48cf3`, Vitest 2.1.9) counts the 1,213 package-suite tests; the 58
+black-box integration tests are reported in the T3/T4/T6/authz evidence files; together they are the 1,271 above.
 Mocked Playwright screen specs in `apps/web/e2e` were run by each UI builder for the screens they changed (not part of
-`pnpm verify`). Coverage per package: `docs/evidence/unit-tests.md` and `coverage-summary.json` (regenerated this session).
+`pnpm verify`).
+
+Coverage (Vitest v8, `docs/evidence/coverage-summary.json`, regenerated this session):
+
+| Package | Lines | Branches |
+| --- | --- | --- |
+| @hqms/api | 97.57% | 86.41% |
+| @hqms/web | 82.18% | 85.55% |
+| @hqms/worker | 93.47% | 85.44% |
+| @hqms/contracts | 99.88% | 92.59% |
+| @hqms/db | 86.42% | 86.93% |
+| @hqms/domain | 100% | 97.43% |
+| @hqms/providers | 98.30% | 92.68% |
+| tests (simulation engine) | 74.67% | 90.47% |
+
+Re-measured T-series evidence: T1 incl. bulk-move races (pass), T2 pause race under D-032 (4 rounds with an applied pause,
+16 refused DOCTOR_OCCUPIED, 0 calls after a pause), T3 50 SSE clients p50 292 ms / p95 474 ms, T4 36/36, T6 parts A-B,
+authz 640 checks (378 must-refuse) with 0 unauthorised successes over 74 routes. **Not re-measured this session:** T5 load,
+failure injection and restore drill, the 200-client SSE run (historical, 2026-11-11 tree); UAT has not been executed by a
+person. The browser e2e does not drive the follow-up task / return booking (covered over HTTP in T4 and by mocked specs).
 
 ## 5. Static analysis (measured)
 
 | Tool | Result |
 | --- | --- |
-| TypeScript `tsc --noEmit` (strict, every package) | 0 errors |
-| ESLint (typescript-eslint strict, `--max-warnings 0`) | 0 errors, 0 warnings |
-| dependency-cruiser | 0 violations (591 modules, 2,091 dependencies; domain purity, app isolation, web→contracts only, no cycles) |
-| Semgrep 1.186.0 (`p/typescript`, `p/owasp-top-ten`, `--error`) | reached the registry; 0 findings |
+| TypeScript `tsc --noEmit` (strict, all 8 packages) | 0 errors |
+| ESLint (typescript-eslint strict, `--max-warnings 0`) | 492 files, 0 errors, 0 warnings |
+| dependency-cruiser 18.7.2 | 0 violations on all 10 rules (591 modules, 2,091 dependencies; domain purity, app isolation, web→contracts only, no cycles) |
+| Semgrep 1.186.0 (`p/typescript`, `p/owasp-top-ten`, `--error`) | reached the registry; 105 rules on 394 files, 0 findings (one partial-parse warning at `packages/db/src/locks.ts:51`, so that construct may not have been analysed) |
 
 Full tool versions, rule lists and per-rule counts: `docs/evidence/static-analysis.md` (regenerated this session).
 
