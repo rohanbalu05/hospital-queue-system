@@ -4,7 +4,7 @@ import type { DisplaySnapshot, Eta } from '@hqms/contracts';
 import { callNextBlock } from '@/routes/doctor/components/callNextBlock';
 import { DisplayColumn } from '@/routes/display/DisplayColumn';
 import { EtaBlock } from '@/routes/patient/visit/MyVisitPage';
-import { entry, staffSnapshot } from './fixtures';
+import { AVAILABLE, entry, staffSnapshot } from './fixtures';
 
 describe('callNextBlock', () => {
   const open = staffSnapshot({ waiting: [entry(14)] });
@@ -76,6 +76,7 @@ describe('DisplayColumn', () => {
     doctorLabel: 'Dr. Meenakshi Rao, General Medicine',
     room: 'Room 12',
     status: 'open',
+    availability: AVAILABLE,
     nowCalling: 'A-014',
     next: ['W-005', 'A-015', 'A-016'],
     queueVersion: 3,

@@ -1,4 +1,4 @@
-import type { QueueDecision, QueueEntry, StaffQueueSnapshot } from '@hqms/contracts';
+import type { QueueDecision, QueueEntry, SessionAvailability, StaffQueueSnapshot } from '@hqms/contracts';
 
 /** Test and dev-board fixtures. Valid UUIDs, because the app parses every response with the contracts schemas. */
 export const uid = (n: number): string => `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
@@ -53,6 +53,20 @@ export function decision(overrides: Partial<QueueDecision> = {}): QueueDecision 
   };
 }
 
+export const AVAILABLE: SessionAvailability = { state: 'available', since: null, expectedBackAt: null, overdue: false, reason: null };
+
+/** Doctor stepped away at 10:30 am IST, expecting to be back about 10:45 am. */
+export function awayAvailability(overrides: Partial<SessionAvailability> = {}): SessionAvailability {
+  return {
+    state: 'away',
+    since: '2026-11-11T05:00:00.000Z',
+    expectedBackAt: '2026-11-11T05:15:00.000Z',
+    overdue: false,
+    reason: 'Ward round',
+    ...overrides,
+  };
+}
+
 export function staffSnapshot(overrides: Partial<StaffQueueSnapshot> = {}): StaffQueueSnapshot {
   return {
     view: 'staff',
@@ -61,6 +75,7 @@ export function staffSnapshot(overrides: Partial<StaffQueueSnapshot> = {}): Staf
     doctorId: DOCTOR_ID,
     status: 'open',
     pauseUntil: null,
+    availability: AVAILABLE,
     policyVersion: 1,
     rotationPointer: 2,
     rotation: ['A', 'A', 'W'],
