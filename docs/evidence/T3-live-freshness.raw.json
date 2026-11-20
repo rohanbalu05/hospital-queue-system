@@ -4,10 +4,10 @@
       "versionBeforeDisconnect": 3,
       "versionAfterMissedCommits": 5,
       "firstNoticeAfterReconnect": {
-        "sessionId": "b165181d-b7d3-47d5-a880-ebed6c1f38fd",
+        "sessionId": "3fde7059-1b9e-4c51-b5ab-1b6b56d0d1b9",
         "queueVersion": 5,
         "eventType": "connected",
-        "committedAt": "2026-11-20T04:57:14.089Z"
+        "committedAt": "2026-11-20T05:08:18.367Z"
       },
       "snapshotVersionMatches": true,
       "snapshotActiveToken": "W-001"
@@ -21,46 +21,46 @@
       "note": "Measured on one machine, clients in the test process, server poll 500 ms. Not the 200-client target and not the hosted environment.",
       "commitToClientMsFromResponse": {
         "n": 3000,
-        "p50": 235.2,
-        "p95": 475.7,
-        "p99": 492.9,
-        "max": 493.6
+        "p50": 292.4,
+        "p95": 473.5,
+        "p99": 488.9,
+        "max": 489.5
       },
       "sinceRequestSentMs": {
         "n": 3000,
-        "p50": 243.5,
-        "p95": 484.4,
-        "p99": 500.9,
-        "max": 501.5
+        "p50": 300.1,
+        "p95": 481.4,
+        "p99": 495.7,
+        "max": 496.3
       },
       "byCommand": {
         "call-next": {
           "n": 1000,
-          "p50": 202.8,
-          "p95": 440.5,
-          "p99": 465.8,
-          "max": 466
+          "p50": 233.6,
+          "p95": 430.4,
+          "p99": 471.9,
+          "max": 472.3
         },
         "start": {
           "n": 1000,
-          "p50": 359.2,
-          "p95": 474.7,
-          "p99": 475.4,
-          "max": 475.7
+          "p50": 291.8,
+          "p95": 473.5,
+          "p99": 484.3,
+          "max": 484.6
         },
         "complete": {
           "n": 1000,
-          "p50": 162.8,
-          "p95": 491.7,
-          "p99": 493.4,
-          "max": 493.6
+          "p50": 427,
+          "p95": 484.1,
+          "p99": 489.3,
+          "max": 489.5
         }
       },
       "noticesArrivingBeforeTheResponse": 0,
       "allClientsConvergedOnFinalVersion": true,
       "finalVersion": 83,
       "pingEventsSeen": 100,
-      "worstCommitMsAcrossClients": 493.6
+      "worstCommitMsAcrossClients": 489.5
     }
   }
 }
