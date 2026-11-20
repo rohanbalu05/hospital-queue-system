@@ -9,3 +9,17 @@ export function slotTimes(session: Pick<Session, 'startsAt' | 'endsAt' | 'slotMi
   for (let t = start; t + step <= end; t += step) out.push(new Date(t).toISOString());
   return out;
 }
+
+/**
+ * D-035: a slot is worth assigning only if the patient still has `minArrivalWindowMin` minutes to arrive before
+ * the slot's late-grace window closes (`slot + lateGraceMin >= now + minArrivalWindowMin`). One definition for
+ * booking, reschedule, return booking, bulk move, alternatives and the slots read.
+ */
+export function isSlotAssignable(
+  slotAt: string | Date,
+  now: Date,
+  lateGraceMin: number,
+  minArrivalWindowMin: number,
+): boolean {
+  return new Date(slotAt).getTime() + lateGraceMin * 60_000 >= now.getTime() + minArrivalWindowMin * 60_000;
+}

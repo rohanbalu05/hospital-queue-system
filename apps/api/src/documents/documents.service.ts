@@ -259,9 +259,20 @@ export class DocumentsService {
     key: string | undefined,
   ): Promise<IdempotentResult<InstructionVersion>> {
     const { user } = ctx;
-    await this.load(ctx, documentId);
+    const document = await this.load(ctx, documentId);
     if (body.instructionId && !body.expectedCurrentVersionId) {
-      throw validationFailed('expectedCurrentVersionId is required when instructionId is given');
+      // B4.7: say exactly what to send. The id of the version the doctor is replacing is the instruction_versions
+      // id of the lineage's current version (InstructionVersion.id, status 'current'); returned here, only for a
+      // lineage of this document's own patient, so a client that omitted it can retry.
+      const cur = await this.pool.query<{ id: string }>(
+        `SELECT iv.id FROM instruction_versions iv JOIN instructions i ON i.id = iv.instruction_id
+          WHERE i.id = $1 AND i.patient_id = $2 AND iv.status = 'current'`,
+        [body.instructionId, document.patientId],
+      );
+      throw validationFailed(
+        'expectedCurrentVersionId is required when instructionId is given: send the id of the instruction version you are replacing (the one with status "current")',
+        { field: 'expectedCurrentVersionId', currentVersionId: cur.rows[0]?.id ?? null },
+      );
     }
     return runCommand(this.pool, ctx, 'instruction.verify', key, { documentId, body }, async (tx) => {
       const doc = await lockDocument(tx, documentId);
