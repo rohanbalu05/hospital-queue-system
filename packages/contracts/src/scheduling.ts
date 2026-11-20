@@ -117,6 +117,14 @@ export const Appointment = z.object({
   /** Present once checked in (staff + own patient reads). */
   queueEntryId: Id.nullable().optional(),
   token: z.string().nullable().optional(),
+  /**
+   * Set when the checked-in patient was moved to another doctor's session after this doctor became away or
+   * unavailable (D-033): the appointment itself stays `checked_in`, so reads say where the patient went.
+   */
+  transferredTo: z
+    .object({ sessionId: Id, doctorName: z.string(), room: z.string(), token: z.string() })
+    .nullable()
+    .optional(),
 });
 export type Appointment = z.infer<typeof Appointment>;
 
