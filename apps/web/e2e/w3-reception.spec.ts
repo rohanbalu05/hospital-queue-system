@@ -57,6 +57,10 @@ test.describe('reception live board at 1440', () => {
     await expect(panel).toContainText('Rohan Deshpande');
     await expect(panel.getByRole('button', { name: 'Mark absent' })).toBeEnabled();
     await panel.getByRole('button', { name: 'Mark absent' }).click();
+    // Mark absent asks first (PR-27): nothing is sent until the dialog is confirmed.
+    const confirm = page.getByRole('dialog', { name: /Mark W-005 absent/ });
+    expect(queue.requests.some((r) => /\/queue-entries\/.+\/absent$/.test(r.line))).toBe(false);
+    await confirm.getByRole('button', { name: 'Mark absent' }).click();
     await expect(page.getByText('Marked absent').first()).toBeVisible();
     expect(queue.requests.some((r) => /\/queue-entries\/.+\/absent$/.test(r.line))).toBe(true);
     // The patient moves to the skipped and absent lane.

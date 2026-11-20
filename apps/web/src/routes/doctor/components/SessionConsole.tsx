@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { CallNextResult, QueueDecision, QueueEntry, Session, SessionAvailability } from '@hqms/contracts';
-import { AvailabilityStrip, ErrorState, PressureNote, SkeletonRows, StaleBanner, useAvailabilityControls } from '@/components/queue';
+import { AvailabilityStrip, ConfirmDialog, ErrorState, PressureNote, SkeletonRows, StaleBanner, useAvailabilityControls } from '@/components/queue';
 import { Button } from '@/components/ui/button';
 import {
   useCallNext,
@@ -13,6 +13,8 @@ import {
 } from '@/api/queue';
 import { useLiveQueue } from '@/live';
 import { AbsentDialog, PriorityDialog } from './Dialogs';
+import { FollowUpDialog, type CreatedFollowUp } from './FollowUpDialog';
+import { FollowUpConfirmation, JustCompleted } from './JustCompleted';
 import { CallNextPanel } from './CallNextPanel';
 import { NowPanel } from './NowPanel';
 import { SkippedList, WaitingList } from './Lists';
@@ -71,6 +73,12 @@ export function SessionConsole({ session, picker }: SessionConsoleProps) {
 
   const [dialog, setDialog] = useState<DialogState>(null);
   const [justCalled, setJustCalled] = useState<CallNextResult | null>(null);
+  // PR-32: the patient just completed stays on screen (with Create follow-up) until the next call.
+  const [completed, setCompleted] = useState<QueueEntry | null>(null);
+  const [followUpFor, setFollowUpFor] = useState<QueueEntry | null>(null);
+  const [created, setCreated] = useState<Record<string, CreatedFollowUp[]>>({});
+  // PR-35: Skip asks first.
+  const [skipFor, setSkipFor] = useState<QueueEntry | null>(null);
 
   const callRef = useRef<HTMLButtonElement>(null);
   const startRef = useRef<HTMLButtonElement>(null);
@@ -91,6 +99,9 @@ export function SessionConsole({ session, picker }: SessionConsoleProps) {
   // A different session starts with a clean slate.
   useEffect(() => {
     setJustCalled(null);
+    setCompleted(null);
+    setFollowUpFor(null);
+    setSkipFor(null);
   }, [session.id]);
 
   if (query.isPending) return <SkeletonRows count={6} />;
@@ -112,6 +123,7 @@ export function SessionConsole({ session, picker }: SessionConsoleProps) {
       onSuccess: (result) => {
         setJustCalled(result);
         if (result.entry) {
+          setCompleted(null);
           toast.success(`Called ${result.entry.token}`);
           startRef.current?.focus();
         } else {
@@ -142,6 +154,7 @@ export function SessionConsole({ session, picker }: SessionConsoleProps) {
       { visitId: active.visitId, expectedVersion: active.version },
       {
         onSuccess: () => {
+          setCompleted(active);
           toast.success(`Completed ${active.token}`);
           callRef.current?.focus();
         },
@@ -152,14 +165,24 @@ export function SessionConsole({ session, picker }: SessionConsoleProps) {
 
   function onSkip() {
     if (!active) return;
+    setSkipFor(active);
+  }
+
+  function confirmSkip() {
+    const target = skipFor;
+    if (!target) return;
     entryAction.mutate(
-      { entryId: active.id, action: 'skip', expectedVersion: active.version },
+      { entryId: target.id, action: 'skip', expectedVersion: target.version },
       {
         onSuccess: () => {
-          toast.success(`Skipped ${active.token}`);
+          toast.success(`Skipped ${target.token}`);
+          setSkipFor(null);
           callRef.current?.focus();
         },
-        onError: (err) => toastFailure('Skip', err),
+        onError: (err) => {
+          setSkipFor(null);
+          toastFailure('Skip', err);
+        },
       },
     );
   }
@@ -251,8 +274,15 @@ export function SessionConsole({ session, picker }: SessionConsoleProps) {
             onStart={onStart}
             onComplete={onComplete}
             onSkip={onSkip}
+            onFollowUp={() => active && setFollowUpFor(active)}
+            confirmation={active && created[active.visitId] ? <FollowUpConfirmation created={created[active.visitId] ?? []} /> : null}
             busy={busy}
           />
+          {completed && (active === null || active.visitId !== completed.visitId) ? (
+            <div className="mt-4">
+              <JustCompleted entry={completed} created={created[completed.visitId] ?? []} onFollowUp={() => setFollowUpFor(completed)} />
+            </div>
+          ) : null}
         </div>
         <div className="lg:col-start-1 lg:row-start-2">
           <WaitingList
@@ -305,6 +335,21 @@ export function SessionConsole({ session, picker }: SessionConsoleProps) {
             },
           );
         }}
+      />
+      <FollowUpDialog
+        entry={followUpFor}
+        onClose={() => setFollowUpFor(null)}
+        onCreated={(visitId, c) => setCreated((all) => ({ ...all, [visitId]: [...(all[visitId] ?? []), c] }))}
+      />
+      <ConfirmDialog
+        open={skipFor !== null}
+        onOpenChange={(o) => !o && setSkipFor(null)}
+        title={`Skip ${skipFor?.token ?? ''}?`}
+        description={`${skipFor?.patientName ?? 'This patient'} moves to the Skipped list. You or reception can re-enter them if they arrive.`}
+        confirmLabel="Skip"
+        cancelLabel="Keep called"
+        pending={entryAction.isPending}
+        onConfirm={confirmSkip}
       />
       {availability.dialogs}
     </div>

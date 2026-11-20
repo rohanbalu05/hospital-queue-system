@@ -71,6 +71,22 @@ export interface ArrivalOutcome {
   name: string;
   /** What the desk just did, using the same verb as the toast. */
   verb: 'Checked in' | 'Admitted';
+  /** Set when the walk-in went to another doctor than the one on the board (PR-23). */
+  doctorName?: string;
+}
+
+/** Table 7: a booked patient is "late" once the slot has passed, and "past grace" after this many minutes. */
+export const LATE_GRACE_MIN = 15;
+
+/** Minutes past the scheduled time, or null when the slot is not yet due. */
+export function minutesLate(scheduledAt: string, now: number): number | null {
+  const mins = Math.floor((now - new Date(scheduledAt).getTime()) / 60_000);
+  return mins >= 1 ? mins : null;
+}
+
+/** "Late 5 min" inside the grace window, "Late 20 min, past grace" after it. */
+export function lateWords(mins: number): string {
+  return mins > LATE_GRACE_MIN ? `Late ${mins} min, past grace` : `Late ${mins} min`;
 }
 
 export interface PanelError {
