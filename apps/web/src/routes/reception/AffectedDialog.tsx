@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { AffectedPatients, AlternativeSession, MoveAffectedResult } from '@hqms/contracts';
 import { useAffectedPatients, useMoveAffected } from '@/api/queue';
@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useQueueSnapshot } from '@/live/useQueue';
 import { ApiRequestError } from '@/lib/api';
 import { formatIST } from '@/lib/format';
 import { istDate } from '@/lib/dates';
@@ -56,7 +57,21 @@ interface Props {
  * shows, patient by patient, who moved and who could not be.
  */
 export function AffectedDialog({ open, onOpenChange, sessionId }: Props) {
-  const q = useAffectedPatients(sessionId, open);
+  const q = useAffectedPatients(sessionId, open, { fresh: true });
+  // The board keeps this snapshot live over SSE. A newer queue version while the dialog is open means the list may have changed
+  // (a patient rebooked, arrived or was moved), so the list is fetched again.
+  const queueVersion = useQueueSnapshot(open ? sessionId : null).data?.queueVersion;
+  const seenVersion = useRef<number | undefined>(undefined);
+  const refetchAffected = q.refetch;
+  useEffect(() => {
+    if (!open) {
+      seenVersion.current = undefined;
+      return;
+    }
+    if (queueVersion === undefined) return;
+    if (seenVersion.current !== undefined && seenVersion.current !== queueVersion) void refetchAffected();
+    seenVersion.current = queueVersion;
+  }, [open, queueVersion, refetchAffected]);
   const move = useMoveAffected(sessionId);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [targetId, setTargetId] = useState<string | null>(null);

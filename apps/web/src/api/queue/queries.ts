@@ -64,13 +64,15 @@ export function useDoctorSessions(date: string, doctorId: string | null) {
  * GET /sessions/{id}/affected (reception in scope, admin): booked patients who have not arrived, checked-in patients
  * still waiting, and other doctors' sessions that could take them. Only asked for while the doctor is away or unavailable.
  */
-export function useAffectedPatients(sessionId: string | null, enabled: boolean) {
+export function useAffectedPatients(sessionId: string | null, enabled: boolean, opts: { fresh?: boolean } = {}) {
   return useQuery({
     queryKey: queueKeys.affected(sessionId ?? 'none'),
     queryFn: ({ signal }) =>
       apiFetch(`/sessions/${encodeURIComponent(sessionId as string)}/affected`, { schema: AffectedPatients, ...(signal ? { signal } : {}) }),
     enabled: enabled && sessionId !== null,
-    staleTime: 5_000,
+    // The dialog asks with fresh: a list that drives a move must never come from a copy a few seconds old.
+    staleTime: opts.fresh ? 0 : 5_000,
+    ...(opts.fresh ? { refetchOnMount: 'always' as const } : {}),
     refetchInterval: 20_000,
   });
 }
