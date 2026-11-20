@@ -27,11 +27,20 @@ const HORIZON_DAYS = 14;
 export function ReturnBookingDialog({ open, task, onOpenChange, onBooked }: ReturnBookingDialogProps) {
   const doctors = useDoctorsQuery();
   const [doctorPick, setDoctorPick] = useState<string>(task.sourceVisit?.doctorId ?? '');
-  const doctorId = doctorPick || doctors.data?.[0]?.id || '';
+  // Default to the doctor the patient saw (id from the source visit, else the name the API sent), not the first in the list (PR-39).
+  const taskDoctorName = task.doctorName ?? task.sourceVisit?.doctorName ?? null;
+  const taskDoctorId = task.sourceVisit?.doctorId ?? doctors.data?.find((d) => d.fullName === taskDoctorName)?.id ?? '';
+  const doctorId = doctorPick || taskDoctorId || doctors.data?.[0]?.id || '';
   const [sessionId, setSessionId] = useState('');
   const today = istDate();
   const sessionsQ = useSessionsQuery({ from: today, to: addDays(today, HORIZON_DAYS), doctorId }, { enabled: open && doctorId !== '' });
   const sessions = useMemo(() => [...(sessionsQ.data ?? [])].sort((a, b) => a.startsAt.localeCompare(b.startsAt)), [sessionsQ.data]);
+  const rangeWord = (() => {
+    const first = sessions[0]?.sessionDate;
+    const last = sessions[sessions.length - 1]?.sessionDate;
+    if (!first || !last) return `Sessions, ${formatLocalDate(today)} to ${formatLocalDate(addDays(today, HORIZON_DAYS))}`;
+    return first === last ? `Sessions on ${formatLocalDate(first)}` : `Sessions from ${formatLocalDate(first)} to ${formatLocalDate(last)}`;
+  })();
   const booking = useReturnBooking();
   const justBooked = useRef(false);
 
@@ -103,13 +112,13 @@ export function ReturnBookingDialog({ open, task, onOpenChange, onBooked }: Retu
               ))}
             </SelectContent>
           </Select>
-          {task.sourceVisit && doctorId === task.sourceVisit.doctorId ? (
-            <p className="text-sm text-muted-foreground">The doctor from the source visit.</p>
+          {taskDoctorId !== '' && doctorId === taskDoctorId ? (
+            <p className="text-sm text-muted-foreground">The doctor this patient saw.</p>
           ) : null}
         </div>
 
         <div className="grid gap-1.5">
-          <p className="text-sm font-bold">Session, next {HORIZON_DAYS} days</p>
+          <p className="text-sm font-bold">{rangeWord}</p>
           {doctors.isError ? (
             <ErrorState title="Doctors could not be loaded" error={doctors.error} onRetry={() => void doctors.refetch()} />
           ) : sessionsQ.isPending || doctors.isPending ? (
