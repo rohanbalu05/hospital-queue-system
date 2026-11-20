@@ -88,7 +88,7 @@ export type StaffMember = z.infer<typeof StaffMember>;
 export const StaffRole = z.enum(['reception', 'doctor', 'followup', 'admin']);
 
 /**
- * POST /admin/staff (admin; Idempotency-Key): create a staff login (PR-42). A doctor account links an existing
+ * POST /admin/staff (admin): create a staff login (PR-42). Deliberately NOT idempotent: a replay would have to store the temporary password; a retried create gets 409 (email exists). A doctor account links an existing
  * doctor record without a login (`doctorId`) or creates one (`newDoctor`). Reception/follow-up may start with
  * assignments. The response carries a one-time temporary password the admin hands over; it is never stored or
  * shown again (only its argon2 hash is stored).
