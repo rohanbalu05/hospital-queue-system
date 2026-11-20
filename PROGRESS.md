@@ -50,3 +50,24 @@ Read this first on resume, then `git log --oneline -30`.
 - Three builders running in parallel (providers, api, worker), each test-first.
 - Codex P1 fixes merged (test-first): deny-list (3787d9a), duplicate admission + migration 0007 (bdacda5), OCR attempt fencing (f6fb3c9). verify 775 tests, concurrency 17/17, e2e green. D-031. Evidence T1/T4/T5 updated; reports regenerated.
 - "@codex review" posted once on PR #1. docs/gates/G4-fixes.md written. STOPPED for HQ.
+
+## Session 3 — review rejected: persona review, real-world features, demo on Windows and macOS
+- Branch `claude/pensive-goodall-kb6473` (from main 250c691). Git identity Rohan Balu; `.claude/settings.json` has
+  `includeCoAuthoredBy: false` and empty attribution; no AI attribution lines in any commit. No PR opened; main untouched.
+- Phase A: `docs/review/persona-review.md` — 49 findings (4 P0, 25 P1, 20 P2) + 1 pass, every portal at 1440/390, 10 scenarios.
+- Contracts + migrations by the orchestrator: 0008 (notification link/severity, notification_deliveries, transfer visits),
+  0009 (`night` label), 0010 (follow-up reply/urgent, worker heartbeats), 0011 (deliveries unique per recipient).
+  Decisions D-032..D-039.
+- Built and merged (each test-first, up to 4 builders in worktrees): B1 step away / I'm back / unavailable (+ admin reopen);
+  B2 notification centre for all roles, worker fan-out, fake NotificationProvider SMS/email, admin Notifications sent;
+  B3 one-click rebook + reception Affected patients move/transfer; B4 seven known defects; B5 any-hour labelled demo
+  sessions for two GM doctors, `start-demo.sh` (macOS), README fresh-clone steps, `docs/demo/DEMO.md`; B6 every P0/P1 of
+  the review (worker heartbeat + /health, priority eligibility, admin sessions + staff lifecycle, reception patient desk,
+  duplicates, walk-in alternatives, doctor follow-up, red-flag advice, follow-up replies, offline banners, ...).
+- Reviews: concurrency/security (no P0; P1s fixed — D-039); real-stack e2e found 5 defects (fixed).
+- Last runs on the final product tree: `pnpm verify` green, 1,271 tests (api 303, web 314, providers 218, domain 135,
+  worker 132, db 83, contracts 12, tests 58+16); `pnpm test:concurrency` 19/19; `pnpm e2e` 3/3 twice (with the worker);
+  Semgrep 0 findings; dependency-cruiser 0 violations.
+- Reports: `docs/review/final-report.md`, disposition table at the end of `docs/review/persona-review.md`.
+- Not done (future work, reasons in the review): doctor schedule templates/holidays, slot choice by patient, display
+  density, forced password change, real SMS/email providers; `start-demo.sh` Homebrew branch not run on a Mac here.
