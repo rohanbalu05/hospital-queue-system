@@ -1,7 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchDisplaySnapshot, fetchQueueSnapshot, queueKeys, type RoleQueueSnapshot } from '@/api/queue';
 import type { DisplaySnapshot } from '@hqms/contracts';
 import { useLiveSync } from './useLiveSync';
+import { keepNewest, keepNewestDisplay } from './monotonic';
 import type { StreamStatus } from './stream';
 
 /** Safety net for a missed notice: the snapshot is refetched at least once a minute while the screen is open. */
@@ -18,9 +19,12 @@ export interface LiveInfo {
 
 /** GET /sessions/{id}/queue: role-scoped snapshot (view = 'staff' or 'patient'). */
 export function useQueueSnapshot(sessionId: string | null) {
+  const qc = useQueryClient();
+  const queryKey = queueKeys.snapshot(sessionId ?? 'none');
   return useQuery({
-    queryKey: queueKeys.snapshot(sessionId ?? 'none'),
-    queryFn: ({ signal }) => fetchQueueSnapshot(sessionId as string, signal),
+    queryKey,
+    // An older response never replaces a newer snapshot already on screen.
+    queryFn: async ({ signal }) => keepNewest(qc.getQueryData<RoleQueueSnapshot>(queryKey), await fetchQueueSnapshot(sessionId as string, signal)),
     enabled: sessionId !== null,
     refetchInterval: FALLBACK_POLL_MS,
     staleTime: 2_000,
@@ -58,9 +62,11 @@ export function useLiveQueue(sessionId: string | null) {
 
 /** GET /display/sessions?date=: the public display snapshot (tokens only). */
 export function useDisplaySnapshot(date: string) {
+  const qc = useQueryClient();
+  const queryKey = queueKeys.display(date);
   return useQuery({
-    queryKey: queueKeys.display(date),
-    queryFn: ({ signal }) => fetchDisplaySnapshot(date, signal),
+    queryKey,
+    queryFn: async ({ signal }) => keepNewestDisplay(qc.getQueryData<DisplaySnapshot>(queryKey), await fetchDisplaySnapshot(date, signal)),
     refetchInterval: FALLBACK_POLL_MS,
     staleTime: 2_000,
     // An unattended TV keeps retrying quietly instead of giving up.
