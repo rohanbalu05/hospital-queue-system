@@ -62,7 +62,15 @@ interface Wording {
   staff: (counts: { waiting: number; bookedNotArrived: number; affected: number }) => string;
 }
 
-function wording(phase: Phase, dr: string, label: string, department: string, until: string | null, update: boolean): Wording {
+function wording(
+  phase: Phase,
+  dr: string,
+  label: string,
+  department: string,
+  until: string | null,
+  update: boolean,
+  reopened = false,
+): Wording {
   const t = until === null ? null : formatClock(until);
   switch (phase) {
     case 'away': {
@@ -97,6 +105,14 @@ function wording(phase: Phase, dr: string, label: string, department: string, un
       };
     }
     case 'back':
+      // PR-30: an admin reopened a session that had been marked unavailable. Patients already moved stay moved.
+      if (reopened) {
+        return {
+          checkedIn: `${dr} is available again for this session. Your place in the queue is kept.`,
+          booked: (appt) => `${dr} is available again for this session. Your ${appt} appointment stands.`,
+          staff: () => `${dr} is available again (session reopened by admin).`,
+        };
+      }
       return {
         checkedIn: `${dr} is back and seeing patients again. Your place in the queue is unchanged.`,
         booked: (appt) => `${dr} is back and seeing patients. Your ${appt} appointment stands.`,
@@ -134,7 +150,7 @@ export async function renderSessionEvent(tx: Tx, ev: OutboxEventRow): Promise<Re
   if (!s) return [];
 
   const until = typeof ev.payload['pauseUntil'] === 'string' ? (ev.payload['pauseUntil'] as string) : null;
-  const w = wording(phase, doctorTitle(s.full_name), s.label, s.department, until, ev.payload['update'] === true);
+  const w = wording(phase, doctorTitle(s.full_name), s.label, s.department, until, ev.payload['update'] === true, ev.payload['reopened'] === true);
   const severity = SEVERITY[phase];
 
   const checkedIn = (
@@ -229,6 +245,37 @@ export async function renderTransfer(tx: Tx, ev: OutboxEventRow): Promise<Render
       severity: 'warning',
       sms: c.phone,
       email: null, // in-app + sms only
+    },
+  ];
+}
+
+const replyDateFmt = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short' });
+
+/**
+ * FollowUpResolved (PR-14): when staff resolved the task WITH a reply for the patient, the patient's login gets one
+ * in-app notice that a reply is waiting. In-app only, and never the reply text (it is read on the Follow-ups page,
+ * behind the patient's own login). A cancelled task, a task without a reply and a patient without a login get nothing.
+ */
+export async function renderFollowUpReply(tx: Tx, ev: OutboxEventRow): Promise<RenderedNotification[]> {
+  if (ev.payload['cancelled'] === true) return [];
+  const t = (
+    await tx.query<{ patient_id: string; kind: string; created_at: string; status: string; has_reply: boolean; user_id: string | null }>(
+      `SELECT t.patient_id, t.kind, t.created_at, t.status, t.patient_reply IS NOT NULL AS has_reply,
+              (SELECT u.id FROM users u WHERE u.patient_id = t.patient_id AND u.active) AS user_id
+         FROM follow_up_tasks t WHERE t.id = $1`,
+      [ev.entityId],
+    )
+  ).rows[0];
+  if (!t || t.status !== 'resolved' || !t.has_reply || !t.user_id) return [];
+  const about = t.kind === 'assistant_escalation' ? 'your question' : 'your follow-up';
+  return [
+    {
+      recipientUserId: t.user_id,
+      patientId: t.patient_id,
+      kind: ev.eventType,
+      body: `The care team has replied about ${about} from ${replyDateFmt.format(new Date(t.created_at))}. Open Follow-ups to read it.`,
+      link: NOTIFICATION_LINKS.patientFollowUps(),
+      severity: 'info',
     },
   ];
 }
