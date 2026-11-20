@@ -190,6 +190,8 @@ export async function bookAppointment(
   return { ...r, patientId, userId };
 }
 
+/** A job without runAt is due one second ago: run_at is the database clock (microseconds) and the runner compares it
+ * with the JS clock (milliseconds), so a job inserted in the same millisecond as a drain was not yet due (flake). */
 export async function insertJob(
   pool: Pool,
   j: {
@@ -206,7 +208,7 @@ export async function insertJob(
 ): Promise<string> {
   const r = await pool.query(
     `INSERT INTO jobs (job_type, payload, run_at, max_attempts, dedupe_key, state, attempts, lease_owner, lease_expires_at)
-     VALUES ($1, $2::jsonb, COALESCE($3::timestamptz, now()), COALESCE($4, 5), $5, COALESCE($6, 'pending'), COALESCE($7, 0), $8, $9) RETURNING id`,
+     VALUES ($1, $2::jsonb, COALESCE($3::timestamptz, now() - interval '1 second'), COALESCE($4, 5), $5, COALESCE($6, 'pending'), COALESCE($7, 0), $8, $9) RETURNING id`,
     [
       j.type,
       JSON.stringify(j.payload ?? {}),
