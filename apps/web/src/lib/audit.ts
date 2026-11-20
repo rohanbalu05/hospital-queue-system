@@ -57,7 +57,7 @@ const ENTITY_LABEL: Record<string, string> = {
   policy: 'Policy',
   patient: 'Patient',
   message: 'Assistant message',
-  user: 'Staff account',
+  user: 'User account',
 };
 
 export function entityLabel(entityType: string): string {
