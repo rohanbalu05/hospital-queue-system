@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { ArrivalResult, QueueEntry, RegisterPatientRequest } from '@hqms/contracts';
 import {
@@ -92,6 +94,21 @@ export default function ReceptionHome() {
   const [sessionPick, setSessionPick] = useState('');
   const session = sessions.find((s) => s.id === sessionPick) ?? sessions[0] ?? null;
 
+  // A notification link opens /reception?session=<id>: select that session (and its doctor) once, when it is one of today's
+  // sessions for a doctor on this desk. Otherwise the default selection stays.
+  const [params] = useSearchParams();
+  const requestedSession = params.get('session');
+  const requestedQ = useSessionsQuery({ date: today }, { enabled: requestedSession !== null && assigned.length > 0 });
+  const appliedLink = useRef<string | null>(null);
+  useEffect(() => {
+    if (!requestedSession || appliedLink.current === requestedSession) return;
+    const found = requestedQ.data?.find((s) => s.id === requestedSession);
+    if (!found || !assigned.some((d) => d.id === found.doctorId)) return;
+    appliedLink.current = requestedSession;
+    setDoctorPick(found.doctorId);
+    setSessionPick(found.id);
+  }, [requestedSession, requestedQ.data, assigned]);
+
   const apptQ = useSessionAppointmentsQuery(session?.id ?? null);
   const appointments = apptQ.data;
 
@@ -99,6 +116,9 @@ export default function ReceptionHome() {
   const debounced = useDebounced(query, 200);
   const patientsQ = usePatientSearchQuery(debounced);
   const searching = query.trim().length >= 2 && (debounced !== query || patientsQ.isFetching);
+  // The rows on screen belong to `debounced`, not to what is in the box right now. Until the results for the current
+  // text have arrived, no row is actionable: Enter and the buttons would otherwise act on a patient the typed query does not match.
+  const resultsCurrent = debounced === query && !(query.trim().length >= 2 && patientsQ.isFetching);
   const items = useMemo(() => buildItems(debounced, appointments ?? [], patientsQ.data), [debounced, appointments, patientsQ.data]);
 
   const [activeKey, setActiveKey] = useState<string | null>(null);
@@ -120,6 +140,14 @@ export default function ReceptionHome() {
     if (!snapshot || !selectedEntryId) return null;
     return [snapshot.active, ...snapshot.waiting, ...snapshot.skipped].find((e): e is QueueEntry => e !== null && e.id === selectedEntryId) ?? null;
   }, [snapshot, selectedEntryId]);
+  // The session list is polled; the live snapshot is the truth for status (away, unavailable) between polls (PR-24).
+  const liveSession = useMemo(() => (session && snapshot && snapshot.status !== session.status ? { ...session, status: snapshot.status } : session), [session, snapshot]);
+  const qc = useQueryClient();
+  const liveStatus = snapshot?.status ?? null;
+  useEffect(() => {
+    if (liveStatus !== null && session && liveStatus !== session.status) void qc.invalidateQueries({ queryKey: ['sessions'] });
+  }, [liveStatus, session?.status, qc]);
+  const checkInOff = liveSession ? liveSession.status === 'closed' || liveSession.status === 'unavailable' : false;
   const entryAction = useEntryAction(session?.id ?? '');
   const [entryError, setEntryError] = useState<PanelError | null>(null);
   const [lateEntry, setLateEntry] = useState<{ entry: QueueEntry; minutesLate: number; scheduledAt: string | null } | null>(null);
@@ -268,7 +296,8 @@ export default function ReceptionHome() {
   };
 
   const onEnter = () => {
-    if (active && canCheckIn(active) && !late) doCheckIn(active);
+    if (!resultsCurrent) return;
+    if (active && canCheckIn(active) && !late && !checkInOff) doCheckIn(active);
   };
 
   const description = `${formatLocalDate(today, 'weekday-date')}. Arrivals, walk-ins and the session board for your doctors.`;
@@ -319,6 +348,7 @@ export default function ReceptionHome() {
             activeKey={active?.key ?? null}
             onActive={setActiveKey}
             onEnter={onEnter}
+            resultsCurrent={resultsCurrent}
             loading={sessionsQ.isPending || (session !== null && (apptQ.isPending || searching) && items.length === 0)}
             error={apptQ.isError && !apptQ.data ? apptQ.error : patientsQ.isError ? patientsQ.error : null}
             onRetry={() => {
@@ -331,11 +361,13 @@ export default function ReceptionHome() {
         <div className="lg:col-start-3 lg:row-start-1">
           <ActionPanel
             item={active}
-            session={session}
+            session={liveSession}
             knownToken={active?.appointment ? tokens[active.appointment.id] : undefined}
-            onCheckIn={() => active && doCheckIn(active)}
+            resultsCurrent={resultsCurrent}
+            searchText={query.trim()}
+            onCheckIn={() => resultsCurrent && !checkInOff && active && doCheckIn(active)}
             checkInPending={checkIn.isPending}
-            onAdmit={() => active && doAdmit(active.patientId, active.name)}
+            onAdmit={() => resultsCurrent && active && doAdmit(active.patientId, active.name)}
             admitPending={admit.isPending}
             onRegister={doRegister}
             registerPending={register.isPending}

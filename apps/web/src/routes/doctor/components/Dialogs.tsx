@@ -1,12 +1,10 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { MarkUnavailableRequest, SetPriorityRequest, type QueueEntry } from '@hqms/contracts';
+import { SetPriorityRequest, type QueueEntry } from '@hqms/contracts';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { istInstant } from '@/live/date';
-import { formatIST } from '@/lib/format';
 
 function Field({ id, label, hint, error, children }: { id: string; label: string; hint?: string; error?: string | null; children: ReactNode }) {
   return (
@@ -178,150 +176,6 @@ export function AbsentDialog({ open, onOpenChange, pending, entry: entryProp, on
             </Button>
             <Button type="submit" variant="destructive" disabled={pending}>
               Mark absent
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Pause
-// ---------------------------------------------------------------------------------------------------------------------
-
-interface PauseDialogProps extends DialogBase {
-  /** IST date (YYYY-MM-DD) of the session, to turn the "back at" time into an instant. */
-  date: string;
-  onSubmit: (vars: { until?: string; reason?: string }) => void;
-}
-
-export function PauseDialog({ open, onOpenChange, pending, date, onSubmit }: PauseDialogProps) {
-  const ids = useId();
-  const [time, setTime] = useState('');
-  const [reason, setReason] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  useResetOnOpen(open, () => {
-    setTime('');
-    setReason('');
-    setError(null);
-  });
-
-  function submit(e: FormEvent) {
-    e.preventDefault();
-    const vars: { until?: string; reason?: string } = {};
-    if (time) {
-      const until = istInstant(date, time);
-      if (!until || new Date(until).getTime() <= Date.now()) {
-        setError(`Choose a time later than now (${formatIST(new Date())}), or leave it empty if you do not know.`);
-        return;
-      }
-      vars.until = until;
-    }
-    if (reason.trim()) vars.reason = reason.trim();
-    setError(null);
-    onSubmit(vars);
-  }
-
-  const timeId = `${ids}-time`;
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <form onSubmit={submit} className="grid gap-4" noValidate>
-          <DialogHeader>
-            <DialogTitle>Pause session</DialogTitle>
-            <DialogDescription>
-              No one can be called while the session is paused. Patients see that the doctor has paused.
-            </DialogDescription>
-          </DialogHeader>
-          <Field
-            id={timeId}
-            label="Back at (optional)"
-            hint="Unknown duration withholds patient estimates. Give a time so they can see a range again."
-            error={error}
-          >
-            <Input
-              id={timeId}
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="w-40"
-              aria-invalid={error ? true : undefined}
-              aria-describedby={error ? `${timeId}-error` : `${timeId}-hint`}
-            />
-          </Field>
-          <Field id={`${ids}-reason`} label="Reason (optional)">
-            <Input id={`${ids}-reason`} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} autoComplete="off" />
-          </Field>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={pending}>
-              Pause session
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Mark unavailable
-// ---------------------------------------------------------------------------------------------------------------------
-
-interface UnavailableDialogProps extends DialogBase {
-  onSubmit: (reason: string) => void;
-}
-
-export function UnavailableDialog({ open, onOpenChange, pending, onSubmit }: UnavailableDialogProps) {
-  const id = useId();
-  const [reason, setReason] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  useResetOnOpen(open, () => {
-    setReason('');
-    setError(null);
-  });
-
-  function submit(e: FormEvent) {
-    e.preventDefault();
-    if (!MarkUnavailableRequest.safeParse({ reason: reason.trim() }).success) {
-      setError('Give a reason of at least 3 characters.');
-      return;
-    }
-    setError(null);
-    onSubmit(reason.trim());
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <form onSubmit={submit} className="grid gap-4" noValidate>
-          <DialogHeader>
-            <DialogTitle>Mark session unavailable</DialogTitle>
-            <DialogDescription>
-              You will not be seeing the remaining patients in this session. Patients are not reassigned to another doctor
-              automatically, so reception will need to rebook or advise them.
-            </DialogDescription>
-          </DialogHeader>
-          <Field id={id} label="Reason" hint="For example: called to emergency theatre." error={error}>
-            <Input
-              id={id}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              maxLength={300}
-              autoComplete="off"
-              aria-invalid={error ? true : undefined}
-              aria-describedby={error ? `${id}-error` : `${id}-hint`}
-            />
-          </Field>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="destructive" disabled={pending}>
-              Mark unavailable
             </Button>
           </DialogFooter>
         </form>

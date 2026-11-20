@@ -8,7 +8,7 @@ export function commandErrorMessage(err: unknown): string {
       case 'DOCTOR_OCCUPIED':
         return 'You already have a patient called or in service. Start, complete or skip that patient first.';
       case 'SESSION_NOT_CALLABLE':
-        return 'This session is paused or closed, so no one can be called. Resume it first.';
+        return "This session is not taking calls. If you are away, press I'm back first.";
       case 'CONFLICT':
       case 'INVALID_TRANSITION':
         return 'The queue changed while you were acting. The screen now shows the latest state. Check it and try again.';
