@@ -6,6 +6,8 @@
 import { inject } from 'vitest';
 import pg from 'pg';
 import { stableId } from '../../db/seed/seed.js';
+import { createSession as insertSession, withTransaction } from '../../packages/db/src/index.js';
+import { sessionLabelFor } from '../../packages/contracts/src/scheduling.js';
 import { type ApiClient, login, type ApiResponse } from './client.js';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -37,6 +39,20 @@ export function istDate(at: Date): string {
     month: '2-digit',
     day: '2-digit',
   }).format(at);
+}
+
+/**
+ * POST /sessions refuses an overlap with another non-closed session of the same doctor (409 CONFLICT, details.reason
+ * SESSION_OVERLAP, PR-41); closed sessions do not block. Fixtures that need a session "now" therefore close the
+ * overlapping one (admin API, the way an admin would) and try again.
+ */
+async function closeOverlapping(admin: ApiClient, res: ApiResponse): Promise<boolean> {
+  const details = res.body?.error?.details ?? res.body?.details;
+  if (res.status !== 409 || details?.reason !== 'SESSION_OVERLAP') return false;
+  const closed = await admin.post(`/sessions/${details.overlappingSessionId}/close`, {});
+  if (closed.status !== 200)
+    throw new Error(`could not close overlapping session: ${closed.status} ${JSON.stringify(closed.body)}`);
+  return true;
 }
 
 export interface MadeSession {
@@ -104,7 +120,7 @@ export async function makeTodaySession(admin: ApiClient, opts: SessionOptions = 
       {
         doctorId: doctorId(doctor),
         sessionDate: date,
-        label: 'afternoon',
+        label: sessionLabelFor(startsAt),
         startsAt,
         endsAt,
         bookedCapacity: opts.booked ?? 10,
@@ -113,6 +129,7 @@ export async function makeTodaySession(admin: ApiClient, opts: SessionOptions = 
       null,
     );
     if (res.status === 201) return { id: res.body.id, doctor, date, startsAt, endsAt };
+    if (await closeOverlapping(admin, res)) continue;
     if (res.status !== 409)
       throw new Error(`could not create today session: ${res.status} ${JSON.stringify(res.body)}`);
   }
@@ -127,7 +144,7 @@ export async function registerPatients(
 ): Promise<string[]> {
   const out: string[] = [];
   for (let i = 0; i < n; i += 1) {
-    const res = await reception.post('/patients', { fullName: `${prefix} ${i + 1}` });
+    const res = await reception.post('/patients', { fullName: `${prefix} ${i + 1}`, confirmNew: true });
     if (res.status !== 201) throw new Error(`could not register patient: ${res.status} ${JSON.stringify(res.body)}`);
     out.push(res.body.id as string);
   }
@@ -361,7 +378,7 @@ export async function makeRunningSession(admin: ApiClient, spec: RunningSessionS
       {
         doctorId: doctorId(spec.doctor),
         sessionDate: date,
-        label: spec.label ?? 'afternoon',
+        label: spec.label ?? sessionLabelFor(startsAt),
         startsAt,
         endsAt,
         bookedCapacity: spec.booked ?? 10,
@@ -370,10 +387,43 @@ export async function makeRunningSession(admin: ApiClient, spec: RunningSessionS
       null,
     );
     if (res.status === 201) return { id: res.body.id, doctor: spec.doctor, date, startsAt, endsAt };
+    if (await closeOverlapping(admin, res)) {
+      attempt -= 1; // same start again: the overlap is closed now
+      continue;
+    }
     if (res.status !== 409)
       throw new Error(`could not create running session: ${res.status} ${JSON.stringify(res.body)}`);
   }
   throw new Error('could not find a free (doctor, start) pair for a running session');
+}
+
+/**
+ * A second, OVERLAPPING open session of a doctor, created the way a database that predates PR-41 can hold one (the API
+ * now refuses it, so it is inserted through the repository function the seed uses). Like makeRunningSession it starts `scheduled`. The
+ * doctor guard (T2) has to hold for such data too: one called or in-service allocation per doctor, across sessions.
+ */
+export async function makeLegacyOverlappingSession(admin: ApiClient, spec: RunningSessionSpec): Promise<MadeSession> {
+  const durationMs = (spec.durationMin ?? 240) * 60_000;
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const startMs = Math.floor((Date.now() + (spec.startOffsetMin - attempt) * 60_000) / 60_000) * 60_000;
+    const startsAt = new Date(startMs).toISOString();
+    const endsAt = new Date(startMs + durationMs).toISOString();
+    const date = istDate(new Date(startMs));
+    const id = await withTransaction(pool(), (tx) =>
+      insertSession(tx, {
+        doctorId: doctorId(spec.doctor),
+        sessionDate: date,
+        label: spec.label ?? sessionLabelFor(startsAt),
+        startsAt,
+        endsAt,
+        bookedCapacity: spec.booked ?? 10,
+        walkinCapacity: spec.walkin ?? 5,
+      }),
+    );
+    if (id === null) continue; // unique (doctor, starts_at) clash: shift one minute
+    return { id, doctor: spec.doctor, date, startsAt, endsAt };
+  }
+  throw new Error('could not find a free (doctor, start) pair for an overlapping session');
 }
 
 /** Admit walk-ins one after another (so token order equals array order). Returns the ArrivalResult bodies. */

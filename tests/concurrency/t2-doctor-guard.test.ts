@@ -22,6 +22,7 @@ import {
   doctorEmail,
   doctorId,
   loginAs,
+  makeLegacyOverlappingSession,
   makeRunningSession,
   openSession,
   pollActiveAllocations,
@@ -69,19 +70,10 @@ describe('T2 doctor guard under concurrency', () => {
     const receptionClients = await Promise.all(Array.from({ length: 3 }, () => loginAs('reception@hqms.test')));
     const clients = [...doctorClients, ...receptionClients];
 
-    // Two sessions of the same doctor that overlap in time (started 40 and 25 minutes ago, 4 hours long).
-    const sessionA = await makeRunningSession(admin, {
-      doctor: DOCTOR,
-      startOffsetMin: -40,
-      walkin: 30,
-      label: 'morning',
-    });
-    const sessionB = await makeRunningSession(admin, {
-      doctor: DOCTOR,
-      startOffsetMin: -25,
-      walkin: 30,
-      label: 'afternoon',
-    });
+    // Two sessions of the same doctor that overlap in time (started 40 and 25 minutes ago, 4 hours long). The API refuses
+    // to create the second one now (PR-41), so it is inserted as a database that predates that rule could hold it.
+    const sessionA = await makeRunningSession(admin, { doctor: DOCTOR, startOffsetMin: -40, walkin: 30 });
+    const sessionB = await makeLegacyOverlappingSession(admin, { doctor: DOCTOR, startOffsetMin: -25, walkin: 30 });
     expect(new Date(sessionB.startsAt).getTime()).toBeLessThan(new Date(sessionA.endsAt).getTime());
     // Each session holds ROUNDS patients, so neither can run dry before the last round even if one session wins every
     // round. (With 16 each, a drained session answered 200 NO_ALLOCATION with entry null, which is not an allocation

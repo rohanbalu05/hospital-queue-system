@@ -18,6 +18,8 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     baseURL: process.env['E2E_BASE_URL'] ?? `http://127.0.0.1:${webPort}`,
+    // A click on a control that never appears must fail in seconds, not sit until the whole-test timeout.
+    actionTimeout: 20_000,
     trace: 'off',
     video: 'off',
     screenshot: 'off',
