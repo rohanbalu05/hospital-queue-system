@@ -28,7 +28,7 @@ pnpm --filter @hqms/tests test        # runs tests/integration/t3-sse-freshness.
 
 Overrides: `T3_CLIENTS` (default 50), `T3_CYCLES` (default 20). Raw numbers: `docs/evidence/T3-live-freshness.raw.json`.
 
-## Results (measured, one run after the last edit; an earlier run of the final code gave p50 320.5 ms, p95 484.8 ms)
+## Results of the 2026-11-11 run (measured then; superseded by the "Session 3 re-run" at the end for the current 50-client numbers)
 
 Reconnect: 2 of 2 checks passed (version 3 before disconnect, 5 after two missed commits; first notice after reconnect carried
 version 5 and matched the snapshot and the database).
@@ -57,7 +57,7 @@ only "p95 below 2000 ms".
 
 ---
 
-# 200-client run (NFR-02, FR-09, FR-10)
+# 200-client run (NFR-02, FR-09, FR-10) (historical: measured 2026-11-11 on the session-1/2 tree, merged at `b87aa05`; **not re-run in session 3**)
 
 Added after the 50-client quick check above, which is kept unchanged. Script: `tests/load/sse.ts` (`pnpm --filter @hqms/tests load:sse`; `SSE_SECONDS`, default 180, 120 used).
 Raw numbers: `T3-live-freshness-200.raw.json`. Environment as in `T5-workload-failure.md` section 1 (4 vCPU shared machine, API production bundle, `SSE_POLL_MS=500`,
@@ -106,3 +106,32 @@ so the model structure (EWMA, residual of the active consultation, range) is exe
 Read this with three caveats, which make the numbers **not usable as a calibration result**: (1) the API reports ETA ranges in whole minutes, so with 15-second services the range is [0, 1] and "inside" is decided by rounding; (2) the estimator carried 64 samples from the
 200-client phase for these two doctors (not a cold start, contrary to the label in the raw JSON note), mean 0.22 and 0.35 min at the end; (3) 10 patients per scenario. What it does show: predictions are produced for every waiting patient on every refresh, status `ok`,
 and the long-horizon predictions (position 6 or more) are the least reliable. A real calibration needs a run in real time with the 12-minute assumption (hours) or a hosted pilot; none was done.
+
+---
+
+# Session 3 re-run of the 50-client check (2026-11-20, code tree of commit `1697f3e`)
+
+The 50-client test (`tests/integration/t3-sse-freshness.test.ts`) was re-run in session 3 on the final product tree and rewrote `T3-live-freshness.raw.json`
+(raw `committedAt` stamp 2026-11-20T05:08Z, run with scratch databases suffixed `_ev`; the whole `tests/integration` folder passed, 58 of 58 tests in 6 files, 63.5 s, and this
+test took 38.5 s of that). The raw file does not record the Node version or machine; it was the same class of 4 vCPU cloud sandbox VM as above. The 2026-11-11 table above is
+**superseded** by these numbers; both are real measurements of different builds and machine states, and neither is a target.
+
+**Reconnect (measured):** version 3 before the disconnect, 5 after two missed commits; the first notice after reconnect was `eventType: "connected"` with `queueVersion` 5, equal to the
+snapshot (`snapshotVersionMatches: true`, active token W-001).
+
+**Freshness (measured):** 50 clients, 20 cycles, 60 commits, 3000 samples, `SSE_POLL_MS` 500.
+
+| Measure (milliseconds)                                                      |   p50 |   p95 |   p99 |   max |
+| --------------------------------------------------------------------------- | ----: | ----: | ----: | ----: |
+| Notice arrival minus the moment the command's response reached the client   | 292.4 | 473.5 | 488.9 | 489.5 |
+| Notice arrival minus the moment the command was sent (upper bound)          | 300.1 | 481.4 | 495.7 | 496.3 |
+
+By command (response to notice, n = 1000 each): `call-next` p50 233.6, p95 430.4, max 472.3; `start` p50 291.8, p95 473.5, max 484.6; `complete` p50 427, p95 484.1, max 489.5. Notices that arrived
+before their command's response: 0. All clients converged on the final version (83). Ping events seen: 100.
+
+**Run-to-run spread, same tree, same day.** An earlier run of the same tree (the final-tree verification run, whose raw file this one replaced) measured p50 235.2 ms and p95 475.7 ms for the
+first row, with per-command p50 of 202.8 (`call-next`), 359.2 (`start`) and 162.8 ms (`complete`). The per-command ordering therefore changes from run to run; with 20 commits per command and a shared
+500 ms poll, the per-command p50 figures are phase noise and must not be compared with each other. The stable part is the p95 and max, which sit just under the 500 ms poll interval.
+
+Reading: bounded by the 500 ms server poll, as designed (D-025). The test's own gate is p95 below 2000 ms; that is a pass criterion of this test, not a statement about the hosted environment.
+Limitations are those listed under "Limitations" above (50 clients, one session, one API instance, same-machine generator; display and patient streams, and ETA calibration, not covered here).

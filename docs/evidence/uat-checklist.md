@@ -135,6 +135,40 @@ Requirements: FR-09, NFR-06.
 | W4  | Open the display at 1440 px and 390 px wide                      | Readable at both widths; no horizontal scrolling                                                                             | NFR-08        |        |       |
 | W5  | Inspect the display's network responses                          | No patient names, MRNs, phone numbers or document data beyond the approved minimal set                                       | NFR-06        |        |       |
 
+## 7. Session 3 additions (doctor availability, notifications, admin sessions and staff, desk)
+
+Added 2026-11-20 for the features built in session 3 (D-032 to D-039, persona-review fixes). **Not executed: Result and Notes are blank.** Set-up: `pnpm dev` with the worker running (notifications and outbox fan-out need it; with `NOTIFICATION_PROVIDER=fake` no real SMS or e-mail is sent, "Sent" means the fake provider accepted it). Use a session of Dr. Suresh Hegde that is open now (the demo creates one at any hour), and a second General Medicine doctor (Dr. Lakshmi Narayan) with a running session as the rebook and move target. Use two browser windows (doctor and a waiting patient) plus reception, and the display at `/display`.
+
+Requirements: FR-08, FR-09, FR-10, FR-14, FR-02, FR-03, FR-04, FR-05, FR-11, FR-13, FR-15, NFR-06, NFR-07, NFR-08. Rows S1 to S10, S12 and S13 cover flows also driven by the real-stack Playwright specs in `e2e-availability.md`; S11 and S14 to S25 cover persona-review fixes (`docs/review/persona-review.md`); an automated spec passing is not a substitute for a person running the step.
+
+| #   | Step | Expected result | FR | Result | Notes |
+| --- | ---- | --------------- | -- | ------ | ----- |
+| S1  | Doctor: with a waiting patient and no one called, use Step away (reason Break, 15 min preset), by keyboard only; confirm | A strip shows "You are away ... expected back about hh:mm" and the reason; Call next is disabled and says no one can be called; the N shortcut calls nobody; queue order and rotation are kept | FR-08, NFR-08 |        |       |
+| S2  | Doctor: with a patient called but not started, try Step away | Refused: "DOCTOR_OCCUPIED" wording (the called patient must be started or skipped first); the session stays open | FR-08 |        |       |
+| S3  | Doctor: while away, change the expected return (Step away again with another preset) | The return time updates and waiting patients are told the new time; no second break is created | FR-08 |        |       |
+| S4  | Doctor: press I'm back (keyboard) | Strip disappears on the doctor console, reception and display without reload; the next Call next calls the patient who was first before the break | FR-08, FR-09 |        |       |
+| S5  | Reception: watch the board during S1 to S4 | Availability strip "Dr. ... is away ... expected back about hh:mm" and an Affected patients button appear and clear live; Check in stays possible while away | FR-08, FR-09 |        |       |
+| S6  | Waiting patient and display during S1 to S4 | Patient My visit shows the away banner with "Your place in the queue is kept" and an updated wait range; display shows the doctor's column as temporarily away; both return to normal at S4 | FR-09, FR-10 |        |       |
+| S7  | Doctor: Unavailable for rest of session; confirm with an empty reason, then with a reason | Empty reason is refused (at least 3 characters); with a reason the session is unavailable, Call next stays blocked and the unavailable button is disabled | FR-08 |        |       |
+| S8  | Patient with a booked, not-arrived appointment of that session: open Today, then use Rebook with another doctor by keyboard | An urgent banner offers Rebook or Cancel; the panel lists only same-department doctors other than the unavailable one with the next slot; one Enter books it; My visits shows the new time under Upcoming and the old one as Rescheduled | FR-03, FR-04 |        |       |
+| S9  | Reception: open Affected patients; select all checked-in patients; move them to the other General Medicine doctor | A results list shows each patient with a new token; the patients' Today and My visit show the new doctor and token and no unavailable banner; the old appointment reads "Moved to Dr. ..." ; the other doctor's display column lists them | FR-04, FR-05 |        |       |
+| S10 | Reception: in Affected patients, try to move more patients than the target session has free places | Only as many as there are places are moved; the rest are listed as skipped with a reason; no over-booking | FR-02, FR-03 |        |       |
+| S11 | Admin: Reopen the unavailable session before its end, with a reason | Session returns to open, the reason is recorded, patients are told | FR-08 |        |       |
+| S12 | Patient and reception: open the notification bell | Unread count shows on the bell; the sheet lists the away, back, urgent and moved notices (newest first), each with an Open link to the right screen; Mark as read and Mark all as read work; empty and error states read clearly | FR-09 |        |       |
+| S13 | Admin: open Notifications sent | One row per channel (in-app, SMS, e-mail) per recipient and event with status Sent, the fake provider named, and addresses masked; a failed or queued delivery would show as such | FR-15, NFR-07 |        |       |
+| S14 | Admin: Sessions page: create a session for a doctor, with Repeat for several days | The sessions appear with the policy version and capacity; a session that overlaps another of the same doctor is refused with a clear message | FR-02 |        |       |
+| S15 | Admin: open, close (confirm dialog) and reopen a session | Status changes show immediately; closed sessions do not block a new session; reopen needs a reason | FR-02, FR-08 |        |       |
+| S16 | Admin: Staff page: add a staff member (receives a one-time temporary password), deactivate, activate, reset a password; try to deactivate yourself | Each action takes effect and is audited; a deactivated user cannot sign in; the temporary password is shown once; self-deactivation is refused | FR-01, FR-15 |        |       |
+| S17 | Admin: background-work panel (System status) with the worker running, then stop the worker | With the worker up: calm "working" line; after the worker stops, the panel reports it is down or late and `/health` shows degraded, while booking still works | NFR-07 |        |       |
+| S18 | Patient: ask the assistant "I feel dizzy after the new tablets. Should I stop taking them?" | An urgent callout with fixed safety advice (what to do now) appears, the question is escalated as an urgent owned task, and no treatment change is made | FR-14 |        |       |
+| S19 | Follow-up staff: open the urgent task from S18 | Urgent tasks are listed first; the patient's phone (tap to call), MRN and doctor are shown | FR-11, FR-14 |        |       |
+| S20 | Follow-up staff: resolve with disposition Advice given, leaving the patient reply empty; then with a reply | Without a reply the resolve is refused (a reply is required for advice given and referred); with a reply it resolves and the staff-only note stays staff-only | FR-11, FR-14 |        |       |
+| S21 | Patient: open Follow-ups after S20 | The care team's reply is shown on the task; the staff outcome note is not shown; a notification arrives | FR-14, NFR-06 |        |       |
+| S22 | Reception: register a patient whose name and phone match an existing patient | A possible-duplicate warning lists the candidates with "Use this patient" and "Create new record anyway"; choosing Use this patient does not create a record | FR-01 |        |       |
+| S23 | Reception patient desk: book an appointment for a patient (search by name or MRN), then cancel it, then book another and reschedule it | Each works from the desk for a patient with and without a login; capacity is respected; the audit shows reception as the actor | FR-03, FR-04 |        |       |
+| S24 | Reception: admit a walk-in when the doctor's 5 walk-in places are full | Refused with a reason and a list "Other doctors in <department> today" each with Admit; there is no over-capacity override | FR-02, FR-05 |        |       |
+| S25 | Reception: look at a patient who arrived late; mark a patient absent | Late N min and past grace markers appear; Mark absent asks for confirmation and an optional reason | FR-05, FR-08 |        |       |
+
 ## Sign-off
 
 | Role section           | Steps run | Pass | Fail | Blocked | Tester initials |
@@ -145,5 +179,6 @@ Requirements: FR-09, NFR-06.
 | 4 Follow-up staff      |           |      |      |         |                 |
 | 5 Admin                |           |      |      |         |                 |
 | 6 Waiting-room display |           |      |      |         |                 |
+| 7 Session 3 additions  |           |      |      |         |                 |
 
 Overall outcome and open defects: _(to be completed after execution)_
