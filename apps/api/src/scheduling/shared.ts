@@ -2,7 +2,7 @@ import type { Appointment, QueuePolicy } from '@hqms/contracts';
 import type { AppointmentRecord, Queryable, SessionLockRow, Tx } from '@hqms/db';
 import type { Policy } from '@hqms/domain';
 import { conflict } from '../common/errors.js';
-import { slotTimes } from './slots.js';
+import { isSlotAssignable, slotTimes } from './slots.js';
 
 /** Strip the internal allocation id before an appointment goes to a client. */
 export function toAppointment(rec: AppointmentRecord): Appointment {
@@ -36,23 +36,42 @@ export function assertBookable(session: SessionLockRow, now: Date): void {
   }
 }
 
+/** Slot rule inputs: the session policy's late grace and the configured minimum arrival window (D-035). */
+export interface SlotRule {
+  lateGraceMin: number;
+  minArrivalWindowMin: number;
+}
+
 /**
- * First slot of the session not held by an active appointment and still worth booking: a slot whose
- * late-grace window has already closed (`slot + lateGraceMin <= now`) would be marked missed at once, so
- * it is skipped (D-022). None left -> CAPACITY_FULL. Call with the session lock held.
+ * First slot of the session not held by an active appointment and still worth booking: a slot is assignable
+ * only if `slot + lateGraceMin >= now + minArrivalWindowMin` (D-035), so the patient has time to arrive before it
+ * would be marked missed. None left -> CAPACITY_FULL. Call with the session lock held.
  */
-export async function firstFreeSlot(tx: Tx, session: SessionLockRow, now: Date, lateGraceMin: number): Promise<string> {
-  const res = await tx.query<{ scheduled_at: string }>(
+export async function firstFreeSlot(tx: Tx, session: SessionLockRow, now: Date, rule: SlotRule): Promise<string> {
+  const free = await nextAssignableSlot(tx, session, now, rule);
+  if (!free)
+    throw conflict('CAPACITY_FULL', 'No free appointment slot is left in this session', { sessionId: session.id });
+  return free;
+}
+
+/** Same rule as firstFreeSlot without throwing; a plain read, so alternatives can show what a booking would get now. */
+export async function nextAssignableSlot(
+  db: Queryable,
+  session: Pick<SessionLockRow, 'id' | 'startsAt' | 'endsAt' | 'slotMinutes'>,
+  now: Date,
+  rule: SlotRule,
+): Promise<string | null> {
+  const res = await db.query<{ scheduled_at: string }>(
     `SELECT scheduled_at FROM appointments WHERE session_id = $1 AND status IN ('booked','checked_in','completed')`,
     [session.id],
   );
   const taken = new Set(res.rows.map((r) => new Date(r.scheduled_at).getTime()));
-  const free = slotTimes(session).find(
-    (at) => !taken.has(new Date(at).getTime()) && new Date(at).getTime() + lateGraceMin * 60_000 > now.getTime(),
+  return (
+    slotTimes(session).find(
+      (at) =>
+        !taken.has(new Date(at).getTime()) && isSlotAssignable(at, now, rule.lateGraceMin, rule.minArrivalWindowMin),
+    ) ?? null
   );
-  if (!free)
-    throw conflict('CAPACITY_FULL', 'No free appointment slot is left in this session', { sessionId: session.id });
-  return free;
 }
 
 /** One active (booked or checked-in) appointment per patient per session; the unique index is the backstop. */

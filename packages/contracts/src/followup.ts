@@ -44,6 +44,14 @@ export const FollowUpTask = z.object({
   returnAppointmentId: Id.nullable(),
   version: z.number().int().positive(),
   createdAt: Instant,
+  /** Red-flag escalation: shown first, shorter due time (PR-13). */
+  urgent: z.boolean().optional(),
+  /** Staff reads in scope only (PR-38): how to reach the patient and whose patient it is. */
+  patientMrn: z.string().optional(),
+  patientPhone: z.string().nullable().optional(),
+  doctorName: z.string().nullable().optional(),
+  /** What the patient was told (PR-14); null until resolved with a reply. */
+  patientReply: z.string().nullable().optional(),
 });
 export type FollowUpTask = z.infer<typeof FollowUpTask>;
 
@@ -76,6 +84,12 @@ export const ResolveTaskRequest = ExpectedVersion.extend({
   outcomeNote: z.string().min(3).max(2000),
   /** Required when disposition = return_booked. */
   returnAppointmentId: Id.optional(),
+  /**
+   * Reply the PATIENT reads on their Follow-ups page (PR-14). Plain language; the outcome note stays staff-only.
+   * Required for advice_given and referred; optional otherwise. The patient is notified that a reply is waiting
+   * (the notification never carries the reply text).
+   */
+  patientReply: z.string().trim().min(3).max(1000).optional(),
 });
 export type ResolveTaskRequest = z.infer<typeof ResolveTaskRequest>;
 /** POST /follow-up-tasks/{id}/cancel */
@@ -97,6 +111,10 @@ export const PatientFollowUp = z.object({
   returnAppointmentId: Id.nullable(),
   createdAt: Instant,
   resolvedAt: Instant.nullable(),
+  /** The care team's reply (PR-14), null until there is one. */
+  reply: z.string().nullable().optional(),
+  repliedAt: Instant.nullable().optional(),
+  urgent: z.boolean().optional(),
 });
 export type PatientFollowUp = z.infer<typeof PatientFollowUp>;
 
@@ -214,7 +232,13 @@ export const AssistantAnswer = z.object({
   /** Instruction versions the answer relies on (answered => at least one). */
   citations: z.array(AssistantCitation),
   /** Present when escalated: the owned staff task and when the patient will hear back. */
-  escalation: z.object({ taskId: Id, dueAt: Instant }).nullable(),
+  escalation: z.object({ taskId: Id, dueAt: Instant, urgent: z.boolean().optional() }).nullable(),
+  /**
+   * Red-flag symptoms (PR-13): fixed safety-net advice shown prominently above the answer, e.g. "If you have chest
+   * pain, trouble breathing, fainting or a swollen face or throat, call 108 or come to the Emergency department now."
+   * Detected on the question only, before any provider call; such questions escalate as urgent (due in 2 h).
+   */
+  urgentAdvice: z.string().nullable().optional(),
   createdAt: Instant,
 });
 export type AssistantAnswer = z.infer<typeof AssistantAnswer>;
@@ -236,6 +260,8 @@ export const ConversationMessage = z.object({
   escalationTaskId: Id.nullable(),
   /** When the care team will have followed up (the escalation task's due time); null when not escalated. */
   escalationDueAt: Instant.nullable(),
+  /** Same fixed advice as AssistantAnswer.urgentAdvice when the question was a red flag (PR-13). */
+  urgentAdvice: z.string().nullable().optional(),
   createdAt: Instant,
 });
 export type ConversationMessage = z.infer<typeof ConversationMessage>;

@@ -11,7 +11,7 @@ const STATUS_WORD: Record<Session['status'], string> = {
   closed: 'closed',
 };
 
-const LABEL_WORD: Record<Session['label'], string> = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
+const LABEL_WORD: Record<Session['label'], string> = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', night: 'Night' };
 
 export function sessionTitle(s: Session): string {
   return `${LABEL_WORD[s.label]} ${formatIST(s.startsAt)} to ${formatIST(s.endsAt)}, ${s.department}, ${s.room}`;

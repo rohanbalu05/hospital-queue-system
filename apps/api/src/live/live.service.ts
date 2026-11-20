@@ -8,8 +8,8 @@ import { ApiException } from '../common/errors.js';
 import { localDate } from '../common/http.js';
 
 /**
- * A live subscriber. `mode: 'session'` watches fixed session ids; `mode: 'display'` watches every open or
- * paused session of today (the waiting-room display), including sessions that appear or disappear.
+ * A live subscriber. `mode: 'session'` watches fixed session ids; `mode: 'display'` watches every open, paused or
+ * unavailable session of today (the waiting-room display), including sessions that appear or disappear.
  */
 export interface Subscriber {
   mode: 'session' | 'display';
@@ -143,9 +143,9 @@ export class LiveService implements OnModuleDestroy {
     const today = localDate(this.clock.now(), this.config.hospitalTz);
     const res = await this.pool.query<{ id: string; queue_version: number; updated_at: string; on_display: boolean }>(
       `SELECT id, queue_version, updated_at,
-              (session_date = $3::date AND status IN ('open','paused')) AS on_display
+              (session_date = $3::date AND status IN ('open','paused','unavailable')) AS on_display
          FROM sessions
-        WHERE id = ANY($1::uuid[]) OR ($2::boolean AND session_date = $3::date AND status IN ('open','paused'))`,
+        WHERE id = ANY($1::uuid[]) OR ($2::boolean AND session_date = $3::date AND status IN ('open','paused','unavailable'))`,
       [[...watched], display, today],
     );
     const types = new Map<string, string>();

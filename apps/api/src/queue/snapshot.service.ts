@@ -1,9 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type {
-  DisplaySnapshot,
-  PatientQueueSnapshot,
-  QueueDecision,
-  StaffQueueSnapshot,
+import {
+  deriveAvailability,
+  type DisplaySnapshot,
+  type PatientQueueSnapshot,
+  type QueueDecision,
+  type SessionAvailability,
+  type StaffQueueSnapshot,
 } from '@hqms/contracts';
 import { getServiceEstimate, withTransaction, type Pool, type Queryable } from '@hqms/db';
 import {
@@ -97,6 +99,21 @@ function projectedOrder(state: QueueState, now: Date): string[] {
   );
 }
 
+/** Availability of the session's doctor (D-032). The free-text reason is staff-only. */
+function availabilityOf(session: SessionState, now: Date, forStaff: boolean): SessionAvailability {
+  return deriveAvailability(
+    {
+      status: session.status,
+      endsAt: session.endsAt,
+      pausedAt: session.pausedAt,
+      pauseUntil: session.pauseUntil,
+      pauseReason: session.pauseReason,
+    },
+    now,
+    { includeReason: forStaff },
+  );
+}
+
 /** "Dr. Suresh Hegde" -> "Dr. Hegde". */
 export function doctorLabel(fullName: string, department: string): string {
   const parts = fullName.replace(/^dr\.?\s+/i, '').trim().split(/\s+/);
@@ -163,6 +180,8 @@ export class SnapshotService {
           view: 'patient',
           sessionId,
           status: state.session.status,
+          availability: availabilityOf(state.session, now, false),
+          doctorName: state.session.doctorName,
           queueVersion: state.session.queueVersion,
           capturedAt: now.toISOString(),
           myEntry: {
@@ -195,6 +214,7 @@ export class SnapshotService {
         doctorId: state.session.doctorId,
         status: state.session.status,
         pauseUntil: state.session.pauseUntil,
+        availability: availabilityOf(state.session, now, true),
         policyVersion: state.session.policy.version,
         rotationPointer: state.session.rotationPointer,
         rotation: [...state.session.policy.rotation],
@@ -222,7 +242,7 @@ export class SnapshotService {
   }
 
   /**
-   * GET /display/sessions (public): today's open or paused sessions whose time window covers now
+   * GET /display/sessions (public): today's open, paused or unavailable sessions whose time window covers now
    * (starts 30 minutes early, ends 60 minutes late) or that still have patients called or waiting; tokens only.
    * No names, no patient ids, nothing clinical. Always "today": a date parameter is ignored, so the public screen
    * cannot be used to browse other days. Per-address rate limit, and one shared short cache so a crowd of
@@ -265,7 +285,7 @@ export class SnapshotService {
   private async displayFingerprint(): Promise<string> {
     const day = localDate(this.clock.now(), this.config.hospitalTz);
     const r = await this.pool.query<{ fp: string | null }>(
-      `SELECT string_agg(id::text || ':' || queue_version || ':' || status, ',' ORDER BY id) AS fp
+      `SELECT string_agg(id::text || ':' || queue_version || ':' || status || ':' || COALESCE(extract(epoch FROM pause_until)::text, ''), ',' ORDER BY id) AS fp
          FROM sessions WHERE session_date = $1`,
       [day],
     );
@@ -280,9 +300,11 @@ export class SnapshotService {
       const day = localDate(now, this.config.hospitalTz);
       const ids = await db.query<{ id: string }>(
         `SELECT s.id FROM sessions s JOIN doctors d ON d.id = s.doctor_id
-          WHERE s.session_date = $1 AND s.status IN ('open','paused')
+          WHERE s.session_date = $1 AND s.status IN ('open','paused','unavailable')
             AND ((s.starts_at - interval '30 minutes' <= $2::timestamptz AND $2::timestamptz <= s.ends_at + interval '60 minutes')
-                 OR EXISTS (SELECT 1 FROM queue_entries qe WHERE qe.session_id = s.id AND qe.state IN ('waiting','called')))
+                 -- an unavailable session is shown only inside its window (the banner tells people to see reception)
+                 OR (s.status <> 'unavailable'
+                     AND EXISTS (SELECT 1 FROM queue_entries qe WHERE qe.session_id = s.id AND qe.state IN ('waiting','called'))))
           ORDER BY s.starts_at, d.full_name`,
         [day, now],
       );
@@ -298,6 +320,7 @@ export class SnapshotService {
           doctorLabel: doctorLabel(state.session.doctorName, state.session.department),
           room: state.session.room,
           status: state.session.status,
+          availability: availabilityOf(state.session, now, false),
           nowCalling: calling && state.active ? state.active.token : null,
           next: order.slice(0, 3).flatMap((e) => {
             const row = byId.get(e);

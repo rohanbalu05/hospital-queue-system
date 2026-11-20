@@ -51,10 +51,10 @@ describe('D-022 past-slot booking', () => {
 
   it('a slot still inside its grace window is bookable; one past it is skipped', async () => {
     const s = await makeSession(admin);
-    t.clock.set(at(s, 130)); // 11:10: slot 11:00 closes at 11:15 -> still bookable
+    t.clock.set(at(s, 124)); // 11:04: slot 11:00 closes at 11:15, the 10-minute arrival window ends 11:14 -> still bookable
     const a = (await reception.post('/appointments', { sessionId: s.id, patientId: patientId(4) })).body as Appointment;
     expect(new Date(a.scheduledAt).getTime()).toBe(at(s, 120).getTime());
-    t.clock.set(at(s, 136)); // 11:16: 11:00 is stale, and taken anyway -> 11:20
+    t.clock.set(at(s, 126)); // 11:06: 11:00 would close before the arrival window ends (and is taken anyway) -> 11:20
     const b = (await reception.post('/appointments', { sessionId: s.id, patientId: patientId(5) })).body as Appointment;
     expect(new Date(b.scheduledAt).getTime()).toBe(at(s, 140).getTime());
   });

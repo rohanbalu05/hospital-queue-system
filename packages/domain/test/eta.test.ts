@@ -58,15 +58,23 @@ describe('EWMA', () => {
 describe('projectEta: withheld and unsupported', () => {
   const entries = [a('A1', 0, 0, 1), w('W1', 0, 2)];
 
-  it('paused with unknown duration is withheld', () => {
+  it('away with no return time given is withheld and says so (D-032)', () => {
     const eta = projectEta(base({ targetEntryId: 'A1', entries, session: { status: 'paused', pauseUntil: null } }));
-    expect(eta).toMatchObject({ status: 'withheld', lowMinutes: null, highMinutes: null, note: 'Estimate paused' });
+    expect(eta).toMatchObject({
+      status: 'withheld',
+      lowMinutes: null,
+      highMinutes: null,
+      note: 'The doctor has stepped away; no return time given',
+    });
   });
 
-  it('paused with a pause that has already passed is withheld', () => {
+  it('away past the expected return is withheld: "longer than expected" (D-032)', () => {
     const eta = projectEta(base({ targetEntryId: 'A1', entries, session: { status: 'paused', pauseUntil: at(5) } }));
-    expect(eta.status).toBe('withheld');
-    expect(eta.note).toMatch(/longer than planned/);
+    expect(eta).toMatchObject({ status: 'withheld', note: 'The doctor is away longer than expected' });
+    // the boundary: the expected return is exactly now -> overdue as well
+    expect(
+      projectEta(base({ targetEntryId: 'A1', entries, now: at(5), session: { status: 'paused', pauseUntil: at(5) } })).note,
+    ).toBe('The doctor is away longer than expected');
   });
 
   it('unavailable, closed and not-yet-open sessions are withheld', () => {

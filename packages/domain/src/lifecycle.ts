@@ -4,7 +4,7 @@
  */
 
 export type AppointmentStatus = 'booked' | 'checked_in' | 'completed' | 'cancelled' | 'missed' | 'rescheduled';
-export type VisitStatus = 'open' | 'in_service' | 'completed' | 'left';
+export type VisitStatus = 'open' | 'in_service' | 'completed' | 'left' | 'transferred';
 export type QueueEntryStatus =
   | 'waiting'
   | 'called'
@@ -46,10 +46,12 @@ export const TRANSITIONS: { readonly [M in MachineName]: Table<MachineStates[M]>
     rescheduled: [],
   },
   visit: {
-    open: ['in_service', 'left'],
+    // open -> transferred: checked-in patient moved to another doctor's session (B3, D-033).
+    open: ['in_service', 'left', 'transferred'],
     in_service: ['completed'],
     completed: [],
     left: [],
+    transferred: [],
   },
   queueEntry: {
     waiting: ['called', 'absent', 'cancelled'],

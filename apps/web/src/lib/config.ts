@@ -3,6 +3,8 @@ export const HOSPITAL_NAME = 'BMSIT Teaching Hospital, Yelahanka';
 /** Short form for narrow screens. */
 export const HOSPITAL_SHORT_NAME = 'BMSIT Hospital';
 export const HOSPITAL_PLACE = 'Bengaluru';
+/** Front desk number shown where a patient has to phone (demo data, like the hospital name). */
+export const HOSPITAL_FRONT_DESK_PHONE = '080 4123 4500';
 
 /** The dev-only primitives gallery is excluded from production builds. */
 export const DEV_ROUTES = import.meta.env.DEV;

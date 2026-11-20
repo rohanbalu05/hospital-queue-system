@@ -22,7 +22,20 @@ export type QueuePolicy = z.infer<typeof QueuePolicy>;
 export const SessionStatus = z.enum(['scheduled', 'open', 'paused', 'unavailable', 'closed']);
 export type SessionStatus = z.infer<typeof SessionStatus>;
 
-export const SessionLabel = z.enum(['morning', 'afternoon', 'evening']);
+/** By IST start time: 05:00-11:59 morning, 12:00-16:59 afternoon, 17:00-20:59 evening, 21:00-04:59 night (D-037). */
+export const SessionLabel = z.enum(['morning', 'afternoon', 'evening', 'night']);
+export type SessionLabel = z.infer<typeof SessionLabel>;
+
+/** The label a session starting at `startsAt` should carry (hospital-local time, D-037). */
+export function sessionLabelFor(startsAt: Date | string): SessionLabel {
+  const hour = Number(
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', hourCycle: 'h23' }).format(new Date(startsAt)),
+  );
+  if (hour >= 5 && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 17) return 'afternoon';
+  if (hour >= 17 && hour < 21) return 'evening';
+  return 'night';
+}
 
 export const Capacity = z.object({
   bookedCapacity: z.number().int().nonnegative(),
