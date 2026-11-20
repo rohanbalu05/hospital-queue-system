@@ -1,15 +1,25 @@
 import type { Pool } from 'pg';
-import { withTransaction, type Tx } from '@hqms/db';
+import { enqueueJob, withTransaction, type Tx } from '@hqms/db';
 import { errorSummary, silentLogger, type Logger } from './log.js';
+import { renderSessionEvent, renderTransfer, SESSION_FANOUT_EVENTS, type RenderedNotification } from './notifications.js';
 import { systemClock, type Clock } from './types.js';
 
+export type { RenderedNotification } from './notifications.js';
+
 /*
- * Outbox dispatcher: turns committed domain events into in-app notifications (report §6.7).
+ * Outbox dispatcher: turns committed domain events into in-app notifications and, for patients, SMS/email delivery
+ * rows (report §6.7, D-034). One event can have many recipients (session availability changes fan out to the
+ * session's patients and reception).
  *
  * One short transaction per batch: claim undispatched events FOR UPDATE SKIP LOCKED (two dispatchers get
  * disjoint batches), insert notifications, stamp dispatched_at, commit. The insert is also
  * ON CONFLICT (recipient_user_id, event_id) DO NOTHING, so at-least-once redelivery (crash before
  * commit, manual reset of dispatched_at) can never create a second notification.
+ *
+ * Every recipient also gets a notification_deliveries row per channel: in_app (written 'sent' with the notification),
+ * sms and email ('queued' + a deliver_notification job with a stable dedupe key, in the same transaction). The
+ * provider call itself happens later in the worker, outside any transaction. The unique keys on notifications
+ * (recipient, event) and deliveries (event, channel, address) make redelivery a no-op.
  *
  * Notification text is short plain language built from routing data only: token, room, time, doctor name.
  * No clinical text ever reaches a notification (the events do not carry any).
@@ -30,13 +40,11 @@ export interface OutboxEventRow {
   payload: Record<string, unknown>;
 }
 
-export interface RenderedNotification {
-  recipientUserId: string;
-  kind: string;
-  body: string;
-}
-
-export type NotificationRenderer = (tx: Tx, ev: OutboxEventRow) => Promise<RenderedNotification | null>;
+/** A renderer may return nothing, one notification (the original contract) or many (fan-out). */
+export type NotificationRenderer = (
+  tx: Tx,
+  ev: OutboxEventRow,
+) => Promise<RenderedNotification | RenderedNotification[] | null>;
 
 const PATIENT_EVENTS = new Set([
   'AppointmentBooked',
@@ -114,8 +122,16 @@ export function reservationReleasedBody(reason: unknown, when: string | null): s
   }
 }
 
-/** Default renderer: patient-facing events -> one in-app notification for the patient's login, if any. */
-export const renderNotification: NotificationRenderer = async (tx, ev) => {
+/** Default renderer: availability events and transfers fan out; the other patient-facing events notify one login. */
+export const renderNotification = async (tx: Tx, ev: OutboxEventRow): Promise<RenderedNotification[]> => {
+  if (SESSION_FANOUT_EVENTS.has(ev.eventType)) return renderSessionEvent(tx, ev);
+  if (ev.eventType === 'QueuePatientTransferred') return renderTransfer(tx, ev);
+  const single = await renderSingle(tx, ev);
+  return single ? [single] : [];
+};
+
+/** Patient-facing events with one recipient: the patient's login, if any (wording unchanged since W2). */
+const renderSingle = async (tx: Tx, ev: OutboxEventRow): Promise<RenderedNotification | null> => {
   if (!PATIENT_EVENTS.has(ev.eventType)) return null;
   const patientId = await resolvePatientId(tx, ev);
   if (!patientId) return null;
@@ -166,8 +182,66 @@ export const renderNotification: NotificationRenderer = async (tx, ev) => {
     default:
       body = 'A follow-up has been opened for you. Please check your follow-ups.';
   }
-  return { recipientUserId, kind: ev.eventType, body };
+  return { recipientUserId, patientId, kind: ev.eventType, body };
 };
+
+/** The "no login" in-app address: one per recipient, so the (event, channel, address) key stays unique per person. */
+const inAppAddress = (userId: string): string => `in-app:${userId}`;
+
+/**
+ * Write one recipient's notification and delivery rows. Everything is ON CONFLICT DO NOTHING, so replaying an event
+ * adds nothing. Returns how many notifications were inserted (0 or 1).
+ */
+async function writeRecipient(tx: Tx, ev: OutboxEventRow, n: RenderedNotification): Promise<number> {
+  let inserted = 0;
+  let notificationId: string | null = null;
+  if (n.recipientUserId) {
+    const ins = await tx.query<{ id: string }>(
+      `INSERT INTO notifications (recipient_user_id, event_id, kind, body, link, severity)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (recipient_user_id, event_id) DO NOTHING
+       RETURNING id`,
+      [n.recipientUserId, ev.id, n.kind, n.body, n.link ?? null, n.severity ?? 'info'],
+    );
+    inserted = ins.rowCount ?? 0;
+    notificationId =
+      ins.rows[0]?.id ??
+      (
+        await tx.query<{ id: string }>(`SELECT id FROM notifications WHERE recipient_user_id = $1 AND event_id = $2`, [
+          n.recipientUserId,
+          ev.id,
+        ])
+      ).rows[0]?.id ??
+      null;
+    if (notificationId) {
+      await tx.query(
+        `INSERT INTO notification_deliveries
+           (event_id, notification_id, recipient_user_id, patient_id, channel, address, body, status, session_id, sent_at)
+         VALUES ($1, $2, $3, $4, 'in_app', $5, $6, 'sent', $7, now())
+         ON CONFLICT (event_id, channel, address) DO NOTHING`,
+        [ev.id, notificationId, n.recipientUserId, n.patientId ?? null, inAppAddress(n.recipientUserId), n.body, ev.sessionId],
+      );
+    }
+  }
+  for (const [channel, address] of [
+    ['sms', n.sms],
+    ['email', n.email],
+  ] as const) {
+    if (!address || !n.patientId) continue;
+    const row = await tx.query<{ id: string }>(
+      `INSERT INTO notification_deliveries
+         (event_id, recipient_user_id, patient_id, channel, address, body, status, session_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7)
+       ON CONFLICT (event_id, channel, address) DO NOTHING
+       RETURNING id`,
+      [ev.id, n.recipientUserId, n.patientId, channel, address, n.body, ev.sessionId],
+    );
+    const id = row.rows[0]?.id;
+    // The job is created in the same transaction as the row; the dedupe key makes a replay harmless.
+    if (id) await enqueueJob(tx, { jobType: 'deliver_notification', payload: { deliveryId: id }, dedupeKey: `deliver_notification:${id}` });
+  }
+  return inserted;
+}
 
 export interface DispatchResult {
   /** Events stamped dispatched in this batch. */
@@ -225,16 +299,9 @@ export async function dispatchOutboxBatch(
       // One poisoned event must not roll back (or block) the rest of the batch.
       await tx.query('SAVEPOINT ev');
       try {
-        const n = await render(tx, ev);
-        if (n) {
-          const ins = await tx.query(
-            `INSERT INTO notifications (recipient_user_id, event_id, kind, body)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (recipient_user_id, event_id) DO NOTHING`,
-            [n.recipientUserId, ev.id, n.kind, n.body],
-          );
-          result.notifications += ins.rowCount ?? 0;
-        }
+        const rendered = await render(tx, ev);
+        const list = rendered === null ? [] : Array.isArray(rendered) ? rendered : [rendered];
+        for (const n of list) result.notifications += await writeRecipient(tx, ev, n);
         await tx.query('RELEASE SAVEPOINT ev');
         doneIds.push(ev.id);
       } catch (err) {

@@ -58,7 +58,7 @@ export class LiveController {
     }
   }
 
-  /** Public waiting-room display: version notices for today's open or paused sessions (no personal data). */
+  /** Public waiting-room display: version notices for today's open, paused or unavailable sessions (no personal data). */
   @Public()
   @Get('display/events')
   async displayEvents(@Req() req: Request, @Res() res: Response): Promise<void> {

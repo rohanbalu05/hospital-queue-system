@@ -348,7 +348,7 @@ describe('FR-08 session controls, skip, re-entry', () => {
     const blocked = await callNext(s, doc(6), 3);
     expect(blocked.status).toBe(409);
     expect(errorCode(blocked.body)).toBe('SESSION_NOT_CALLABLE');
-    expect((await doc(6).post(`/sessions/${s.id}/pause`, {})).status).toBe(409); // already paused
+    expect((await doc(6).post(`/sessions/${s.id}/pause`, {})).status).toBe(200); // away again = update (D-032)
     expect(errorCode((await doc(6).post(`/sessions/${s.id}/open`, {})).body)).toBe('INVALID_TRANSITION');
     expect((await doc(6).post(`/sessions/${s.id}/resume`, {})).status).toBe(200);
     expect((await callNext(s, doc(6), 4)).status).toBe(200);
@@ -617,7 +617,7 @@ describe('FR-09 / FR-10 snapshots, display and audit reads', () => {
     for (const leak of ['Ramesh Kumar', 'Sunita Devi', patientId(1), patientId(2), w1.queueEntryId, w1.visitId]) {
       expect(text).not.toContain(leak);
     }
-    expect(Object.keys(mine.body).sort()).toEqual(['capturedAt', 'myEntry', 'nowCalling', 'queueVersion', 'sessionId', 'status', 'view']);
+    expect(Object.keys(mine.body).sort()).toEqual(['availability', 'capturedAt', 'doctorName', 'myEntry', 'nowCalling', 'queueVersion', 'sessionId', 'status', 'view']);
     // patient 3 has a login but no entry in this session -> 404 (nothing disclosed)
     expect((await patientLogin[3]!.get(`/sessions/${s.id}/queue`)).status).toBe(404);
   });
