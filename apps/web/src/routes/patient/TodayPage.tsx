@@ -125,16 +125,11 @@ function AppointmentCard({ a, visit, onCancel }: { a: Appointment; visit: MyToda
 function CompletedCard({ a }: { a: Appointment }) {
   return (
     <li data-testid="today-completed" className="rounded-xl border border-l-[3px] border-rule border-l-done bg-surface p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-lg font-bold">
-            Visit completed at <span className="tabular-nums">{formatIST(a.scheduledAt)}</span> with {a.doctorName}
-          </p>
-          <p className="text-muted-foreground">{a.department}</p>
-          {isReturnVisit(a) ? <ReturnVisitTag className="mt-1" /> : null}
-        </div>
-        <StatusWord status={a.status} className="shrink-0" />
-      </div>
+      <p className="text-lg font-bold">
+        Visit completed at <span className="tabular-nums">{formatIST(a.scheduledAt)}</span> with {a.doctorName}
+      </p>
+      <p className="text-muted-foreground">{a.department}</p>
+      {isReturnVisit(a) ? <ReturnVisitTag className="mt-1" /> : null}
       <p className="mt-3 text-muted-foreground">Replies from the care team and any return visit are in your follow-ups.</p>
       <Button asChild variant="outline" size="lg" className="mt-3 w-full sm:w-auto">
         <Link to="/patient/follow-ups">See your follow-ups</Link>
