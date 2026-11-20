@@ -250,3 +250,19 @@ PR-03, 05, 07, 09, 10 (return time shown; ETA clamp below), 11, 12, 20, 24, 31, 
 - **PR-04 / PR-08** offline/stale banner on live screens; no error page for "See my place" before check-in.
 Everything else (P2, or large: doctor schedule templates, holidays, EMR outcome notes, real SMS/email providers, policy
 editing, multi-page display layout) is listed as future work with reasons in the review document.
+
+## D-039 Session-3 concurrency/security review dispositions
+Read-only review of 250c691..5ebdd80: no P0. Fixed: (P1) SMS/email deliveries are unique per recipient
+(`(event_id, channel, address, patient_id)`, migration 0011) so relatives sharing a phone each get their own message;
+(P1) red-flag detection is biased towards escalating — a negation no longer cancels a symptom when the sentence also says
+"like this", "before", "now", "today", "again", "still" or "but", and only zero or one word may sit between the negator
+and the symptom ("I have never had chest pain like this before" and "no relief from my chest pain" escalate).
+P2s fixed: a move batch is checked against a batch-level idempotency record before any item runs; deactivating an admin
+locks all admins in id order before the target; the fan-out skips an away/back event whose status no longer matches the
+session (a late "stepped away" after "I'm back" is not sent); rate limits on the new patient-reachable reads
+(alternatives, today's visits, unread count, read-all) and alternatives capped before per-session slot queries;
+`GET /sessions/{id}/affected` alternatives limited to the caller's scope; the NotificationProvider contract states that a
+real provider must honour the idempotency key (a crash after send but before the DB write retries with the same key).
+Accepted: duplicate-patient detection is advisory (no lock; reception confirms); temporary passwords are not
+force-changed at first sign-in (future work); a transferred patient's original appointment stays `checked_in` by design
+(D-033) and reads show `transferredTo`.
