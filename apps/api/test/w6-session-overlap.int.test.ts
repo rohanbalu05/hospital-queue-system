@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- tests index rows they have just created */
-/* PR-41: POST /sessions refuses a session that overlaps another session of the same doctor (any status). */
+/* PR-41: POST /sessions refuses a session that overlaps another session of the same doctor (not closed). */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ApiError, SessionOverlap } from '@hqms/contracts';
 import { type Client, type TestApp, createTestApp, doctorId, loginAs, nextFutureDate } from './helpers.js';
@@ -54,13 +54,15 @@ describe('PR-41 session overlap', () => {
     expect((await create(9, date, '09:00', '13:00')).status).toBe(201);
   });
 
-  it('a closed or unavailable session still counts (it occupied that time)', async () => {
+  it('an unavailable session still blocks (reopen it instead); a closed one does not', async () => {
     const date = nextFutureDate();
     const a = await create(8, date, '09:00', '13:00');
     expect((await doctorUser.post(`/sessions/${a.body.id}/unavailable`, { reason: 'Emergency surgery' })).status).toBe(200);
     expect((await create(8, date, '10:00', '12:00')).status).toBe(409);
     expect((await admin.post(`/sessions/${a.body.id}/close`, {})).status).toBe(200);
-    expect((await create(8, date, '10:00', '12:00')).status).toBe(409);
+    expect((await create(8, date, '10:00', '12:00')).status).toBe(201);
+    // and the new one now blocks
+    expect((await create(8, date, '11:00', '12:30')).status).toBe(409);
   });
 
   it('parallel overlapping creates: exactly one wins (doctor lock)', async () => {
