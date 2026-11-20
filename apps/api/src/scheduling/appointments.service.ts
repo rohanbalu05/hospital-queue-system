@@ -29,7 +29,8 @@ import {
   type Tx,
 } from '@hqms/db';
 import { assertTransition } from '@hqms/domain';
-import { CLOCK, DB_POOL } from '../common/tokens.js';
+import { APP_CONFIG, CLOCK, DB_POOL } from '../common/tokens.js';
+import type { AppConfig } from '../common/config.js';
 import type { Clock } from '../common/clock.js';
 import type { AppointmentListQueryDto, CancelAppointmentRequestDto } from '../common/types.js';
 import { conflict, forbidden, notFound, validationFailed } from '../common/errors.js';
@@ -45,6 +46,7 @@ import {
   firstFreeSlot,
   toAppointment,
   toDomainPolicy,
+  type SlotRule,
 } from './shared.js';
 
 @Injectable()
@@ -52,9 +54,15 @@ export class AppointmentsService {
   constructor(
     @Inject(DB_POOL) private readonly pool: Pool,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
     @Inject(AccessPolicy) private readonly access: AccessPolicy,
     @Inject(PatientScope) private readonly scope: PatientScope,
   ) {}
+
+  /** The slot rule of D-035 for a session's policy: late grace from the policy, arrival window from config. */
+  slotRule(policy: { lateGraceMin: number }): SlotRule {
+    return { lateGraceMin: policy.lateGraceMin, minArrivalWindowMin: this.config.minArrivalWindowMin };
+  }
 
   /** FR-03: reserve capacity and record the appointment in one transaction (lock order doctor, session, capacity). */
   async book(ctx: RequestCtx, body: BookAppointmentRequest, key: string): Promise<IdempotentResult<Appointment>> {
@@ -189,7 +197,7 @@ export class AppointmentsService {
     assertBookable(session, now);
     const policy = await this.policyOf(tx, session.policyId);
     await assertNoActiveAppointment(tx, patientId, session.id);
-    const scheduledAt = await firstFreeSlot(tx, session, now, policy.lateGraceMin);
+    const scheduledAt = await firstFreeSlot(tx, session, now, this.slotRule(policy));
     const allocationId = await reserveBooked(tx, session.id);
     const appt = await insertAppointment(tx, {
       patientId,
@@ -242,12 +250,32 @@ export class AppointmentsService {
       const cur = await getAppointment(tx, id);
       if (!cur) throw notFound('Appointment');
       assertTransition('appointment', cur.status, 'cancelled');
+      // Lock order: guards -> task row -> appointment row (the same as resolve and return booking).
+      const task = cur.followUpTaskId ? await lockTask(tx, cur.followUpTaskId, this.clock.now()) : null;
       const updated = await setAppointmentStatus(tx, id, 'cancelled', {
         ...(body.expectedVersion === undefined ? {} : { expectedVersion: body.expectedVersion }),
         cancelReason: body.reason ?? null,
       });
       await releaseAllocation(tx, cur.allocationId);
       await cancelReservationReleaseJob(tx, id);
+      if (task && task.returnAppointmentId === id && (task.status === 'open' || task.status === 'acknowledged')) {
+        // B4.6: an open task must not point at a cancelled return booking. A resolved return_booked task keeps
+        // its pointer (history; the table requires it).
+        await tx.query(
+          `UPDATE follow_up_tasks SET return_appointment_id = NULL, version = version + 1, updated_at = now() WHERE id = $1`,
+          [task.id],
+        );
+        await writeAudit(tx, {
+          actorId: user.userId,
+          actorRole: user.role,
+          operation: 'follow_up.return_cancelled',
+          entityType: 'follow_up_task',
+          entityId: task.id,
+          previous: { returnAppointmentId: id },
+          next: { returnAppointmentId: null },
+          correlationId: ctx.correlationId,
+        });
+      }
       const policy = await this.policyOf(tx, session.policyId);
       await writeAudit(tx, {
         actorId: user.userId,
@@ -314,68 +342,7 @@ export class AppointmentsService {
         await lockCapacities(tx, [pre.sessionId, target.id]);
         const targetSession = locked.find((s) => s.id.toLowerCase() === target.id.toLowerCase());
         if (!targetSession) throw notFound('Session');
-
-        const cur = await getAppointment(tx, id);
-        if (!cur) throw notFound('Appointment');
-        assertTransition('appointment', cur.status, 'rescheduled');
-        if (body.expectedVersion !== undefined && cur.version !== body.expectedVersion) {
-          throw conflict('CONFLICT', 'Appointment was changed by someone else', {
-            expectedVersion: body.expectedVersion,
-            currentVersion: cur.version,
-          });
-        }
-        const now = this.clock.now();
-        assertBookable(targetSession, now);
-        const policy = await this.policyOf(tx, targetSession.policyId);
-        await assertNoActiveAppointment(tx, cur.patientId, targetSession.id);
-
-        // Reserve the target first; CAPACITY_FULL here rolls everything back before any write commits.
-        const scheduledAt = await firstFreeSlot(tx, targetSession, now, policy.lateGraceMin);
-        const allocationId = await reserveBooked(tx, targetSession.id);
-        // The original goes to 'rescheduled' before the replacement is inserted (active-appointment index).
-        await setAppointmentStatus(tx, cur.id, 'rescheduled', { expectedVersion: cur.version });
-        const created = await insertAppointment(tx, {
-          patientId: cur.patientId,
-          sessionId: targetSession.id,
-          doctorId: targetSession.doctorId,
-          scheduledAt,
-          allocationId,
-          bookedBy: user.userId,
-          rescheduledFromId: cur.id,
-        });
-        await releaseAllocation(tx, cur.allocationId);
-        await cancelReservationReleaseJob(tx, cur.id);
-        await this.scheduleReservationRelease(tx, created, policy.lateGraceMin);
-
-        await writeAudit(tx, {
-          actorId: user.userId,
-          actorRole: user.role,
-          operation: 'appointment.reschedule',
-          entityType: 'appointment',
-          entityId: created.id,
-          previous: { appointmentId: cur.id, sessionId: cur.sessionId, scheduledAt: cur.scheduledAt },
-          next: { appointmentId: created.id, sessionId: targetSession.id, scheduledAt },
-          policyVersion: policy.version,
-          correlationId: ctx.correlationId,
-        });
-        await writeOutbox(tx, {
-          eventType: 'AppointmentRescheduled',
-          entityType: 'appointment',
-          entityId: created.id,
-          entityVersion: created.version,
-          sessionId: targetSession.id,
-          patientId: cur.patientId,
-          payload: { scheduledAt },
-        });
-        await writeOutbox(tx, {
-          eventType: 'ReservationReleased',
-          entityType: 'appointment',
-          entityId: cur.id,
-          entityVersion: cur.version + 1,
-          sessionId: cur.sessionId,
-          patientId: cur.patientId,
-          payload: { reason: 'rescheduled' },
-        });
+        const created = await this.rescheduleInTx(tx, ctx, id, targetSession, body.expectedVersion);
         return { status: 201, body: toAppointment(created) };
       },
       {
@@ -387,6 +354,104 @@ export class AppointmentsService {
         },
       },
     );
+  }
+
+  /**
+   * The one reschedule path (patient or reception reschedule, reception bulk move). The caller holds the doctor
+   * locks of both sessions, both session locks and both capacity locks (lock order doctor -> session -> capacity,
+   * ids ascending). Reserves the target first, retires the original, inserts the replacement, keeps the
+   * follow-up link (B4.6: the replacement carries follow_up_task_id and the task's return pointer moves with it,
+   * in the same transaction), writes audit + AppointmentRescheduled + ReservationReleased and the timer intent.
+   */
+  async rescheduleInTx(
+    tx: Tx,
+    ctx: RequestCtx,
+    id: string,
+    targetSession: SessionLockRow,
+    expectedVersion: number | undefined,
+  ): Promise<AppointmentRecord> {
+    const { user } = ctx;
+    const cur = await getAppointment(tx, id);
+    if (!cur) throw notFound('Appointment');
+    assertTransition('appointment', cur.status, 'rescheduled');
+    if (expectedVersion !== undefined && cur.version !== expectedVersion) {
+      throw conflict('CONFLICT', 'Appointment was changed by someone else', {
+        expectedVersion,
+        currentVersion: cur.version,
+      });
+    }
+    const now = this.clock.now();
+    assertBookable(targetSession, now);
+    const policy = await this.policyOf(tx, targetSession.policyId);
+    await assertNoActiveAppointment(tx, cur.patientId, targetSession.id);
+
+    // Reserve the target first; CAPACITY_FULL here rolls everything back before any write commits.
+    const scheduledAt = await firstFreeSlot(tx, targetSession, now, this.slotRule(policy));
+    const allocationId = await reserveBooked(tx, targetSession.id);
+    // Lock order: guards -> task row -> appointment rows (the same as resolve, cancel and return booking).
+    const task = cur.followUpTaskId ? await lockTask(tx, cur.followUpTaskId, now) : null;
+    // The original goes to 'rescheduled' before the replacement is inserted (active-appointment index).
+    await setAppointmentStatus(tx, cur.id, 'rescheduled', { expectedVersion: cur.version });
+    const created = await insertAppointment(tx, {
+      patientId: cur.patientId,
+      sessionId: targetSession.id,
+      doctorId: targetSession.doctorId,
+      scheduledAt,
+      allocationId,
+      bookedBy: user.userId,
+      rescheduledFromId: cur.id,
+      followUpTaskId: cur.followUpTaskId,
+    });
+    await releaseAllocation(tx, cur.allocationId);
+    await cancelReservationReleaseJob(tx, cur.id);
+    await this.scheduleReservationRelease(tx, created, policy.lateGraceMin);
+    if (task && task.returnAppointmentId === cur.id) {
+      await tx.query(
+        `UPDATE follow_up_tasks SET return_appointment_id = $2, version = version + 1, updated_at = now() WHERE id = $1`,
+        [task.id, created.id],
+      );
+      await writeAudit(tx, {
+        actorId: user.userId,
+        actorRole: user.role,
+        operation: 'follow_up.return_rescheduled',
+        entityType: 'follow_up_task',
+        entityId: task.id,
+        previous: { returnAppointmentId: cur.id },
+        next: { returnAppointmentId: created.id, sessionId: targetSession.id, scheduledAt },
+        correlationId: ctx.correlationId,
+      });
+    }
+
+    await writeAudit(tx, {
+      actorId: user.userId,
+      actorRole: user.role,
+      operation: 'appointment.reschedule',
+      entityType: 'appointment',
+      entityId: created.id,
+      previous: { appointmentId: cur.id, sessionId: cur.sessionId, scheduledAt: cur.scheduledAt },
+      next: { appointmentId: created.id, sessionId: targetSession.id, scheduledAt },
+      policyVersion: policy.version,
+      correlationId: ctx.correlationId,
+    });
+    await writeOutbox(tx, {
+      eventType: 'AppointmentRescheduled',
+      entityType: 'appointment',
+      entityId: created.id,
+      entityVersion: created.version,
+      sessionId: targetSession.id,
+      patientId: cur.patientId,
+      payload: { scheduledAt },
+    });
+    await writeOutbox(tx, {
+      eventType: 'ReservationReleased',
+      entityType: 'appointment',
+      entityId: cur.id,
+      entityVersion: cur.version + 1,
+      sessionId: cur.sessionId,
+      patientId: cur.patientId,
+      payload: { reason: 'rescheduled' },
+    });
+    return created;
   }
 
   async get(ctx: RequestCtx, id: string): Promise<Appointment> {

@@ -43,6 +43,11 @@ const EnvSchema = z.object({
   /** Per-patient document quota (409 beyond either). */
   UPLOAD_MAX_DOCUMENTS_PER_PATIENT: z.coerce.number().int().positive().default(50),
   UPLOAD_MAX_BYTES_PER_PATIENT: z.coerce.number().int().positive().default(200 * 1024 * 1024),
+  /**
+   * D-035: a slot is assignable only if `slot + lateGraceMin >= now + MIN_ARRIVAL_WINDOW_MIN`, so a booked patient
+   * always has at least this many minutes to arrive before the slot would be marked Missed.
+   */
+  MIN_ARRIVAL_WINDOW_MIN: z.coerce.number().int().min(0).max(120).default(10),
   /** Public display endpoint: requests per client address per minute. */
   DISPLAY_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(120),
   /** Shared cache of the public display snapshot (0 turns it off). */
@@ -85,6 +90,8 @@ export interface AppConfig {
   uploadMaxBytesPerPatient: number;
   displayRateLimitPerMin: number;
   displayCacheMs: number;
+  /** Minimum minutes a patient must have to reach a slot before its late-grace window closes (D-035). */
+  minArrivalWindowMin: number;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -124,5 +131,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     uploadMaxBytesPerPatient: e.UPLOAD_MAX_BYTES_PER_PATIENT,
     displayRateLimitPerMin: e.DISPLAY_RATE_LIMIT_PER_MIN,
     displayCacheMs: e.DISPLAY_CACHE_MS,
+    minArrivalWindowMin: e.MIN_ARRIVAL_WINDOW_MIN,
   };
 }
