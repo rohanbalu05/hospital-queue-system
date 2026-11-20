@@ -141,6 +141,7 @@ describe('T4.6 overdue tasks stay open and visible (FR-11)', () => {
     const done = await followup1.post(`/follow-up-tasks/${t.id}/resolve`, {
       disposition: 'advice_given',
       outcomeNote: 'Phoned the patient; fever settling.',
+      patientReply: 'Rest, drink fluids and ring the clinic if the fever returns.',
     });
     expect(done.status, JSON.stringify(done.body)).toBe(200);
     expect(done.body.status).toBe('resolved');
@@ -148,6 +149,10 @@ describe('T4.6 overdue tasks stay open and visible (FR-11)', () => {
     expect(done.body.outcomeNote).toContain('fever settling');
     expect(done.body.resolvedAt).toBeTruthy();
     expect(done.body.ownerId, 'the resolver becomes the owner when nobody owned it').toBe(followup1Id);
+    // PR-14: the patient sees the reply on their own follow-ups list (the staff note stays staff-only).
+    const seen = ((await patient3.get('/me/follow-ups')).body as any[]).find((x) => x.id === t.id);
+    expect(seen?.reply).toBe('Rest, drink fluids and ring the clinic if the fever returns.');
+    expect(Object.keys(seen)).not.toContain('outcomeNote');
     expect(done.body.overdue, 'a resolved task is no longer overdue').toBe(false);
     // closed tasks cannot be reopened or re-resolved
     const again = await followup1.post(`/follow-up-tasks/${t.id}/resolve`, {
@@ -226,6 +231,7 @@ describe('T4.7 acknowledging takes ownership (FR-11)', () => {
     const denyResolve = await followup2.post(`/follow-up-tasks/${t.id}/resolve`, {
       disposition: 'advice_given',
       outcomeNote: 'not my task',
+      patientReply: 'Not my task to answer.',
     });
     expect(denyResolve.status).toBe(403);
     const denyCancel = await followup2.post(`/follow-up-tasks/${t.id}/cancel`, { reason: 'not my task' });
@@ -409,6 +415,7 @@ describe('T4.8 return booking uses normal capacity and links both ways (FR-14)',
           disposition: 'advice_given',
           returnAppointmentId: returnAppt.id,
           outcomeNote: 'mismatched disposition',
+          patientReply: 'This reply is complete, only the disposition is wrong.',
         })
       ).status,
     ).toBe(400);

@@ -145,7 +145,6 @@ describe('T3 live updates: reconnect and freshness', () => {
       doctor: DOCTOR,
       startOffsetMin: -30,
       walkin: 10,
-      label: 'morning',
     });
     await openSession(reception, session.id);
     const patients = await registerPatients(reception, 4, 'T3 Reconnect');
@@ -197,7 +196,6 @@ describe('T3 live updates: reconnect and freshness', () => {
       doctor: DOCTOR,
       startOffsetMin: -45,
       walkin: 40,
-      label: 'afternoon',
     });
     await openSession(reception, session.id);
     const patients = await registerPatients(reception, CYCLES + 2, 'T3 Fresh');
