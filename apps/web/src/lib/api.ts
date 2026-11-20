@@ -58,6 +58,22 @@ export async function parseApiError(res: Response): Promise<ApiRequestError> {
   });
 }
 
+/**
+ * Calls that answer 401 as part of normal sign-in, not because a session ended: /me (anonymous), /auth/login (wrong
+ * password) and /auth/logout.
+ */
+const AUTH_PATHS = new Set(['/me', '/auth/login', '/auth/logout']);
+type UnauthenticatedHandler = (path: string) => void;
+const unauthenticatedHandlers = new Set<UnauthenticatedHandler>();
+
+/** Called when any other request comes back 401: the signed-in session has ended. Returns an unsubscribe function. */
+export function onSessionRejected(handler: UnauthenticatedHandler): () => void {
+  unauthenticatedHandlers.add(handler);
+  return () => {
+    unauthenticatedHandlers.delete(handler);
+  };
+}
+
 export interface RequestOptions<T> {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
@@ -94,7 +110,13 @@ export async function apiFetch<T = unknown>(path: string, opts: RequestOptions<T
     });
   }
 
-  if (!res.ok) throw await parseApiError(res);
+  if (!res.ok) {
+    const failure = await parseApiError(res);
+    if (failure.isUnauthenticated && !AUTH_PATHS.has(path.split('?')[0] ?? path)) {
+      for (const handler of [...unauthenticatedHandlers]) handler(path);
+    }
+    throw failure;
+  }
   if (res.status === 204) return undefined as T;
 
   let json: unknown;

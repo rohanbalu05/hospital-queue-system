@@ -1,8 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
-import { SlotAvailability, type Session, type Doctor, type Id, type LocalDate } from '@hqms/contracts';
+import {
+  AppointmentAlternatives,
+  SlotAvailability,
+  type MyTodayVisit,
+  type Session,
+  type Doctor,
+  type Id,
+  type LocalDate,
+} from '@hqms/contracts';
 import type { ZodType, ZodTypeDef } from 'zod';
 import { apiFetch, type ApiRequestError } from '@/lib/api';
-import { AppointmentList, DoctorList, PatientList, SessionList, StaffAppointmentList } from './schemas';
+import { AppointmentList, DoctorList, MyTodayVisitList, PatientList, SessionList, StaffAppointmentList } from './schemas';
 
 export type Params = Record<string, string | undefined>;
 
@@ -24,6 +32,8 @@ export const keys = {
   slots: (id: Id) => ['slots', id] as const,
   appointments: (p: AppointmentFilter) => ['appointments', p] as const,
   patients: (q: string) => ['patients', q] as const,
+  myVisitsToday: ['my-visits', 'today'] as const,
+  alternatives: (appointmentId: Id) => ['alternatives', appointmentId] as const,
 };
 
 /** GET /doctors */
@@ -95,5 +105,28 @@ export function usePatientSearchQuery(q: string) {
     queryFn: ({ signal }) => get('/patients', { q: term }, PatientList, signal),
     enabled: term.length >= 2,
     staleTime: 10_000,
+  });
+}
+
+/**
+ * GET /me/visits/today: the signed-in patient's open or in-service visits today, whatever their kind (appointment,
+ * walk-in, late admission, transfer). Not keyed by patient id: the whole cache is cleared when the account changes.
+ */
+export function useMyTodayVisits(options: { enabled?: boolean } = {}) {
+  return useQuery<MyTodayVisit[], ApiRequestError>({
+    queryKey: keys.myVisitsToday,
+    queryFn: ({ signal }) => get('/me/visits/today', {}, MyTodayVisitList, signal),
+    enabled: options.enabled ?? true,
+    refetchInterval: 30_000,
+  });
+}
+
+/** GET /appointments/{id}/alternatives: other doctors' sessions in the same department (max 6). */
+export function useAppointmentAlternatives(appointmentId: Id | null) {
+  return useQuery<AppointmentAlternatives, ApiRequestError>({
+    queryKey: keys.alternatives(appointmentId ?? 'none'),
+    queryFn: ({ signal }) => get(`/appointments/${appointmentId}/alternatives`, {}, AppointmentAlternatives, signal),
+    enabled: appointmentId !== null,
+    staleTime: 0,
   });
 }
