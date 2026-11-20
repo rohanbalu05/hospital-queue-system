@@ -1,18 +1,26 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- fixtures look up ids this file created */
 import { expect, test } from '@playwright/test';
 import { setupW3, shot } from './w3-helpers';
+import { mockSystemFine } from './w6-admin-mocks';
+
+/** The admin shell now shows the Background work panel on every page, so every admin spec needs /admin/system. */
+const setup = async (...args: Parameters<typeof setupW3>) => {
+  const world = await setupW3(...args);
+  await mockSystemFine(args[0]);
+  return world;
+};
 
 test.describe('admin at 1440', () => {
   test.use({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
 
   test('sessions and capacity: table for the day, capacity shown as x/y', async ({ page }) => {
-    await setupW3(page, 'admin');
+    await setup(page, 'admin');
     await page.goto('/admin');
     await expect(page.getByRole('heading', { name: 'Administration', level: 1 })).toBeVisible();
     const rows = page.getByTestId('session-row');
     await expect(rows).toHaveCount(10);
     const rao = rows.filter({ hasText: 'Dr. Meenakshi Rao' }).filter({ hasText: 'Morning' });
-    await expect(rao).toContainText('Open');
+    await expect(rao).toContainText('Available');
     await expect(rao).toContainText('8/10');
     await expect(rao).toContainText('0/5');
     await shot(page, 'w3-admin-sessions-1440');
@@ -24,7 +32,7 @@ test.describe('admin at 1440', () => {
   });
 
   test('edit capacity: a reduction below what is used is refused inline, a valid change is saved', async ({ page }) => {
-    const { w3 } = await setupW3(page, 'admin');
+    const { w3 } = await setup(page, 'admin');
     await page.goto('/admin');
     await page.getByRole('button', { name: /Edit capacity, Dr\. Meenakshi Rao, Morning/ }).click();
     const dialog = page.getByRole('dialog', { name: 'Edit capacity' });
@@ -48,7 +56,7 @@ test.describe('admin at 1440', () => {
   });
 
   test('edit capacity works by keyboard and rejects non-numbers', async ({ page }) => {
-    await setupW3(page, 'admin');
+    await setup(page, 'admin');
     await page.goto('/admin');
     await page.getByRole('button', { name: /Edit capacity, Dr\. Meenakshi Rao, Morning/ }).focus();
     await page.keyboard.press('Enter');
@@ -62,7 +70,7 @@ test.describe('admin at 1440', () => {
   });
 
   test('staff assignments: user to doctors, multi-select', async ({ page }) => {
-    const { w3 } = await setupW3(page, 'admin');
+    const { w3 } = await setup(page, 'admin');
     await page.goto('/admin/staff');
     const rows = page.getByTestId('staff-row');
     await expect(rows).toHaveCount(4);
@@ -82,7 +90,7 @@ test.describe('admin at 1440', () => {
   });
 
   test('current policy: read-only Table 7 values and the version', async ({ page }) => {
-    await setupW3(page, 'admin');
+    await setup(page, 'admin');
     await page.goto('/admin/policy');
     await expect(page.getByTestId('policy-version')).toContainText('Policy version 1');
     const table = page.getByRole('table');
@@ -100,7 +108,7 @@ test.describe('admin at 1440', () => {
   });
 
   test('reports: every metric is labelled Measured or Target', async ({ page }) => {
-    await setupW3(page, 'admin');
+    await setup(page, 'admin');
     await page.goto('/admin/reports');
     await expect(page.getByRole('heading', { name: 'Throughput' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Waiting time by group' })).toBeVisible();
@@ -122,7 +130,7 @@ test.describe('admin at 1440', () => {
   });
 
   test('reports: empty period and error', async ({ page }) => {
-    const { w3 } = await setupW3(page, 'admin');
+    const { w3 } = await setup(page, 'admin');
     w3.empty = true;
     await page.goto('/admin/reports');
     await expect(page.getByRole('heading', { name: 'No sessions in this period' })).toBeVisible();
@@ -133,7 +141,7 @@ test.describe('admin at 1440', () => {
   });
 
   test('audit: filter by entity, shows actor, time, operation, policy version and reason', async ({ page }) => {
-    await setupW3(page, 'admin');
+    await setup(page, 'admin');
     await page.goto('/admin/audit');
     const rows = page.getByTestId('audit-row');
     await expect(rows).toHaveCount(10);

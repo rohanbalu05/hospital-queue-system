@@ -130,9 +130,10 @@ function NewSessionForm({ defaultDate, onClose }: { defaultDate: LocalDate; onCl
         </DialogHeader>
         <ul className="grid gap-0 divide-y divide-rule overflow-hidden rounded-md border border-rule">
           {results.map((r) => (
-            <li key={r.date} data-testid="create-result" data-ok={r.ok} className="flex min-h-10 items-center gap-2 px-3 py-2">
-              <span className="font-bold tabular-nums">{dayWords(r.date)}:</span>
-              <span className={r.ok ? 'text-done' : undefined}>{r.words}</span>
+            <li key={r.date} data-testid="create-result" data-ok={r.ok} className="flex min-h-10 items-center px-3 py-2">
+              <p>
+                <span className="font-bold tabular-nums">{dayWords(r.date)}:</span> <span className={r.ok ? 'text-done' : undefined}>{r.words}</span>
+              </p>
             </li>
           ))}
         </ul>
