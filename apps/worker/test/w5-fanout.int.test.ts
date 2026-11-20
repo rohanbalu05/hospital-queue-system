@@ -404,6 +404,7 @@ describe('existing single-recipient events are unchanged', () => {
       eventType: 'SessionPaused',
       entityType: 'session',
       entityId: randomUUID(), // no such session: renders nothing, must not throw or stall
+      entityVersion: 2,
       payload: { queueVersion: 1, status: 'paused', pauseUntil: null, update: false, doctorId: sc.w.doctorId },
     });
     const good = await sessionEvent(sc, 'SessionResumed');
