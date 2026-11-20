@@ -1,15 +1,26 @@
-import type { Session } from '@hqms/contracts';
+import type { AvailabilitySource, Session } from '@hqms/contracts';
 import { maybeOne, many, type Queryable, type QueryResultRow } from '../pool.js';
 import type { Tx } from '../tx.js';
 
 const SELECT_SESSION = `
   SELECT s.id, s.doctor_id, d.full_name AS doctor_name, d.department, d.room, s.session_date, s.label,
-         s.starts_at, s.ends_at, s.slot_minutes, s.status, p.version AS policy_version, s.version,
+         s.starts_at, s.ends_at, s.slot_minutes, s.status, s.policy_id, s.paused_at, s.pause_until, s.pause_reason,
+         p.version AS policy_version, s.version,
          c.booked_capacity, c.walkin_capacity, c.booked_reserved, c.walkin_used
     FROM sessions s
     JOIN doctors d ON d.id = s.doctor_id
     JOIN queue_policies p ON p.id = s.policy_id
     JOIN session_capacity c ON c.session_id = s.id`;
+
+/**
+ * A session read plus what availability and slot rules are derived from. The Session itself never carries the
+ * staff-only pause reason; callers pass `availability` through `deriveAvailability(..., { includeReason })`.
+ */
+export interface SessionRecord {
+  session: Session;
+  availability: AvailabilitySource;
+  policyId: string;
+}
 
 const mapSession = (r: QueryResultRow): Session => ({
   id: r.id,
@@ -45,8 +56,27 @@ export interface SessionFilter {
   department?: string;
 }
 
+const mapSessionRecord = (r: QueryResultRow): SessionRecord => {
+  const session = mapSession(r);
+  return {
+    session,
+    policyId: r.policy_id,
+    availability: {
+      status: session.status,
+      endsAt: session.endsAt,
+      pausedAt: r.paused_at,
+      pauseUntil: r.pause_until,
+      pauseReason: r.pause_reason,
+    },
+  };
+};
+
 /** Sessions with capacity and policy version, ordered by start time then doctor name. Plain read (no locks). */
 export async function listSessions(db: Queryable, f: SessionFilter = {}): Promise<Session[]> {
+  return (await listSessionRecords(db, f)).map((r) => r.session);
+}
+
+export async function listSessionRecords(db: Queryable, f: SessionFilter = {}): Promise<SessionRecord[]> {
   const rows = await many(
     db,
     `${SELECT_SESSION}
@@ -59,12 +89,16 @@ export async function listSessions(db: Queryable, f: SessionFilter = {}): Promis
       ORDER BY s.starts_at, d.full_name`,
     [f.date ?? null, f.from ?? null, f.to ?? null, f.doctorId ?? null, f.doctorIds ?? null, f.department ?? null],
   );
-  return rows.map(mapSession);
+  return rows.map(mapSessionRecord);
 }
 
 export async function getSession(db: Queryable, id: string): Promise<Session | null> {
+  return (await getSessionRecord(db, id))?.session ?? null;
+}
+
+export async function getSessionRecord(db: Queryable, id: string): Promise<SessionRecord | null> {
   const r = await maybeOne(db, `${SELECT_SESSION} WHERE s.id = $1`, [id]);
-  return r ? mapSession(r) : null;
+  return r ? mapSessionRecord(r) : null;
 }
 
 export interface CreateSessionInput {
