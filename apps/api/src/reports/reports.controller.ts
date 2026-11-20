@@ -1,8 +1,10 @@
 import { Controller, Get, HttpCode, Inject, Param, Post, Query } from '@nestjs/common';
 import type { Notification, OperationsReport, ReadAllResult, UnreadCount } from '@hqms/contracts';
 import { notFound } from '../common/errors.js';
+import type { AppConfig } from '../common/config.js';
+import { PerUserRateLimit } from '../common/user-rate-limit.js';
 import type { RequestCtx } from '../common/request-context.js';
-import { DB_POOL } from '../common/tokens.js';
+import { APP_CONFIG, DB_POOL } from '../common/tokens.js';
 import type { Pool } from '@hqms/db';
 import { UuidPipe, ZodPipe } from '../common/zod.pipe.js';
 import { ALL_ROLES, Ctx, Roles } from '../identity/auth.decorators.js';
@@ -37,7 +39,16 @@ const mapNote = (r: any): Notification => ({
 /** In-app notices for the signed-in user (rows are written by the worker's outbox dispatcher). Own rows only, every role. */
 @Controller('notifications')
 export class NotificationsController {
-  constructor(@Inject(DB_POOL) private readonly pool: Pool) {}
+  private readonly unreadLimit: PerUserRateLimit;
+  private readonly readAllLimit: PerUserRateLimit;
+
+  constructor(
+    @Inject(DB_POOL) private readonly pool: Pool,
+    @Inject(APP_CONFIG) config: AppConfig,
+  ) {
+    this.unreadLimit = new PerUserRateLimit(config.unreadCountRateLimitPerMin);
+    this.readAllLimit = new PerUserRateLimit(config.readsRateLimitPerMin);
+  }
 
   @Roles(...ALL_ROLES)
   @Get()
@@ -54,6 +65,7 @@ export class NotificationsController {
   @Roles(...ALL_ROLES)
   @Get('unread-count')
   async unreadCount(@Ctx() ctx: RequestCtx): Promise<UnreadCount> {
+    this.unreadLimit.hit(ctx.user.userId);
     const res = await this.pool.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM notifications WHERE recipient_user_id = $1 AND read_at IS NULL`,
       [ctx.user.userId],
@@ -66,6 +78,7 @@ export class NotificationsController {
   @Post('read-all')
   @HttpCode(200)
   async readAll(@Ctx() ctx: RequestCtx): Promise<ReadAllResult> {
+    this.readAllLimit.hit(ctx.user.userId);
     const res = await this.pool.query(
       `UPDATE notifications SET read_at = now() WHERE recipient_user_id = $1 AND read_at IS NULL`,
       [ctx.user.userId],
