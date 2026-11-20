@@ -6,7 +6,7 @@
  *     409 DOCTOR_OCCUPIED, no 5xx; a separate connection polls "called or in service" for that doctor during the
  *     race and never sees more than one. 20 rounds, the visit is completed between rounds.
  *  2. call-next vs start vs complete vs skip on the same entry: one valid transition sequence, no 5xx.
- *  3. pause racing call-next: once the pause has committed, no call succeeds.
+ *  3. pause racing call-next: pauses are 200 or 409 DOCTOR_OCCUPIED (D-032); once one has committed, no call succeeds.
  *  4. The same Idempotency-Key fired in parallel: one allocation, identical replayed responses.
  *
  * Real HTTP against the built API, real PostgreSQL, nothing mocked.
@@ -359,7 +359,7 @@ describe('T2 doctor guard under concurrency', () => {
     expect(sequenceViolations).toBe(0);
   }, 240_000);
 
-  it('pause racing call-next: after the pause commits no call succeeds', async () => {
+  it('pause racing call-next: after the first applied pause commits no call succeeds', async () => {
     const DOCTOR = 7;
     const ROUNDS = 20;
     const doctorClient = await loginAs(doctorEmail(DOCTOR));
@@ -368,6 +368,8 @@ describe('T2 doctor guard under concurrency', () => {
     let callsAfterPause = 0;
     let callWonBeforePause = 0;
     let pauseWonFirst = 0;
+    let pauseApplied = 0;
+    let pauseRefused = 0;
 
     for (let round = 1; round <= ROUNDS; round += 1) {
       const session = await makeRunningSession(admin, { doctor: DOCTOR, startOffsetMin: -20 - round, walkin: 10 });
@@ -401,14 +403,14 @@ describe('T2 doctor guard under concurrency', () => {
       const t = tally(results);
       expect(t.serverErrors, `round ${round}: 5xx`).toBe(0);
 
+      // D-032: a pause is allowed from `open` or `paused` (it then only updates the expected return) and is refused with
+      // 409 DOCTOR_OCCUPIED while this doctor has a patient called. So each pause is 200 or 409 DOCTOR_OCCUPIED, and all
+      // of them may apply (a second one just updates the return time).
       const pauses = byKind('pause');
-      expect(
-        pauses.filter((r) => r.status === 200),
-        `round ${round}: exactly one pause applies`,
-      ).toHaveLength(1);
+      const pausesApplied = pauses.filter((r) => r.status === 200).length;
       for (const r of pauses.filter((x) => x.status !== 200)) {
-        expect(r.status).toBe(409);
-        expect(r.body.error.code).toBe('INVALID_TRANSITION');
+        expect(r.status, `round ${round}: pause refusal`).toBe(409);
+        expect(r.body.error.code, `round ${round}: pause refusal`).toBe('DOCTOR_OCCUPIED');
       }
       const calls = byKind('call-next');
       const callOk = calls.filter((r) => r.status === 200);
@@ -420,26 +422,32 @@ describe('T2 doctor guard under concurrency', () => {
       }
       expect(callOk.length, `round ${round}: at most one call can win`).toBeLessThanOrEqual(1);
 
-      // The pause's own queue version (audit row) versus the decisions: every successful call was serialised BEFORE it.
+      // The FIRST applied pause's queue version (smallest `session.pause` audit queueVersion) versus the decisions:
+      // every successful call was serialised BEFORE it. Only meaningful when at least one pause applied.
       const audit = await sqlRows(
         `SELECT (next->>'queueVersion')::int AS v FROM audit_events WHERE operation = 'session.pause' AND entity_id = $1`,
         [session.id],
       );
-      expect(audit, `round ${round}: one pause audit row`).toHaveLength(1);
-      const pauseVersion = audit[0]?.['v'] as number;
-      for (const r of callOk) {
-        if (r.body.decision.queueVersion >= pauseVersion) callsAfterPause += 1;
-        expect(r.body.decision.queueVersion, `round ${round}: a call committed after the pause`).toBeLessThan(
-          pauseVersion,
+      expect(audit, `round ${round}: one pause audit row per applied pause`).toHaveLength(pausesApplied);
+      const pauseVersion = pausesApplied > 0 ? Math.min(...audit.map((a) => a['v'] as number)) : null;
+      if (pauseVersion !== null) {
+        for (const r of callOk) {
+          if (r.body.decision.queueVersion >= pauseVersion) callsAfterPause += 1;
+          expect(r.body.decision.queueVersion, `round ${round}: a call committed after the pause`).toBeLessThan(
+            pauseVersion,
+          );
+        }
+        const status = (await sqlRows(`SELECT status FROM sessions WHERE id = $1`, [session.id]))[0]?.['status'];
+        expect(status).toBe('paused');
+        const decisionsAfterPause = await sqlRows(
+          `SELECT 1 FROM queue_decisions WHERE session_id = $1 AND queue_entry_id IS NOT NULL AND queue_version >= $2`,
+          [session.id, pauseVersion],
         );
+        expect(decisionsAfterPause, `round ${round}: decisions at or after the pause version`).toHaveLength(0);
+        pauseApplied += 1;
+      } else {
+        pauseRefused += 1; // a call won and kept the doctor occupied for every pause attempt: the session stays open
       }
-      const status = (await sqlRows(`SELECT status FROM sessions WHERE id = $1`, [session.id]))[0]?.['status'];
-      expect(status).toBe('paused');
-      const decisionsAfterPause = await sqlRows(
-        `SELECT 1 FROM queue_decisions WHERE session_id = $1 AND queue_entry_id IS NOT NULL AND queue_version >= $2`,
-        [session.id, pauseVersion],
-      );
-      expect(decisionsAfterPause, `round ${round}: decisions at or after the pause version`).toHaveLength(0);
       if (callOk.length === 1) callWonBeforePause += 1;
       else pauseWonFirst += 1;
 
@@ -455,14 +463,18 @@ describe('T2 doctor guard under concurrency', () => {
           expect((await doctorClient.post(`/visits/${held['visit_id']}/start`, {})).status).toBe(200);
         expect((await doctorClient.post(`/visits/${held['visit_id']}/complete`, {})).status).toBe(200);
       }
-      const after = await Promise.all(
-        Array.from({ length: 6 }, (_, i) =>
-          (i % 2 === 0 ? doctorClient : reception).post(`/sessions/${session.id}/call-next`, {}),
-        ),
-      );
-      for (const r of after) {
-        expect(r.status, `round ${round}: call after pause`).toBe(409);
-        expect(r.body.error.code, `round ${round}: call after pause`).toBe('SESSION_NOT_CALLABLE');
+      let callsAfterCommittedPause = 0;
+      if (pauseVersion !== null) {
+        const after = await Promise.all(
+          Array.from({ length: 6 }, (_, i) =>
+            (i % 2 === 0 ? doctorClient : reception).post(`/sessions/${session.id}/call-next`, {}),
+          ),
+        );
+        for (const r of after) {
+          expect(r.status, `round ${round}: call after pause`).toBe(409);
+          expect(r.body.error.code, `round ${round}: call after pause`).toBe('SESSION_NOT_CALLABLE');
+        }
+        callsAfterCommittedPause = after.length;
       }
       expect(await activeFor(DOCTOR)).toBe(0);
       perRound.push({
@@ -472,7 +484,8 @@ describe('T2 doctor guard under concurrency', () => {
         versionBefore,
         statuses: t.byStatus,
         byCode: t.byCode,
-        callsAfterCommittedPause: after.length,
+        pausesApplied,
+        callsAfterCommittedPause,
       });
     }
 
@@ -483,7 +496,8 @@ describe('T2 doctor guard under concurrency', () => {
       roundsWhereACallWonBeforeThePause: callWonBeforePause,
       roundsWhereThePauseWonFirst: pauseWonFirst,
       successfulCallsSerialisedAfterThePause: callsAfterPause,
-      callsAfterCommittedPause: ROUNDS * 6,
+      roundsWithAnAppliedPause: pauseApplied,
+      roundsWherePauseWasRefusedDoctorOccupied: pauseRefused,
       allRefusedSessionNotCallable: true,
       perRound,
     };

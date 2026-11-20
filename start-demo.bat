@@ -40,7 +40,8 @@ if errorlevel 1 (
 echo.
 echo [3/4] Starting API :3000, worker and web :5173 ...
 echo       The browser opens in about 30 seconds. Close this window to stop everything.
-REM Outside 09:00-17:30 IST this creates a session running "now" so the demo works at any hour.
+REM At ANY hour: makes sure doctor@hqms.test has an open session running now (opens the seeded one, or creates a
+REM correctly labelled one). Waits for the API, so it is started in parallel.
 start "HQMS demo session" /min cmd /c "node scripts\demo-session-now.mjs & timeout /t 5 >nul"
 start "" /min cmd /c "timeout /t 30 >nul & start http://localhost:5173"
 
@@ -48,6 +49,7 @@ echo.
 echo [4/4] Logs follow. Demo logins (password demo1234):
 echo       reception@hqms.test  doctor@hqms.test  patient@hqms.test  followup@hqms.test  admin@hqms.test
 echo       Waiting-room display: http://localhost:5173/display
+echo       Notifications are FAKE: no SMS or email is really sent. See Admin ^> Notifications sent.
 echo.
 call pnpm dev
 goto :eof
