@@ -3,7 +3,8 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AffectedPatients, MoveAffectedResult } from '@hqms/contracts';
-import { awayAvailability, SESSION_ID, uid } from '@/live/fixtures';
+import { awayAvailability, SESSION_ID, staffSnapshot, uid } from '@/live/fixtures';
+import { queueKeys } from '@/api/queue';
 import { AffectedDialog } from './AffectedDialog';
 
 beforeAll(() => {
@@ -42,9 +43,11 @@ describe('AffectedDialog', () => {
   let moveRequest: unknown = null;
   let moveKey: string | null = null;
   let moveResult: MoveAffectedResult;
+  let queueVersion = 7;
 
   beforeEach(() => {
     body = affected();
+    queueVersion = 7;
     moveRequest = null;
     moveKey = null;
     moveResult = {
@@ -64,6 +67,7 @@ describe('AffectedDialog', () => {
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const path = new URL(String(input), 'http://localhost').pathname.replace(/^\/api/, '');
         if (path === `/sessions/${SESSION_ID}/affected` && (init?.method ?? 'GET') === 'GET') return json(body);
+        if (path === `/sessions/${SESSION_ID}/queue`) return json(staffSnapshot({ queueVersion }));
         if (path === `/sessions/${SESSION_ID}/affected/move`) {
           moveRequest = JSON.parse(String(init?.body));
           moveKey = new Headers(init?.headers).get('Idempotency-Key');
@@ -153,5 +157,44 @@ describe('AffectedDialog', () => {
     body = affected({ alternatives: [] });
     renderDialog();
     expect(await screen.findByText(/No other General Medicine doctor has a session with room today/)).toBeVisible();
+  });
+
+  const affectedGets = () => (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.filter(([u]) => String(u).endsWith(`/sessions/${SESSION_ID}/affected`)).length;
+
+  it('fetches fresh data every time it opens, even when a recent copy is cached', async () => {
+    // The panel's count already holds a copy fetched moments ago, with a patient who has since rebooked herself.
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    qc.setQueryData(queueKeys.affected(SESSION_ID), affected());
+    body = affected({ notArrived: affected().notArrived.filter((a) => a.patientName !== 'Ananya Iyer') });
+    const ui = (open: boolean) => (
+      <QueryClientProvider client={qc}>
+        <AffectedDialog open={open} onOpenChange={vi.fn()} sessionId={SESSION_ID} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(ui(false));
+    rerender(ui(true));
+    const booked = await screen.findByRole('region', { name: 'Booked, not arrived' });
+    await waitFor(() => expect(within(booked).queryByText('Ananya Iyer')).toBeNull());
+    expect(within(booked).getByText('Imran Pasha')).toBeVisible();
+  });
+
+  it('refetches the list when the live queue notice arrives while it is open', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <AffectedDialog open onOpenChange={vi.fn()} sessionId={SESSION_ID} />
+      </QueryClientProvider>,
+    );
+    const booked = await screen.findByRole('region', { name: 'Booked, not arrived' });
+    expect(within(booked).getByText('Ananya Iyer')).toBeVisible();
+    const before = affectedGets();
+
+    // Ananya rebooks herself; the board's live sync refetches the snapshot with a newer version.
+    body = affected({ notArrived: affected().notArrived.filter((a) => a.patientName !== 'Ananya Iyer') });
+    queueVersion = 8;
+    await qc.refetchQueries({ queryKey: queueKeys.snapshot(SESSION_ID), exact: true });
+
+    await waitFor(() => expect(within(screen.getByRole('region', { name: 'Booked, not arrived' })).queryByText('Ananya Iyer')).toBeNull());
+    expect(affectedGets()).toBeGreaterThan(before);
   });
 });
