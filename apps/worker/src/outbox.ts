@@ -1,10 +1,10 @@
 import type { Pool } from 'pg';
 import { enqueueJob, withTransaction, type Tx } from '@hqms/db';
 import { errorSummary, silentLogger, type Logger } from './log.js';
-import { renderSessionEvent, renderTransfer, SESSION_FANOUT_EVENTS, type RenderedNotification } from './notifications.js';
-import { systemClock, type Clock } from './types.js';
+import { renderSessionEvent, renderTransfer, SESSION_FANOUT_EVENTS } from './notifications.js';
+import { systemClock, type Clock, type OutboxEventRow, type RenderedNotification } from './types.js';
 
-export type { RenderedNotification } from './notifications.js';
+export type { OutboxEventRow, RenderedNotification } from './types.js';
 
 /*
  * Outbox dispatcher: turns committed domain events into in-app notifications and, for patients, SMS/email delivery
@@ -27,18 +27,6 @@ export type { RenderedNotification } from './notifications.js';
  * dispatched_at records "notification fan-out done". The SSE stream reads outbox_events by position and
  * must not depend on it.
  */
-
-export interface OutboxEventRow {
-  position: number;
-  id: string;
-  eventType: string;
-  entityType: string;
-  entityId: string;
-  entityVersion: number;
-  sessionId: string | null;
-  patientId: string | null;
-  payload: Record<string, unknown>;
-}
 
 /** A renderer may return nothing, one notification (the original contract) or many (fan-out). */
 export type NotificationRenderer = (

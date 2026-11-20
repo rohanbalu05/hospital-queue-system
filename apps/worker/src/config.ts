@@ -30,9 +30,14 @@ export interface WorkerConfig {
   notificationProvider: string;
   /** The notification provider call is abandoned after this long (below the handler timeout). */
   notificationTimeoutSec: number;
+  /** How often this worker upserts its worker_heartbeats row (PR-02). */
+  heartbeatSec: number;
   /** How often a running worker makes sure this hour's reconcile_uploads job exists (safety net). */
   reconcileSeedSec: number;
 }
+
+/** Matches apps/api/src/common/config.ts. */
+export const DEFAULT_LOCAL_DATABASE_URL = 'postgres://postgres:postgres@localhost:5432/hqms';
 
 function int(env: NodeJS.ProcessEnv, name: string, fallback: number, min = 1): number {
   const raw = env[name];
@@ -43,7 +48,10 @@ function int(env: NodeJS.ProcessEnv, name: string, fallback: number, min = 1): n
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
-  const databaseUrl = env['DATABASE_URL'];
+  // Same local default as the API outside production (PR-01): `pnpm dev` starts both with no .env. Production
+  // refuses to guess a database.
+  const production = env['NODE_ENV'] === 'production';
+  const databaseUrl = env['DATABASE_URL'] || (production ? '' : DEFAULT_LOCAL_DATABASE_URL);
   if (!databaseUrl) throw new Error('DATABASE_URL is not set');
   const level = (env['LOG_LEVEL'] ?? 'info') as LogLevel;
   if (!['debug', 'info', 'warn', 'error'].includes(level)) throw new Error(`LOG_LEVEL invalid: ${level}`);
@@ -71,5 +79,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
     notificationProvider: env['NOTIFICATION_PROVIDER'] || 'fake',
     notificationTimeoutSec: int(env, 'NOTIFICATION_TIMEOUT_SEC', 30),
     reconcileSeedSec: int(env, 'WORKER_RECONCILE_SEED_SEC', 600),
+    heartbeatSec: int(env, 'WORKER_HEARTBEAT_SEC', 10),
   };
 }
