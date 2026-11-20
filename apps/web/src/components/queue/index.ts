@@ -8,3 +8,21 @@ export { DecisionReason } from './DecisionReason';
 export { StaleBanner, deriveLiveStatus, RECONNECT_AFTER_MS, type LiveStatus } from './StaleBanner';
 export { EmptyState, ErrorState, SkeletonRows, plainErrorMessage } from './states';
 export { PressureNote } from './PressureNote';
+export {
+  AvailabilityStrip,
+  AvailabilityButtons,
+  useAvailabilityControls,
+  stepAwayBlock,
+  type AvailabilityControls,
+  type AvailabilityControlsArgs,
+} from './AvailabilityControls';
+export { StepAwayDialog, UnavailableDialog } from './AvailabilityDialogs';
+export {
+  availabilityLine,
+  availabilityWords,
+  availabilityError,
+  displayBannerText,
+  doctorNameOnly,
+  backAboutText,
+  clock,
+} from './availability';

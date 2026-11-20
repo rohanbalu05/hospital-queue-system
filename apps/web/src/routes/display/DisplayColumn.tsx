@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DisplaySnapshot } from '@hqms/contracts';
+import { displayBannerText, doctorNameOnly } from '@/components/queue/availability';
 import { GROUPS } from '@/components/queue/group';
+import { useNow } from '@/lib/useNow';
 import { cn } from '@/lib/utils';
 
 type Column = DisplaySnapshot['columns'][number];
@@ -29,9 +31,9 @@ const edgeFor = (token: string | null) => (token?.startsWith('W') ? GROUPS.W.edg
 function idleWords(status: Column['status']): string {
   switch (status) {
     case 'paused':
-      return 'Doctor has paused';
+      return 'Calling is on hold';
     case 'unavailable':
-      return 'Doctor is unavailable';
+      return 'No calls in this session';
     case 'closed':
       return 'Session closed';
     case 'scheduled':
@@ -42,6 +44,32 @@ function idleWords(status: Column['status']): string {
 }
 
 export type DisplayVariant = 'tall' | 'wide';
+
+/**
+ * "Dr X is temporarily away, expected back about 10:45 am" or, for the rest of the session, "Please see reception."
+ * Big enough to read from across the room. Away uses the warning tone, unavailable the urgent one; the sentence
+ * carries the meaning, colour only reinforces it. Doctors' names only, never patients'.
+ */
+function AvailabilityBanner({ column, wide }: { column: Column; wide: boolean }) {
+  const now = useNow(15_000);
+  const text = displayBannerText(column.availability, doctorNameOnly(column.doctorLabel), now);
+  if (text === null) return null;
+  const urgent = column.availability.state === 'unavailable';
+  return (
+    <div
+      role="status"
+      data-testid="display-banner"
+      data-state={column.availability.state}
+      className={cn(
+        'border-b border-l-[10px] border-rule font-bold text-ink',
+        urgent ? 'border-l-priority bg-priority/10' : 'border-l-walkin bg-walkin/10',
+        wide ? 'px-6 py-3 text-2xl leading-8' : 'px-8 py-5 text-3xl leading-10',
+      )}
+    >
+      {text}
+    </div>
+  );
+}
 
 interface DisplayColumnProps {
   column: Column;
@@ -90,7 +118,6 @@ export function DisplayColumn({ column, variant, large = true }: DisplayColumnPr
           </p>
         )}
       </div>
-      {showToken && column.status === 'paused' ? <p className="text-2xl">Doctor has paused</p> : null}
     </div>
   );
 
@@ -121,6 +148,7 @@ export function DisplayColumn({ column, variant, large = true }: DisplayColumnPr
         <h2 className="truncate text-4xl font-bold">{column.room}</h2>
         <p className={cn('text-2xl text-muted-foreground', wide ? 'truncate' : 'line-clamp-2 min-h-[3.4rem]')}>{column.doctorLabel}</p>
       </header>
+      <AvailabilityBanner column={column} wide={wide} />
       {wide ? (
         <div className="flex min-h-0 flex-1">
           {now}

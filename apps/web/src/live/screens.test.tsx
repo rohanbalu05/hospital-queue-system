@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { DisplaySnapshot, Eta } from '@hqms/contracts';
 import { callNextBlock } from '@/routes/doctor/components/callNextBlock';
 import { DisplayColumn } from '@/routes/display/DisplayColumn';
 import { EtaBlock } from '@/routes/patient/visit/MyVisitPage';
-import { AVAILABLE, entry, staffSnapshot } from './fixtures';
+import { AVAILABLE, awayAvailability, entry, staffSnapshot } from './fixtures';
 
 describe('callNextBlock', () => {
   const open = staffSnapshot({ waiting: [entry(14)] });
@@ -14,7 +14,7 @@ describe('callNextBlock', () => {
   });
 
   it.each([
-    ['paused', 'paused'],
+    ['paused', 'away'],
     ['unavailable', 'unavailable'],
     ['closed', 'closed'],
     ['scheduled', 'not started'],
@@ -91,8 +91,71 @@ describe('DisplayColumn', () => {
   });
 
   it('shows words instead of a token when the doctor is unavailable', () => {
-    render(<DisplayColumn column={{ ...column, status: 'unavailable', next: [] }} variant="tall" />);
+    render(
+      <DisplayColumn
+        column={{ ...column, status: 'unavailable', next: [], availability: { ...AVAILABLE, state: 'unavailable', since: '2026-11-11T05:00:00.000Z' } }}
+        variant="tall"
+      />,
+    );
     expect(screen.queryByTestId('now-calling')).toBeNull();
-    expect(screen.getByText('Doctor is unavailable')).toBeVisible();
+    expect(screen.getByText('No calls in this session')).toBeVisible();
+  });
+});
+
+describe('DisplayColumn availability banner (B2)', () => {
+  const column: DisplaySnapshot['columns'][number] = {
+    sessionId: '00000000-0000-4000-8000-000000005e51',
+    doctorLabel: 'Dr. Meenakshi Rao, General Medicine',
+    room: 'Room 12',
+    status: 'paused',
+    availability: awayAvailability({ reason: null }),
+    nowCalling: null,
+    next: ['A-015', 'W-005'],
+    queueVersion: 3,
+  };
+  const FIVE_PAST_ELEVEN = new Date('2026-11-11T05:35:00.000Z'); // 11:05 am IST, after the 10:45 am expected return
+
+  afterEach(() => vi.useRealTimers());
+
+  it('says the doctor is temporarily away and when they are expected back, in the warning tone', () => {
+    vi.useFakeTimers({ now: new Date('2026-11-11T04:35:00.000Z') }); // 10:05 am IST
+    render(<DisplayColumn column={column} variant="tall" />);
+    const banner = screen.getByTestId('display-banner');
+    expect(banner).toHaveTextContent('Dr. Meenakshi Rao is temporarily away, expected back about 10:45 am');
+    expect(banner).toHaveAttribute('data-state', 'away');
+    expect(banner.className).toContain('border-l-walkin');
+    expect(banner.className).not.toContain('priority');
+    // The waiting tokens stay on screen.
+    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual(['A-015', 'W-005']);
+  });
+
+  it('says the doctor will be back shortly once the expected time has passed', () => {
+    vi.useFakeTimers({ now: FIVE_PAST_ELEVEN });
+    render(<DisplayColumn column={column} variant="tall" />);
+    expect(screen.getByTestId('display-banner')).toHaveTextContent('Dr. Meenakshi Rao is away and will be back shortly');
+  });
+
+  it('says only temporarily away when no return time is known', () => {
+    render(<DisplayColumn column={{ ...column, availability: awayAvailability({ expectedBackAt: null }) }} variant="tall" />);
+    expect(screen.getByTestId('display-banner')).toHaveTextContent(/^Dr\. Meenakshi Rao is temporarily away$/);
+  });
+
+  it('tells patients to see reception when the doctor is unavailable for the rest of the session, in the urgent tone', () => {
+    render(
+      <DisplayColumn
+        column={{ ...column, status: 'unavailable', next: [], availability: { state: 'unavailable', since: '2026-11-11T05:00:00.000Z', expectedBackAt: null, overdue: false, reason: null } }}
+        variant="wide"
+      />,
+    );
+    const banner = screen.getByTestId('display-banner');
+    expect(banner).toHaveTextContent('Dr. Meenakshi Rao is not available for the rest of this session. Please see reception.');
+    expect(banner.className).toContain('border-l-priority');
+  });
+
+  it('shows no banner for an available doctor and never prints a free-text reason', () => {
+    const { container, rerender } = render(<DisplayColumn column={{ ...column, status: 'open', availability: AVAILABLE }} variant="tall" />);
+    expect(screen.queryByTestId('display-banner')).toBeNull();
+    rerender(<DisplayColumn column={{ ...column, availability: awayAvailability({ reason: 'Ward round' }) }} variant="tall" />);
+    expect(container.textContent).not.toContain('Ward round');
   });
 });

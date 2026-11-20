@@ -7,9 +7,9 @@ import type { StaffQueueSnapshot } from '@hqms/contracts';
 export function callNextBlock(s: Pick<StaffQueueSnapshot, 'status' | 'active' | 'waiting'>): string | null {
   switch (s.status) {
     case 'paused':
-      return 'The session is paused. Resume it to call the next patient.';
+      return "You are away, so no one can be called. Press I'm back to call the next patient.";
     case 'unavailable':
-      return 'The session is marked unavailable, so no one can be called.';
+      return 'You are unavailable for the rest of this session, so no one can be called.';
     case 'closed':
       return 'The session is closed.';
     case 'scheduled':
