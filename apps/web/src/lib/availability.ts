@@ -33,13 +33,13 @@ export function availabilityWords(
   switch (availability.state) {
     case 'away': {
       const place = placement === 'in_queue' ? 'Your place in the queue is kept.' : 'Your appointment is kept.';
-      const lead = availability.overdue
-        ? `${doctorName} has stepped away and is taking longer than expected to return.`
+      const title = availability.overdue
+        ? `${doctorName} has stepped away and is taking longer than expected to return`
         : availability.expectedBackAt
-          ? `${doctorName} has stepped away and is expected back about ${formatIST(availability.expectedBackAt)}.`
-          : `${doctorName} has stepped away. There is no return time yet.`;
+          ? `${doctorName} has stepped away and is expected back about ${formatIST(availability.expectedBackAt)}`
+          : `${doctorName} has stepped away and has not given a return time`;
       const wait = placement === 'in_queue' ? awayWaitLine(eta) : null;
-      return { tone: 'warning', title: 'The doctor has stepped away', lines: [`${lead} ${place}`, ...(wait ? [wait] : [])] };
+      return { tone: 'warning', title, lines: [place, ...(wait ? [wait] : [])] };
     }
     case 'unavailable':
       return {

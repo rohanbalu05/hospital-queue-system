@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Notification, ReadAllResult, UnreadCount, type Id } from '@hqms/contracts';
+import { ReadAllResult, UnreadCount, type Id, type Notification } from '@hqms/contracts';
 import { apiFetch, type ApiRequestError } from '@/lib/api';
 import { get } from './queries';
 import { NotificationList } from './schemas';
@@ -54,7 +54,7 @@ export function useMarkNotificationRead() {
 /** POST /notifications/read-all */
 export function useMarkAllNotificationsRead() {
   const qc = useQueryClient();
-  return useMutation<ReadAllResult, ApiRequestError, void>({
+  return useMutation<ReadAllResult, ApiRequestError>({
     mutationFn: () => apiFetch('/notifications/read-all', { method: 'POST', schema: ReadAllResult }),
     onSuccess: () => {
       const at = new Date().toISOString();

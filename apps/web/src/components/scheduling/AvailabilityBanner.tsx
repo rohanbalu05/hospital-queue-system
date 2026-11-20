@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Eta, SessionAvailability } from '@hqms/contracts';
+import { TONE_EDGE, ToneTag } from '@/components/layout/Tone';
 import { availabilityWords, type Placement } from '@/lib/availability';
 import { cn } from '@/lib/utils';
 
@@ -23,13 +24,6 @@ export function useBackNotice(state: SessionAvailability['state'] | undefined): 
   }, [state]);
   return show;
 }
-
-/** Tone is a word and an edge weight, never colour alone, and none of them is red: red belongs to clinical priority. */
-const TONE = {
-  info: { edge: 'border-l-[3px] border-l-rule', word: null },
-  warning: { edge: 'border-l-[3px] border-l-ink', word: 'Heads up' },
-  urgent: { edge: 'border-l-[6px] border-l-ink', word: 'Action needed' },
-} as const;
 
 interface AvailabilityBannerProps {
   availability: SessionAvailability;
@@ -60,19 +54,14 @@ export function AvailabilityBanner({ availability, doctorName, placement, eta, a
     );
   }
 
-  const tone = TONE[words.tone];
   return (
     <section
       role={words.tone === 'urgent' ? 'alert' : 'status'}
       data-testid="availability-banner"
       data-state={availability.state}
-      className={cn('rounded-xl border border-rule bg-surface px-4 py-4', tone.edge, className)}
+      className={cn('rounded-xl border border-rule bg-surface px-4 py-4', TONE_EDGE[words.tone], className)}
     >
-      {tone.word ? (
-        <p className={cn('mb-2 inline-block rounded-xs px-1.5 py-0.5 text-sm font-bold', words.tone === 'urgent' ? 'bg-ink text-white' : 'border border-ink text-ink')}>
-          {tone.word}
-        </p>
-      ) : null}
+      <ToneTag tone={words.tone} className="mb-2" />
       <h2 className="text-lg font-bold">{words.title}</h2>
       {words.lines.map((line) => (
         <p key={line} className="mt-1">
