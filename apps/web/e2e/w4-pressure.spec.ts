@@ -71,12 +71,12 @@ test.describe('workload pressure on the doctor console at 1280', () => {
     await shot(page, 'w4-doctor-pressure-overloaded-1280');
   });
 
-  test('a paused session uses an ink edge, not red', async ({ page }) => {
+  test('an away doctor uses the warning edge, not red', async ({ page }) => {
     await setupDoctor(page, { status: 'paused' });
     await page.goto('/doctor');
-    await expect(page.getByTestId('session-status')).toContainText('Session paused');
-    const edge = await page.getByTestId('session-status').evaluate((el) => getComputedStyle(el).borderLeftColor);
-    expect(edge).toBe('rgb(22, 35, 43)');
+    await expect(page.getByTestId('availability-strip')).toContainText('You are away');
+    const edge = await page.getByTestId('availability-strip').evaluate((el) => getComputedStyle(el).borderLeftColor);
+    expect(edge).toBe('rgb(154, 91, 0)');
   });
 });
 

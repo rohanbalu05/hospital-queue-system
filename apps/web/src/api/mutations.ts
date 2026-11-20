@@ -10,6 +10,8 @@ function useInvalidateScheduling() {
       qc.invalidateQueries({ queryKey: ['appointments'] }),
       qc.invalidateQueries({ queryKey: ['sessions'] }),
       qc.invalidateQueries({ queryKey: ['slots'] }),
+      qc.invalidateQueries({ queryKey: ['alternatives'] }),
+      qc.invalidateQueries({ queryKey: ['my-visits'] }),
     ]);
 }
 
@@ -37,14 +39,17 @@ export function useCancelAppointment() {
   });
 }
 
-/** POST /appointments/:id/reschedule (Idempotency-Key). */
+/** POST /appointments/:id/reschedule (Idempotency-Key). expectedVersion is the appointment version the patient saw. */
 export function useRescheduleAppointment() {
   const invalidate = useInvalidateScheduling();
-  return useIdempotentMutation<Appointment, { appointmentId: Id; targetSessionId: Id }>(
+  return useIdempotentMutation<Appointment, { appointmentId: Id; targetSessionId: Id; expectedVersion?: number }>(
     (vars, key) =>
       apiFetch(`/appointments/${vars.appointmentId}/reschedule`, {
         method: 'POST',
-        body: { targetSessionId: vars.targetSessionId },
+        body: {
+          targetSessionId: vars.targetSessionId,
+          ...(vars.expectedVersion !== undefined ? { expectedVersion: vars.expectedVersion } : {}),
+        },
         idempotencyKey: key,
         schema: Appointment,
       }),

@@ -53,11 +53,12 @@ test.describe('patient Today tab at 390', () => {
     await expect(page.getByRole('navigation', { name: 'Patient' }).getByRole('link', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
   });
 
-  test('a booked appointment today also links to the queue', async ({ page }) => {
+  test('a booked appointment today has no queue link until the patient checks in', async ({ page }) => {
     await setup(page, 'booked');
     await page.goto('/patient');
     await expect(page.getByTestId('today-appointment')).toContainText('Booked');
-    await expect(page.getByRole('link', { name: 'See my place in the queue' })).toBeVisible();
+    await expect(page.getByTestId('today-appointment')).toContainText('Check in at reception when you arrive');
+    await expect(page.getByRole('link', { name: 'See my place in the queue' })).toHaveCount(0);
   });
 
   test("My visits links today's row to the queue, other days do not", async ({ page }) => {

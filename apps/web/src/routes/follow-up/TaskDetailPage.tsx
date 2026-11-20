@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { Appointment } from '@hqms/contracts';
 import { useAcknowledgeTask, useFollowUpTask } from '@/api';
+import { ContactPanel, OutcomePanel, UrgentGuidance } from '@/components/followup/task-parts';
 import { TaskStatusWord, TimingWord } from '@/components/followup/words';
 import { StaffShell } from '@/components/layout/Shells';
 import { ErrorState, SkeletonRows } from '@/components/queue';
@@ -10,9 +11,8 @@ import { InlineAlert } from '@/components/scheduling/status';
 import { Button } from '@/components/ui/button';
 import { ApiRequestError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { formatLocalDate } from '@/lib/dates';
 import { formatIST } from '@/lib/format';
-import { DISPOSITION_WORD, KIND_WORD, isClosed, shortId, sourceVisitWord } from '@/lib/followup';
+import { KIND_WORD, isClosed } from '@/lib/followup';
 import { useNow } from '@/lib/useNow';
 import { CancelTaskDialog } from './components/CancelTaskDialog';
 import { DispositionForm, bookedWord } from './components/DispositionForm';
@@ -84,64 +84,20 @@ export default function TaskDetailPage() {
 
   return (
     <StaffShell title={task.title} description={`${task.patientName}. ${KIND_WORD[task.kind] ?? task.kind}.`} actions={back}>
+      {task.urgent && !closed ? <UrgentGuidance className="mb-4" /> : null}
+      {/* DOM order is contact, action, status: on a phone the number and the form come before the bookkeeping. */}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_440px]">
-        <section aria-labelledby="task-h" className="rounded-xl border border-rule bg-surface p-4">
-          <h2 id="task-h" className="mb-1 text-lg font-bold">
-            Task
-          </h2>
-          <dl>
-            <Row term="Patient">
-              <span className="font-bold">{task.patientName}</span>
-            </Row>
-            <Row term="Source visit">{sourceVisitWord(task, (d) => formatLocalDate(d))}{task.sourceVisit ? `, ${task.sourceVisit.department}` : ''}</Row>
-            <Row term="Status">
-              <TaskStatusWord status={task.status} />
-            </Row>
-            <Row term="Due">
-              <span className="tabular-nums">{formatIST(task.dueAt, 'date-time')}</span>
-              {!closed ? (
-                <>
-                  {' '}
-                  <TimingWord task={task} now={now} />
-                </>
-              ) : null}
-            </Row>
-            <Row term="Owner">{task.ownerName ?? <span className="text-muted-foreground">Unassigned</span>}</Row>
-            <Row term="Created">
-              <span className="tabular-nums">{formatIST(task.createdAt, 'date-time')}</span>
-            </Row>
-            {task.acknowledgedAt ? (
-              <Row term="Acknowledged">
-                <span className="tabular-nums">{formatIST(task.acknowledgedAt, 'date-time')}</span>
-              </Row>
-            ) : null}
-          </dl>
-          <h3 className="mt-4 mb-1 font-bold">Detail</h3>
-          {task.detail ? <p className="max-w-prose whitespace-pre-wrap">{task.detail}</p> : <p className="text-muted-foreground">No further detail was written for this task.</p>}
-        </section>
+        <div className="lg:col-start-1 lg:row-start-1">
+          <ContactPanel task={task} />
+        </div>
 
-        <section aria-labelledby="action-h" className="rounded-xl border border-rule bg-surface p-4">
+        <section aria-labelledby="action-h" className="rounded-xl border border-rule bg-surface p-4 lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <h2 id="action-h" className="mb-3 text-lg font-bold">
             {closed ? 'Outcome' : task.status === 'open' ? 'Take this task' : 'Record the outcome'}
           </h2>
 
           {closed ? (
-            <div className="grid gap-3">
-              <p>
-                <TaskStatusWord status={task.status} />
-                {task.resolvedAt ? <span className="tabular-nums"> {formatIST(task.resolvedAt, 'date-time')}</span> : null}
-              </p>
-              {task.disposition ? (
-                <p>
-                  <span className="text-muted-foreground">Outcome: </span>
-                  <span className="font-bold">{DISPOSITION_WORD[task.disposition]}</span>
-                </p>
-              ) : null}
-              {task.outcomeNote ? <p className="whitespace-pre-wrap">{task.outcomeNote}</p> : null}
-              {task.returnAppointmentId ? (
-                <p className="text-sm text-muted-foreground">Return visit linked, reference {shortId(task.returnAppointmentId)}.</p>
-              ) : null}
-            </div>
+            <OutcomePanel task={task} />
           ) : task.status === 'open' ? (
             <div className="grid gap-3">
               <p className="max-w-prose">Acknowledging makes you the owner. The task stays on your list, and overdue, until you resolve or cancel it.</p>
@@ -176,6 +132,35 @@ export default function TaskDetailPage() {
             </div>
           )}
           {booked && !closed ? <p className="mt-3 text-sm text-muted-foreground">Booked: {bookedWord(booked)}.</p> : null}
+        </section>
+
+        <section aria-labelledby="task-h" className="rounded-xl border border-rule bg-surface p-4 lg:col-start-1 lg:row-start-2">
+          <h2 id="task-h" className="mb-1 text-lg font-bold">
+            Task status
+          </h2>
+          <dl>
+            <Row term="Status">
+              <TaskStatusWord status={task.status} />
+            </Row>
+            <Row term="Due">
+              <span className="tabular-nums">{formatIST(task.dueAt, 'date-time')}</span>
+              {!closed ? (
+                <>
+                  {' '}
+                  <TimingWord task={task} now={now} />
+                </>
+              ) : null}
+            </Row>
+            <Row term="Owner">{task.ownerName ?? <span className="text-muted-foreground">Unassigned</span>}</Row>
+            <Row term="Created">
+              <span className="tabular-nums">{formatIST(task.createdAt, 'date-time')}</span>
+            </Row>
+            {task.acknowledgedAt ? (
+              <Row term="Acknowledged">
+                <span className="tabular-nums">{formatIST(task.acknowledgedAt, 'date-time')}</span>
+              </Row>
+            ) : null}
+          </dl>
         </section>
       </div>
 

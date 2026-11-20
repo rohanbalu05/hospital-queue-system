@@ -89,6 +89,10 @@ export async function mockApi(page: Page, initial: DemoRole | null = null): Prom
         }
         return json(route, 401, { error: { code: 'UNAUTHENTICATED', message: 'Invalid email or password.' } });
       }
+      // Defaults for the notification bell and Today's visits, so screens that do not care stay quiet. Specs override them.
+      if (req.method() === 'GET' && path === '/notifications/unread-count') return json(route, 200, { unreadCount: 0 });
+      if (req.method() === 'GET' && path === '/notifications') return json(route, 200, []);
+      if (req.method() === 'GET' && path === '/me/visits/today') return json(route, 200, []);
       if (req.method() === 'POST' && path === '/auth/logout') {
         current = null;
         return route.fulfill({ status: 204 });

@@ -13,3 +13,4 @@ export {
 } from './useQueue';
 export { todayIST, useTodayIST, istInstant } from './date';
 export { SessionBoardLive } from './SessionBoardLive';
+export { useConnectionStatus, OFFLINE_BANNER_MS } from './connection';
