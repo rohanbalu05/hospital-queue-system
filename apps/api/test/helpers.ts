@@ -152,7 +152,8 @@ export async function count(pool: Pool, sql: string, params: unknown[] = []): Pr
 
 /** Register a fresh patient (reception, assisted registration). */
 export async function newPatient(reception: Client, name = 'Test Patient'): Promise<string> {
-  const res = await reception.post('/patients', { fullName: name }, null);
+  // confirmNew: many tests register the same default name; duplicates are not what they are about (PR-22).
+  const res = await reception.post('/patients', { fullName: name, confirmNew: true }, null);
   if (res.status !== 201) throw new Error(`could not register patient: ${res.status}`);
   return res.body.id as string;
 }
