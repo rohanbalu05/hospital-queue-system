@@ -165,7 +165,7 @@ describe('deactivate, activate, reset password', () => {
     expect((await admin.post(`/admin/staff/${randomUUID()}/deactivate`, { reason: 'Not there' }, null)).status).toBe(404);
   });
 
-  it('the last active admin cannot be deactivated (even by a stale actor)', async () => {
+  it('the last active admin stays: an admin cannot deactivate themself, and others can be rotated out', async () => {
     // Make A the only active admin besides a second one B, then take B out by SQL and try to deactivate A as B's session.
     const a = await createOk({ displayName: 'Admin Alpha', email: email('adm'), role: 'admin' });
     const b = await createOk({ displayName: 'Admin Beta', email: email('adm'), role: 'admin' });
@@ -207,7 +207,7 @@ describe('deactivate, activate, reset password', () => {
     expect(JSON.stringify(audit.rows)).not.toContain(fresh.temporaryPassword);
     expect(JSON.stringify(audit.rows)).not.toContain(made.temporaryPassword);
     // nothing about passwords is stored for replay
-    expect((await t.pool.query(`SELECT 1 FROM idempotency_records WHERE response::text LIKE $1`, [`%${fresh.temporaryPassword}%`])).rowCount).toBe(0);
+    expect((await t.pool.query(`SELECT 1 FROM idempotency_records WHERE response_body::text LIKE $1`, [`%${fresh.temporaryPassword}%`])).rowCount).toBe(0);
   });
 
   it('assignments keep working for the new account (PUT /admin/staff/{id}/assignments)', async () => {
