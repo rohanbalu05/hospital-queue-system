@@ -144,3 +144,66 @@ Three Codex review findings, each fixed test-first (failing test committed befor
 2. **A parked entry still holds the patient's place** (`apps/api/src/common/live-place.ts`, `QueueService.reEnter`, migration 0007). Walk-in admission and check-in now treat a skipped/absent entry whose visit is still open as an existing place (409 CONFLICT, nothing consumed). Re-entry is refused (409) when the patient has any other live or parked-open entry in the session. Backstop: unique index `visits_one_open_per_patient_session_uq` on `visits (session_id, patient_id) WHERE status IN ('open','in_service')`. A patient whose earlier visit is completed or left can still be admitted again. D-022/D-025 unchanged (a parked entry keeps its consumed place; re-entry takes no new capacity).
 3. **OCR writes are fenced by the job lease** (`apps/worker/src/handlers/documents.ts`). Every OCR transaction (start, success, failure) first verifies, in the same transaction, `jobs.state='running' AND lease_owner AND attempts` match this attempt (`FOR NO KEY UPDATE`, job row before document row). A superseded attempt writes nothing, logs `ocr.superseded`, and the runner writes no outcome for it. Chosen over a document token because it needs no migration and still works if the document is re-enqueued under a different job. Lock order: job → document; the runner's own statements are single-row autocommit updates on `jobs` and never touch documents, so no cycle.
 Also (test harness): the db suite's scratch DB is now overridable with `DB_TEST_DB_NAME`, completing D-027 (API, worker, db, black-box suites all isolatable per run).
+
+## D-032 Doctor availability lifecycle: "Away" is the `paused` state (session 3, B1)
+The teacher's review found "Mark unavailable" one-way with no way to continue. The session status machine is unchanged
+(`open ⇄ paused`, `→ unavailable` one-way, `→ closed`); the product names change and the contract gains a derived view.
+- **Away = `paused`.** No new status value: renaming would churn every layer and the report (FR-08, §6.6) already names
+  pause. `SessionAvailability` (`packages/contracts/src/availability.ts`) is derived by the pure `deriveAvailability`
+  (scheduled→not_started, open→available, paused→away, unavailable→unavailable, closed or past end→ended) and is carried on
+  the staff, patient and display snapshots, on session reads and on today's visits. One definition, every screen agrees.
+- **Step away** (`POST /sessions/{id}/pause`, doctor / reception / admin in scope) takes a reason and an expected return
+  (UI presets 10/15/30/60 min or a custom time). Also allowed while already away, to update the expected return (patients
+  are re-notified). Refused with 409 DOCTOR_OCCUPIED while this doctor's patient is `called` but not started (the 2-minute
+  timeout would skip them while the doctor is gone) and with 400 when the return is after the session end ("mark
+  unavailable instead"). Call-next stays 409 SESSION_NOT_CALLABLE while away; queue order and rotation pointer are kept.
+- **I'm back** (`/resume`) returns to available; the next call continues from the kept order.
+- **Unavailable for the rest of the session** stays one-way and needs an explicit confirmation step in the UI. Reversing a
+  mistaken "unavailable" is future work (patients may already have been moved).
+- **Wait estimates include away time:** the projection starts at max(doctor free, expected return) (already in the ETA
+  model); an overdue or open-ended absence withholds the ETA with a plain reason.
+- The free-text reason is staff-only (`reason` is null on patient and display reads).
+
+## D-033 Doctor unavailable: alternatives, one-click rebook, reception bulk move (B3)
+Report §6.6: "Reception arranges alternatives with the patient. Do not silently change the selected doctor."
+- `GET /appointments/{id}/alternatives` lists other doctors' sessions in the same department (scheduled/open, not ended,
+  free booked slot), today first then 7 days, max 6. The patient's one click is the existing `POST /appointments/{id}/reschedule`
+  (already cross-doctor, locks both doctors in id order, target reserved first so a full target leaves the original intact).
+- `GET /sessions/{id}/affected` (reception in scope, admin): booked-not-arrived appointments, checked-in patients still
+  waiting/skipped/absent, and candidate sessions. `POST /sessions/{id}/affected/move` moves selected patients to one target
+  session; each item is its own short transaction so capacity rules apply per item (a full target skips the remainder with
+  CAPACITY_FULL rather than failing the batch). Source must be away or unavailable.
+- **Checked-in patients are transferred, not re-admitted:** old entry → cancelled, old visit → `transferred`; a new visit
+  (kind `transfer`, `transferred_from_visit_id`) and entry in the target keep the patient's group and original
+  check-in/eligibility times and consume a place of the same kind (A → booked, W → walk-in). The original appointment
+  is untouched. Event `QueuePatientTransferred`. Every moved patient is notified, so nothing is silent.
+
+## D-034 Notifications: fan-out, channels, fake NotificationProvider, delivery log (B2)
+- The report's initial scope is in-app notices (§2); this wave adds outbound SMS/email **through an adapter only**:
+  `NotificationProvider` in `packages/providers` (D-023), `fake` by default (no keys; returns a fake message id), selected by
+  `NOTIFICATION_PROVIDER`. Real providers are future work.
+- The worker's outbox dispatcher fans one event out to many recipients. For `SessionPaused` (away, incl. updates),
+  `SessionResumed` and `SessionUnavailable`: (a) checked-in patients still waiting/called/skipped/absent, (b) booked patients
+  of the session who have not arrived, (c) active reception users assigned to the doctor; (d) the display shows a banner from
+  its live snapshot. Patients get in-app (if they have a login) plus SMS (if a phone is on file) plus email (login email);
+  staff get in-app only.
+- `notification_deliveries` (migration 0008) logs one row per recipient per channel per event; in-app rows are written
+  `sent` with the notification, SMS/email rows `queued` with a `deliver_notification` job (stable dedupe key) in the same
+  transaction; the job calls the provider outside any transaction and records sent/failed. Unique (event, channel, address)
+  keeps at-least-once dispatch idempotent. Admin reads it as "Notifications sent" (`GET /admin/notifications`, addresses masked).
+- Notification text is built from routing data only (doctor name, times, token, room). Links follow `NOTIFICATION_LINKS`.
+
+## D-035 Booking never assigns a slot whose late-grace window is about to close (B4)
+D-022 skipped slots with `slot + grace <= now`, but a booking at 10:44:30 still got the 10:30 slot and went Missed 30 s
+later. A slot is now assignable only if `slot + lateGraceMin >= now + MIN_ARRIVAL_WINDOW_MIN` (10 min, config), for booking,
+reschedule, rebook, bulk move and the slots endpoint alike, so the patient always has at least 10 minutes to arrive.
+
+## D-036 Session 3 orchestration
+Contracts (`availability.ts`, `affected.ts`, `notifications.ts`, `MyTodayVisit`, `QueuePatientTransferred`,
+`deliver_notification`) and migration 0008 were written by the orchestrator before the builders started, because the api,
+worker and web builders all depend on the same schema (same rationale as Wave 0). Builder path ownership this wave:
+api-availability (`apps/api/src/{queue,live,reports,admin,access}`, new `apps/api/src/affected`, `packages/domain` visit
+lifecycle), worker+api-fixes (`apps/worker`, `packages/providers`, `apps/api/src/{scheduling,patients,documents,catalogue}`),
+ui-staff (`apps/web/src/routes/{doctor,reception,display,admin}`, `apps/web/src/live`, `apps/web/src/api/queue`),
+ui-patient (`apps/web/src/routes/patient`, `apps/web/src/components/{notifications,layout}`, `apps/web/src/lib`,
+other `apps/web/src/api/*`).

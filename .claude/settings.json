@@ -26,7 +26,10 @@
       "Read(./.env.local)"
     ]
   },
-  "enabledMcpjsonServers": ["shadcn", "context7"],
+  "enabledMcpjsonServers": [
+    "shadcn",
+    "context7"
+  ],
   "hooks": {
     "SessionStart": [
       {
@@ -39,5 +42,10 @@
         ]
       }
     ]
+  },
+  "includeCoAuthoredBy": false,
+  "attribution": {
+    "commit": "",
+    "pr": ""
   }
 }

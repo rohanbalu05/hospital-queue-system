@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ExpectedVersion, Id, Instant, LocalDate } from './common.js';
+import { SessionAvailability } from './availability.js';
 
 /** Table 7, versioned. A session keeps its policy version for its whole life. */
 export const QueuePolicy = z.object({
@@ -45,6 +46,8 @@ export const Session = z.object({
   endsAt: Instant,
   slotMinutes: z.number().int().positive(),
   status: SessionStatus,
+  /** Doctor availability (B1). `reason` only on staff reads. Optional for older fixtures; the API always sets it. */
+  availability: SessionAvailability.optional(),
   policyVersion: z.number().int().positive(),
   capacity: Capacity,
   version: z.number().int().positive(),

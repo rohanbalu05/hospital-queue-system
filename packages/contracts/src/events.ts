@@ -18,6 +18,8 @@ export const DomainEventType = z.enum([
   'SessionPaused',
   'SessionResumed',
   'SessionUnavailable',
+  /** Checked-in patient moved to another doctor's session (B3). Entity = the NEW queue entry. */
+  'QueuePatientTransferred',
   'ConsultationStarted',
   'ConsultationCompleted',
   'DocumentUploaded',
@@ -65,5 +67,6 @@ export const JobType = z.enum([
   'ocr_document', // payload { documentId }
   'dispatch_outbox', // fan-out outbox -> notifications
   'reconcile_uploads', // periodic: orphaned objects / missing OCR jobs
+  'deliver_notification', // payload { deliveryId } -> NotificationProvider.send outside any transaction (B2)
 ]);
 export type JobType = z.infer<typeof JobType>;

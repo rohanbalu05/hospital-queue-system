@@ -5,3 +5,6 @@ export * from './queue.js';
 export * from './followup.js';
 export * from './reports.js';
 export * from './events.js';
+export * from './availability.js';
+export * from './affected.js';
+export * from './notifications.js';

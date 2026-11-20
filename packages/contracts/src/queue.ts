@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ExpectedVersion, Id, Instant } from './common.js';
 import { SessionStatus } from './scheduling.js';
+import { SessionAvailability } from './availability.js';
 
 export const QueueGroup = z.enum(['A', 'W']);
 export type QueueGroup = z.infer<typeof QueueGroup>;
@@ -8,7 +9,8 @@ export type QueueGroup = z.infer<typeof QueueGroup>;
 export const QueueEntryState = z.enum(['waiting', 'called', 'in_service', 'completed', 'skipped', 'absent', 'cancelled']);
 export type QueueEntryState = z.infer<typeof QueueEntryState>;
 
-export const VisitKind = z.enum(['appointment', 'walkin', 'late_admission']);
+/** `transfer`: moved from another doctor's session after that doctor became away/unavailable (B3, D-033). */
+export const VisitKind = z.enum(['appointment', 'walkin', 'late_admission', 'transfer']);
 export type VisitKind = z.infer<typeof VisitKind>;
 
 export const DecisionReason = z.enum(['CLINICAL_PRIORITY', 'AGING', 'ROTATION', 'NO_ALLOCATION']);
@@ -43,6 +45,27 @@ export const ArrivalResult = z.object({
   queueVersion: z.number().int().nonnegative(),
 });
 export type ArrivalResult = z.infer<typeof ArrivalResult>;
+
+/**
+ * GET /me/visits/today (patient: own). Today's (IST) open or in-service visits, whatever their kind:
+ * appointment, walk-in, late admission or transfer (B4: a walk-in's Today page must show the visit).
+ */
+export const MyTodayVisit = z.object({
+  visitId: Id,
+  sessionId: Id,
+  appointmentId: Id.nullable(),
+  doctorName: z.string(),
+  department: z.string(),
+  room: z.string(),
+  kind: VisitKind,
+  visitStatus: z.enum(['open', 'in_service']),
+  token: Token,
+  queueState: QueueEntryState,
+  checkedInAt: Instant,
+  scheduledAt: Instant.nullable(),
+  availability: SessionAvailability,
+});
+export type MyTodayVisit = z.infer<typeof MyTodayVisit>;
 
 // ---------------------------------------------------------------------------
 // Queue entries and decisions
@@ -127,13 +150,9 @@ export const SetPriorityRequest = ExpectedVersion.extend({
 });
 export type SetPriorityRequest = z.infer<typeof SetPriorityRequest>;
 
-/** POST /sessions/{id}/pause, /resume, /unavailable */
-export const PauseSessionRequest = z.object({
-  /** Omit for unknown duration -> ETA withheld (FR-10). */
-  until: Instant.optional(),
-  reason: z.string().max(300).optional(),
-});
-export type PauseSessionRequest = z.infer<typeof PauseSessionRequest>;
+/** POST /sessions/{id}/pause ("Step away"), /resume ("I'm back"), /unavailable. See StepAwayRequest (availability.ts). */
+export { StepAwayRequest as PauseSessionRequest } from './availability.js';
+/** Rest of the session. One-way; the UI asks for explicit confirmation. Reason is staff-only. */
 export const MarkUnavailableRequest = z.object({ reason: z.string().min(3).max(300) });
 
 // ---------------------------------------------------------------------------
@@ -176,6 +195,8 @@ export const StaffQueueSnapshot = z.object({
   doctorId: Id,
   status: SessionStatus,
   pauseUntil: Instant.nullable(),
+  /** Doctor availability incl. staff-only reason (B1). */
+  availability: SessionAvailability,
   policyVersion: z.number().int().positive(),
   rotationPointer: z.number().int().nonnegative(),
   rotation: z.array(QueueGroup),
@@ -204,6 +225,9 @@ export const PatientQueueSnapshot = z.object({
   view: z.literal('patient'),
   sessionId: Id,
   status: SessionStatus,
+  /** Doctor availability for the patient banner; `reason` is always null here (B1). */
+  availability: SessionAvailability,
+  doctorName: z.string(),
   queueVersion: z.number().int().nonnegative(),
   capturedAt: Instant,
   myEntry: z
@@ -226,6 +250,8 @@ export const DisplayColumn = z.object({
   doctorLabel: z.string(), // e.g. "Dr. Rao · ENT"
   room: z.string(),
   status: SessionStatus,
+  /** Banner "Dr X is temporarily away, expected back about hh:mm"; `reason` is always null here (B1). */
+  availability: SessionAvailability,
   nowCalling: Token.nullable(),
   next: z.array(Token).max(3),
   queueVersion: z.number().int().nonnegative(),
