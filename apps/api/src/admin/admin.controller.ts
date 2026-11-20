@@ -197,15 +197,18 @@ export class AdminController {
     @Body(new ZodPipe(StaffStatusRequest)) body: StaffStatusRequest,
   ): Promise<StaffMember> {
     return withTransaction(this.pool, async (tx) => {
-      const target = await this.lockStaff(tx, userId);
       if (userId === ctx.user.userId) throw conflict('CONFLICT', 'You cannot deactivate your own account');
+      // Lock order (D-039): when the target is an admin, lock EVERY active admin row in id order first (the target is in
+      // that set), then check. Locking the target before the others let "A deactivates B" and "B deactivates A" deadlock.
+      const peek = await tx.query<{ role: string }>(`SELECT role FROM users WHERE id = $1 AND role <> 'patient'`, [userId]);
+      if (peek.rows[0]?.role === 'admin') {
+        await tx.query(`SELECT id FROM users WHERE role = 'admin' AND active ORDER BY id FOR UPDATE`);
+      }
+      const target = await this.lockStaff(tx, userId); // already held for an active admin; locks any other staff row
       if (target.active) {
         if (target.role === 'admin') {
-          // Lock every active admin so two parallel deactivations cannot both pass the count.
-          const admins = await tx.query<{ id: string }>(`SELECT id FROM users WHERE role = 'admin' AND active ORDER BY id FOR UPDATE`);
-          if (admins.rows.filter((a) => a.id !== userId).length === 0) {
-            throw conflict('CONFLICT', 'The last active admin cannot be deactivated');
-          }
+          const others = await tx.query(`SELECT 1 FROM users WHERE role = 'admin' AND active AND id <> $1 LIMIT 1`, [userId]);
+          if ((others.rowCount ?? 0) === 0) throw conflict('CONFLICT', 'The last active admin cannot be deactivated');
         }
         await tx.query(`UPDATE users SET active = false WHERE id = $1`, [userId]);
         await this.revokeSessions(tx, userId);
