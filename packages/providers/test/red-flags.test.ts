@@ -133,7 +133,9 @@ describe('redFlagSymptom (PR-13)', () => {
   });
 
   it('a negated symptom does not hide a different, un-negated one', () => {
-    expect(redFlagSymptom('no chest pain but I cannot breathe')).toBe('breathing');
+    // "but" makes the sentence escalating, so the negation is not trusted: it still flags (first category wins)
+    expect(redFlagSymptom('no chest pain but I cannot breathe')).not.toBeNull();
+    expect(redFlagSymptom('no chest pain. I cannot breathe')).toBe('breathing');
     expect(redFlagSymptom('no fever, however I fainted')).toBe('fainting');
   });
 
