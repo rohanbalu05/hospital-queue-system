@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { mockApi } from './mocks';
 import { installFakeEventSource, mockQueue, type QueueMock, type QueueMockOptions } from './mocks-queue';
 import { shot } from './w3-helpers';
+import { mockSystemFine } from './w6-admin-mocks';
 import { NOTIFICATION_ROWS, TARGET_FULL_WALKIN, mockNotificationLog, setupReceptionAvailability } from './w5-staff-mocks';
 
 /**
@@ -295,6 +296,7 @@ for (const vp of VIEWPORTS) {
 
     test('lists every delivery with channel, recipient, masked address, message and status; filters; refresh', async ({ page }) => {
       await mockApi(page, 'admin');
+      await mockSystemFine(page); // the admin shell shows Background work on every page
       const log = await mockNotificationLog(page);
       await page.goto('/admin');
       await page.getByRole('link', { name: 'Notifications sent' }).click();
@@ -327,6 +329,7 @@ for (const vp of VIEWPORTS) {
 
     test('error state explains what happened and offers a retry', async ({ page }) => {
       await mockApi(page, 'admin');
+      await mockSystemFine(page); // the admin shell shows Background work on every page
       await mockNotificationLog(page, [], { fail: true });
       await page.goto('/admin/notifications');
       await expect(page.getByRole('alert')).toContainText('The notification log could not be loaded');
@@ -335,6 +338,7 @@ for (const vp of VIEWPORTS) {
 
     test('empty state says what appears here', async ({ page }) => {
       await mockApi(page, 'admin');
+      await mockSystemFine(page); // the admin shell shows Background work on every page
       await mockNotificationLog(page, []);
       await page.goto('/admin/notifications');
       await expect(page.getByText('No notifications sent yet')).toBeVisible();

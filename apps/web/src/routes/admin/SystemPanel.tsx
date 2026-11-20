@@ -55,13 +55,23 @@ function WorkerLine({ worker }: { worker: SystemStatus['worker'] }) {
 export default function SystemPanel() {
   const q = useSystemStatus();
   const s = q.data;
+  const calm = s !== undefined && s.worker.status === 'up' && s.jobs.overdue === 0 && s.jobs.deadLast24h === 0 && s.outbox.undispatched === 0 && s.notifications.queued === 0 && s.notifications.failedLast24h === 0;
   return (
     <section aria-labelledby="system-h" className="mb-4 grid gap-2 rounded-xl border border-rule bg-surface px-4 py-3">
       <div className="flex flex-wrap items-baseline gap-x-3">
         <h2 id="system-h" className="text-base font-bold">
           Background work
         </h2>
-        {s ? <p className="text-sm text-muted-foreground tabular-nums">Checked {formatIST(s.checkedAt, 'time-seconds')}</p> : null}
+        {s && !calm ? <p className="text-sm text-muted-foreground tabular-nums">Checked {formatIST(s.checkedAt, 'time-seconds')}</p> : null}
+        {s && calm ? (
+          <p data-testid="system-calm" className="text-sm">
+            <span className="font-bold">Worker running</span>
+            <span className="text-muted-foreground tabular-nums">. Last seen {formatIST(s.worker.lastSeenAt)}. Nothing is overdue, waiting or failed. </span>
+            <Link to="/admin/notifications" className="font-bold underline underline-offset-2">
+              Notifications sent
+            </Link>
+          </p>
+        ) : null}
       </div>
       {q.isPending ? (
         <div data-testid="system-loading" aria-busy="true" aria-label="Loading" className="grid gap-2">
@@ -70,7 +80,7 @@ export default function SystemPanel() {
         </div>
       ) : !s ? (
         <ErrorState title="Background work status could not be loaded" error={q.error} onRetry={() => void q.refetch()} className="border-0 px-0 py-1" />
-      ) : (
+      ) : calm ? null : (
         <>
           <WorkerLine worker={s.worker} />
           <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">

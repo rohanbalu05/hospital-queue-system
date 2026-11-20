@@ -51,17 +51,16 @@ describe('Background work panel', () => {
     expect(SYSTEM_REFRESH_MS).toBe(30_000);
   });
 
-  it('is calm when everything is fine: worker running, nothing waiting, no alert', async () => {
+  it('is calm when everything is fine: one line, no counts, no alert', async () => {
     mount(fine);
-    await screen.findByTestId('stat-overdue');
+    const line = await screen.findByTestId('system-calm');
     const panel = screen.getByRole('region', { name: 'Background work' });
     expect(within(panel).getByText('Worker running')).toBeVisible();
-    expect(panel).toHaveTextContent('Last seen 10:04 am');
+    expect(line).toHaveTextContent('Last seen 10:04 am');
+    expect(line).toHaveTextContent('Nothing is overdue, waiting or failed.');
+    expect(within(panel).getByRole('link', { name: 'Notifications sent' })).toHaveAttribute('href', '/admin/notifications');
     expect(within(panel).queryByRole('alert')).toBeNull();
-    expect(within(panel).getByTestId('stat-overdue')).toHaveTextContent('0');
-    expect(within(panel).getByTestId('stat-dead')).toHaveTextContent('0');
-    expect(within(panel).getByTestId('stat-outbox')).toHaveTextContent('0');
-    expect(within(panel).getByTestId('stat-notifications')).toHaveTextContent('0 queued, 0 failed');
+    expect(within(panel).queryByTestId('stat-overdue')).toBeNull();
   });
 
   it('is urgent when the worker is down, in words, with the last time it was seen', async () => {
