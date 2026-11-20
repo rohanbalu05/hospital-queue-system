@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ApiRequestError } from '@/lib/api';
 import { addDays, formatLocalDate, istDate, nextDays } from '@/lib/dates';
 import { formatIST } from '@/lib/format';
-import type { DeskPatient } from './PatientDesk';
+import type { DeskPatient } from './deskTypes';
 
 /** Words for the errors a desk booking, cancel or reschedule can hit. */
 export function bookingErrorWords(err: unknown, what: string): { title: string; message: string } {

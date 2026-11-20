@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Appointment, Id } from '@hqms/contracts';
+import type { Appointment } from '@hqms/contracts';
 import { useAppointmentsQuery } from '@/api';
 import { EmptyState, ErrorState, SkeletonRows } from '@/components/queue';
 import { StatusWord } from '@/components/scheduling/status';
@@ -10,12 +10,8 @@ import { formatIST } from '@/lib/format';
 import { BookPanel, CancelPanel, ReschedulePanel, dayWord } from './DeskBooking';
 
 /** The person the desk is working with. Taken from the arrival row, so it needs no extra request. */
-export interface DeskPatient {
-  id: Id;
-  name: string;
-  mrn: string | null;
-  phone: string | null;
-}
+export type { DeskPatient } from './deskTypes';
+import type { DeskPatient } from './deskTypes';
 
 type Mode =
   | { kind: 'list' }
