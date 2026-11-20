@@ -6,6 +6,7 @@ import type { AppConfig } from '../common/config.js';
 import type { Clock } from '../common/clock.js';
 import { localDate } from '../common/http.js';
 import { notFound } from '../common/errors.js';
+import { PerUserRateLimit } from '../common/user-rate-limit.js';
 import type { RequestCtx } from '../common/request-context.js';
 import { Ctx, Roles } from '../identity/auth.decorators.js';
 
@@ -20,11 +21,16 @@ export class MyVisitsController {
     @Inject(DB_POOL) private readonly pool: Pool,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
-  ) {}
+  ) {
+    this.limit = new PerUserRateLimit(config.readsRateLimitPerMin);
+  }
+
+  private readonly limit: PerUserRateLimit;
 
   @Roles('patient')
   @Get('today')
   async today(@Ctx() ctx: RequestCtx): Promise<MyTodayVisit[]> {
+    this.limit.hit(ctx.user.userId);
     const patientId = ctx.user.patientId;
     if (!patientId) throw notFound('Patient');
     const now = this.clock.now();

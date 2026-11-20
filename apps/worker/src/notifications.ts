@@ -130,6 +130,26 @@ function wording(
 }
 
 /**
+ * The event is dispatched asynchronously, so by the time it is rendered the doctor may already be back (or away again).
+ * A late "stepped away" after "I'm back", or an old return time after a newer one, would only mislead patients, so it is
+ * skipped; the newer event carries the current truth. SessionUnavailable is never skipped: it is terminal for the
+ * session and the affected patients must always be told.
+ */
+function isStaleSessionNotice(ev: OutboxEventRow, s: { status: string; pause_until: Date | string | null }): boolean {
+  if (ev.eventType === 'SessionPaused') {
+    if (s.status !== 'paused') return true;
+    if ('pauseUntil' in ev.payload) {
+      const sent = typeof ev.payload['pauseUntil'] === 'string' ? new Date(ev.payload['pauseUntil'] as string).getTime() : null;
+      const now = s.pause_until === null ? null : new Date(s.pause_until).getTime();
+      if (sent !== now) return true;
+    }
+    return false;
+  }
+  if (ev.eventType === 'SessionResumed') return s.status === 'paused' || s.status === 'unavailable';
+  return false;
+}
+
+/**
  * SessionPaused (incl. updates), SessionResumed, SessionUnavailable. Recipients:
  *  (a) checked-in patients of the session whose entry is waiting, called, skipped or absent and whose visit is still open,
  *  (b) patients with a booked appointment in the session who have not arrived,
@@ -141,13 +161,21 @@ export async function renderSessionEvent(tx: Tx, ev: OutboxEventRow): Promise<Re
   const sessionId = ev.sessionId ?? (ev.entityType === 'session' ? ev.entityId : null);
   if (!phase || !sessionId) return [];
   const s = (
-    await tx.query<{ doctor_id: string; label: string; full_name: string; department: string }>(
-      `SELECT s.doctor_id, s.label, d.full_name, d.department
+    await tx.query<{
+      doctor_id: string;
+      label: string;
+      full_name: string;
+      department: string;
+      status: string;
+      pause_until: Date | string | null;
+    }>(
+      `SELECT s.doctor_id, s.label, d.full_name, d.department, s.status, s.pause_until
          FROM sessions s JOIN doctors d ON d.id = s.doctor_id WHERE s.id = $1`,
       [sessionId],
     )
   ).rows[0];
   if (!s) return [];
+  if (isStaleSessionNotice(ev, s)) return [];
 
   const until = typeof ev.payload['pauseUntil'] === 'string' ? (ev.payload['pauseUntil'] as string) : null;
   const w = wording(phase, doctorTitle(s.full_name), s.label, s.department, until, ev.payload['update'] === true, ev.payload['reopened'] === true);

@@ -6,7 +6,10 @@ import {
   type AppointmentAlternatives,
   type MoveAffectedResult,
 } from '@hqms/contracts';
+import type { AppConfig } from '../common/config.js';
 import type { RequestCtx } from '../common/request-context.js';
+import { APP_CONFIG } from '../common/tokens.js';
+import { PerUserRateLimit } from '../common/user-rate-limit.js';
 import { requireIdempotencyKey } from '../common/http.js';
 import { UuidPipe, ZodPipe } from '../common/zod.pipe.js';
 import { ALL_ROLES, Ctx, Roles } from '../identity/auth.decorators.js';
@@ -15,12 +18,20 @@ import { AffectedService } from './affected.service.js';
 /** B3 (D-033): what happens to patients when a doctor is unavailable for the rest of the session. */
 @Controller()
 export class AffectedController {
-  constructor(@Inject(AffectedService) private readonly affected: AffectedService) {}
+  private readonly alternativesLimit: PerUserRateLimit;
+
+  constructor(
+    @Inject(AffectedService) private readonly affected: AffectedService,
+    @Inject(APP_CONFIG) config: AppConfig,
+  ) {
+    this.alternativesLimit = new PerUserRateLimit(config.readsRateLimitPerMin);
+  }
 
   /** The owning patient, or staff in scope of the appointment's doctor (the service decides). */
   @Roles(...ALL_ROLES)
   @Get('appointments/:id/alternatives')
   alternatives(@Ctx() ctx: RequestCtx, @Param('id', new UuidPipe()) id: string): Promise<AppointmentAlternatives> {
+    this.alternativesLimit.hit(ctx.user.userId);
     return this.affected.alternativesFor(ctx, id);
   }
 

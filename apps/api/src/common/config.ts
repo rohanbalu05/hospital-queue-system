@@ -52,6 +52,10 @@ const EnvSchema = z.object({
   DISPLAY_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(120),
   /** Shared cache of the public display snapshot (0 turns it off). */
   DISPLAY_CACHE_MS: z.coerce.number().int().min(0).default(1000),
+  /** Per-user requests per minute for alternatives, today's visits and read-all (429 RATE_LIMITED beyond it). */
+  READS_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(30),
+  /** Per-user requests per minute for the notification bell count (refetched on live notices). */
+  UNREAD_COUNT_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(60),
   /** A worker with no heartbeat for this long counts as down (PR-02): /health reports degraded. */
   WORKER_STALE_SEC: z.coerce.number().int().min(5).default(60),
 });
@@ -92,6 +96,10 @@ export interface AppConfig {
   uploadMaxBytesPerPatient: number;
   displayRateLimitPerMin: number;
   displayCacheMs: number;
+  /** Per-user requests per minute: alternatives, today's visits, read-all. */
+  readsRateLimitPerMin: number;
+  /** Per-user requests per minute: the notification bell count. */
+  unreadCountRateLimitPerMin: number;
   /** Minimum minutes a patient must have to reach a slot before its late-grace window closes (D-035). */
   minArrivalWindowMin: number;
   /** Heartbeat age after which a worker counts as down (PR-02). */
@@ -135,6 +143,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     uploadMaxBytesPerPatient: e.UPLOAD_MAX_BYTES_PER_PATIENT,
     displayRateLimitPerMin: e.DISPLAY_RATE_LIMIT_PER_MIN,
     displayCacheMs: e.DISPLAY_CACHE_MS,
+    readsRateLimitPerMin: e.READS_RATE_LIMIT_PER_MIN,
+    unreadCountRateLimitPerMin: e.UNREAD_COUNT_RATE_LIMIT_PER_MIN,
     minArrivalWindowMin: e.MIN_ARRIVAL_WINDOW_MIN,
     workerStaleSec: e.WORKER_STALE_SEC,
   };
