@@ -5,8 +5,8 @@ BEA (BCS703B) course project, Phase 2, BMSIT ISE 2026-27. Team: Rohan Balu, Rish
 One hospital, many doctors: capacity-checked booking, an explainable per-doctor queue, live status over SSE, and a closed
 follow-up loop (OCR draft, clinical verification, bounded assistant, owned staff task, linked return booking).
 
-The approved design is in `docs/spec/phase1-report.md`. The repo is built by a Claude Code orchestrator (Opus) with Sonnet
-subagents; see `KICKOFF.md`, `CLAUDE.md` and `.claude/agents/`.
+The approved design is in `docs/spec/phase1-report.md`; the build plan, decisions and progress are in `PLAN.md`,
+`DECISIONS.md` and `PROGRESS.md`.
 
 ## Quick start (fresh clone, demo in one command)
 
