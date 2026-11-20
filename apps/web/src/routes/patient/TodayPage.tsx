@@ -14,12 +14,18 @@ import { useAuth } from '@/lib/auth';
 import { istDate } from '@/lib/dates';
 import { formatIST } from '@/lib/format';
 import { useQueueSnapshot } from '@/live';
+import { CancelledNotice, ReturnVisitTag, isReturnVisit } from './VisitBits';
 
 /** Today's live appointments (booked or checked in), earliest first. Dates are hospital-local (IST). */
 export function todaysAppointments(list: Appointment[], today: string): Appointment[] {
   return list
     .filter((a) => (a.status === 'booked' || a.status === 'checked_in') && istDate(a.scheduledAt) === today)
     .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+}
+
+/** Appointments completed today (IST), earliest first: the visit is over, so Today says so instead of "No visit today". */
+export function completedToday(list: Appointment[], today: string): Appointment[] {
+  return list.filter((a) => a.status === 'completed' && istDate(a.scheduledAt) === today).sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
 }
 
 /**
@@ -88,6 +94,7 @@ function AppointmentCard({ a, visit, onCancel }: { a: Appointment; visit: MyToda
           <p className="text-2xl font-bold tabular-nums">{formatIST(a.scheduledAt)}</p>
           <p className="font-bold">{a.doctorName}</p>
           <p className="text-muted-foreground">{a.department}</p>
+          {isReturnVisit(a) ? <ReturnVisitTag className="mt-1" /> : null}
           {visit ? (
             <p className="mt-1 flex items-center gap-2">
               <TokenText token={visit.token} size="md" />
@@ -110,6 +117,23 @@ function AppointmentCard({ a, visit, onCancel }: { a: Appointment; visit: MyToda
           <p className="mt-2 text-muted-foreground">You are checked in. The next screen shows your token, your place and the estimated wait.</p>
         </>
       )}
+    </li>
+  );
+}
+
+/** A visit that is over today: what happened and where the next steps are. */
+function CompletedCard({ a }: { a: Appointment }) {
+  return (
+    <li data-testid="today-completed" className="rounded-xl border border-l-[3px] border-rule border-l-done bg-surface p-4">
+      <p className="text-lg font-bold">
+        Visit completed at <span className="tabular-nums">{formatIST(a.scheduledAt)}</span> with {a.doctorName}
+      </p>
+      <p className="text-muted-foreground">{a.department}</p>
+      {isReturnVisit(a) ? <ReturnVisitTag className="mt-1" /> : null}
+      <p className="mt-3 text-muted-foreground">Replies from the care team and any return visit are in your follow-ups.</p>
+      <Button asChild variant="outline" size="lg" className="mt-3 w-full sm:w-auto">
+        <Link to="/patient/follow-ups">See your follow-ups</Link>
+      </Button>
     </li>
   );
 }
@@ -157,16 +181,19 @@ export default function TodayPage() {
   const q = useAppointmentsQuery({ patientId }, { enabled: Boolean(patientId) });
   const vq = useMyTodayVisits({ enabled: Boolean(patientId) });
   const [cancelling, setCancelling] = useState<Appointment | null>(null);
+  const [cancelled, setCancelled] = useState<Appointment | null>(null);
   const today = istDate();
   const todays = todaysAppointments(q.data ?? [], today);
   const visits = vq.data ?? [];
   const extra = visitsWithoutCard(visits, todays);
+  const finished = completedToday(q.data ?? [], today);
   const visitFor = (a: Appointment) => visits.find((v) => v.appointmentId === a.id);
   const pending = Boolean(patientId) && (q.isPending || vq.isPending);
-  const nothing = todays.length === 0 && extra.length === 0;
+  const nothing = todays.length === 0 && extra.length === 0 && finished.length === 0;
 
   return (
     <PatientPage title="Today" {...(me ? { description: `Signed in as ${me.displayName}.` } : {})}>
+      {cancelled ? <CancelledNotice appointment={cancelled} className="mb-4" /> : null}
       {pending && nothing ? (
         <SkeletonRows count={2} />
       ) : q.isError && nothing ? (
@@ -213,10 +240,13 @@ export default function TodayPage() {
             {todays.map((a) => (
               <AppointmentCard key={a.id} a={a} visit={visitFor(a)} onCancel={setCancelling} />
             ))}
+            {finished.map((a) => (
+              <CompletedCard key={a.id} a={a} />
+            ))}
           </ul>
         </section>
       )}
-      <CancelDialog appointment={cancelling} onClose={() => setCancelling(null)} />
+      <CancelDialog appointment={cancelling} onClose={() => setCancelling(null)} onCancelled={setCancelled} />
     </PatientPage>
   );
 }
