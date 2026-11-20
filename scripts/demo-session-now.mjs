@@ -89,10 +89,17 @@ function stableId(name) {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
+/**
+ * Both General Medicine doctors get a running session, so the "doctor unavailable" demo always has a
+ * same-department doctor today to rebook or move patients to (D-033, D-037).
+ */
+const DEMO_DOCTORS = [
+  { key: 'doctor:1', who: 'Dr. Suresh Hegde' },
+  { key: 'doctor:2', who: 'Dr. Lakshmi Narayan' },
+];
+
 async function main() {
   const API = process.env.API_URL ?? 'http://localhost:3000';
-  const DOCTOR = stableId('doctor:1');
-  const who = 'Dr. Suresh Hegde';
 
   for (let i = 0; ; i++) {
     try {
@@ -133,6 +140,12 @@ async function main() {
   };
   const open = async (s) => call('POST', `/sessions/${s.id}/open`, {});
 
+  for (const { key, who } of DEMO_DOCTORS) {
+    await ensureRunning({ call, open, doctorId: stableId(key), who });
+  }
+}
+
+async function ensureRunning({ call, open, doctorId: DOCTOR, who }) {
   const now = new Date();
   // Yesterday's date too: a night session that started before midnight is still running after it.
   const from = istDate(new Date(now.getTime() - 24 * 3_600_000));

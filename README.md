@@ -13,8 +13,10 @@ subagents; see `KICKOFF.md`, `CLAUDE.md` and `.claude/agents/`.
 The public repo is https://github.com/rohanbalu05/hospital-queue-system. No API keys or cloud accounts are needed: login,
 storage, OCR, the assistant and SMS/email notifications all use local or fake adapters (see `.env.example`).
 Every launch of the demo script **resets the demo data**, so "today" is always the current date, and it makes sure
-`doctor@hqms.test` (Dr. Suresh Hegde) has a session running right now, **at any hour** (it opens the seeded morning or
-afternoon session, or creates one labelled morning / afternoon / evening / night; `scripts/demo-session-now.mjs`).
+`doctor@hqms.test` (Dr. Suresh Hegde) and `doctor2@hqms.test` (Dr. Lakshmi Narayan, also General Medicine, so the
+"doctor unavailable → rebook / move patients" demo always has a target) have a session running right now, **at any hour**
+(it opens the seeded morning or afternoon session, or creates one labelled morning / afternoon / evening / night;
+`scripts/demo-session-now.mjs`).
 
 ### macOS (Homebrew)
 
@@ -124,7 +126,7 @@ The seed refuses to run with `NODE_ENV=production` unless `ALLOW_DEMO_SEED=true`
 | `pnpm evidence:static` / `pnpm evidence:tests` | regenerate `docs/evidence/static-analysis.md` / `unit-tests.md` |
 | `pnpm --filter @hqms/tests simulate` | seeded FCFS vs policy simulation (`docs/evidence/simulation-fcfs-vs-policy.md`) |
 | `pnpm db:migrate` / `db:seed` / `db:reset` | migrations, demo seed, reset (refuses unless a test database, `NODE_ENV=development` or `--force`; the demo launchers set `NODE_ENV=development`) |
-| `node scripts/demo-session-now.mjs` | ensure `doctor@hqms.test` has an open session now, at any hour (`node --test scripts/demo-session-now.test.mjs` tests its decision logic) |
+| `node scripts/demo-session-now.mjs` | ensure `doctor@hqms.test` and `doctor2@hqms.test` have an open session now, at any hour (`node --test scripts/demo-session-now.test.mjs` tests its decision logic) |
 | `pnpm depcruise` / `lint` / `typecheck` / `format:check` | the individual checks |
 
 Config notes (every key is in `.env.example`; defaults use fake adapters): `NOTIFICATION_PROVIDER=fake|real` (real SMS/email
