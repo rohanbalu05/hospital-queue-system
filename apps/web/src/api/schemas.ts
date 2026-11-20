@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Appointment, Doctor, Patient, Session } from '@hqms/contracts';
+import { Appointment, Doctor, MyTodayVisit, Notification, Patient, Session } from '@hqms/contracts';
 
 /**
  * List endpoints are documented as returning the items; the API may wrap them as { items, nextCursor }
@@ -12,6 +12,8 @@ export const DoctorList = listOf(Doctor);
 export const SessionList = listOf(Session);
 export const PatientList = listOf(Patient);
 export const AppointmentList = listOf(Appointment);
+export const MyTodayVisitList = listOf(MyTodayVisit);
+export const NotificationList = listOf(Notification);
 
 /**
  * Staff appointment rows. The Appointment contract has no patient name, MRN or phone, which the arrivals

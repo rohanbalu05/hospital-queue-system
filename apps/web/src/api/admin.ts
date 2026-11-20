@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AuditEvent,
+  NotificationDelivery,
   OperationsReport,
   QueuePolicy,
   Session,
   StaffMember,
+  type DeliveryChannel,
+  type DeliveryStatus,
   type Id as IdT,
   type LocalDate,
   type UpdateCapacityRequest,
@@ -18,6 +21,7 @@ export const adminKeys = {
   staff: ['admin', 'staff'] as const,
   report: (from: string, to: string) => ['admin', 'report', from, to] as const,
   audit: (p: AuditFilter) => ['admin', 'audit', p] as const,
+  notifications: (p: NotificationLogFilter) => ['admin', 'notifications', p] as const,
 };
 
 /** GET /policies/current (read-only Table 7 values). */
@@ -79,5 +83,33 @@ export function useSetAssignments() {
       void qc.invalidateQueries({ queryKey: adminKeys.staff });
       void qc.invalidateQueries({ queryKey: ['admin', 'audit'] });
     },
+  });
+}
+
+export interface NotificationLogFilter {
+  channel?: DeliveryChannel | undefined;
+  status?: DeliveryStatus | undefined;
+  sessionId?: IdT | undefined;
+  limit?: number | undefined;
+}
+
+/** GET /admin/notifications?limit=&channel=&status=&sessionId= : the "Notifications sent" log (addresses are masked by the API). */
+export function useNotificationLog(filter: NotificationLogFilter) {
+  return useQuery<NotificationDelivery[], ApiRequestError>({
+    queryKey: adminKeys.notifications(filter),
+    queryFn: ({ signal }) =>
+      get(
+        '/admin/notifications',
+        {
+          limit: String(filter.limit ?? 100),
+          ...(filter.channel ? { channel: filter.channel } : {}),
+          ...(filter.status ? { status: filter.status } : {}),
+          ...(filter.sessionId ? { sessionId: filter.sessionId } : {}),
+        },
+        listOf(NotificationDelivery),
+        signal,
+      ),
+    // New messages and retries land all day: look again every 20 s while the page is open.
+    refetchInterval: 20_000,
   });
 }

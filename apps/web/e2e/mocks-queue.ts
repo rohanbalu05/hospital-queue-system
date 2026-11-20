@@ -124,11 +124,49 @@ export const ETA_WITHHELD = {
   uncertainty: null,
 };
 
+export interface Availability {
+  state: 'not_started' | 'available' | 'away' | 'unavailable' | 'ended';
+  since: string | null;
+  expectedBackAt: string | null;
+  overdue: boolean;
+  reason: string | null;
+}
+
+/** Same mapping as deriveAvailability in the contracts: paused = away, unavailable = unavailable (D-032). */
+export function availabilityFor(
+  status: SessionStatus,
+  pausedAt: string | null,
+  pauseUntil: string | null,
+  reason: string | null,
+  staff: boolean,
+): Availability {
+  const none = { since: null, expectedBackAt: null, overdue: false, reason: null };
+  switch (status) {
+    case 'scheduled':
+      return { state: 'not_started', ...none };
+    case 'open':
+      return { state: 'available', ...none };
+    case 'closed':
+      return { state: 'ended', ...none };
+    case 'unavailable':
+      return { state: 'unavailable', ...none, since: pausedAt, reason: staff ? reason : null };
+    case 'paused':
+      return {
+        state: 'away',
+        since: pausedAt,
+        expectedBackAt: pauseUntil,
+        overdue: pauseUntil !== null && new Date(pauseUntil).getTime() <= NOW.getTime(),
+        reason: staff ? reason : null,
+      };
+  }
+}
+
 export interface DisplayColumnState {
   sessionId: string;
   doctorLabel: string;
   room: string;
   status: SessionStatus;
+  availability?: Availability;
   nowCalling: string | null;
   next: string[];
   queueVersion: number;
@@ -139,6 +177,9 @@ export interface QueueMockOptions {
   view?: 'staff' | 'patient';
   status?: SessionStatus;
   pauseUntil?: string | null;
+  /** When the doctor stepped away (away / unavailable). Default: 10:30 am IST. */
+  pausedAt?: string | null;
+  pauseReason?: string | null;
   /** Make the queue endpoint fail with 500 (error state). */
   failQueue?: boolean;
   /** Delay the queue response in ms (loading state). */
@@ -156,6 +197,8 @@ export interface QueueMock {
     version: number;
     status: SessionStatus;
     pauseUntil: string | null;
+    pausedAt: string | null;
+    pauseReason: string | null;
     active: MockEntry | null;
     waiting: MockEntry[];
     skipped: MockEntry[];
@@ -234,6 +277,8 @@ export async function mockQueue(page: Page, options: QueueMockOptions = {}): Pro
     version: 7,
     status: options.status ?? 'open',
     pauseUntil: options.pauseUntil ?? null,
+    pausedAt: options.pausedAt ?? (options.status === 'paused' || options.status === 'unavailable' ? istTime('10:30') : null),
+    pauseReason: options.pauseReason ?? (options.status === 'paused' ? 'Ward round / emergency' : options.status === 'unavailable' ? 'Called to emergency theatre' : null),
     active: null,
     waiting: initialWaiting(),
     skipped: [makeEntry(11, 'A', 'Geetha Murthy', '09:05', { state: 'skipped', callCount: 1, calledAt: istTime('09:50') })],
@@ -266,6 +311,7 @@ export async function mockQueue(page: Page, options: QueueMockOptions = {}): Pro
     endsAt: istTime(ends),
     slotMinutes: 12,
     status,
+    availability: id === SESSION_ID ? availabilityFor(status, world.pausedAt, world.pauseUntil, world.pauseReason, true) : availabilityFor(status, null, null, null, true),
     policyVersion: 1,
     capacity: { bookedCapacity: 10, walkinCapacity: 5, bookedReserved: 8, walkinUsed: 2, bookedAvailable: 2, walkinAvailable: 3 },
     version: 1,
@@ -277,6 +323,7 @@ export async function mockQueue(page: Page, options: QueueMockOptions = {}): Pro
     doctorId: DOCTOR_ID,
     status: world.status,
     pauseUntil: world.pauseUntil,
+    availability: availabilityFor(world.status, world.pausedAt, world.pauseUntil, world.pauseReason, true),
     policyVersion: 1,
     rotationPointer: pointer % 3,
     rotation: ROTATION,
@@ -297,6 +344,7 @@ export async function mockQueue(page: Page, options: QueueMockOptions = {}): Pro
     doctorLabel: 'Dr. Meenakshi Rao, General Medicine',
     room: 'Room 12',
     status: world.status,
+    availability: availabilityFor(world.status, world.pausedAt, world.pauseUntil, world.pauseReason, false),
     nowCalling: calledToken(),
     next: world.waiting.slice(0, 3).map((e) => e.token),
     queueVersion: world.version,
@@ -312,7 +360,10 @@ export async function mockQueue(page: Page, options: QueueMockOptions = {}): Pro
   const displaySnapshot = () => ({
     view: 'display' as const,
     capturedAt: NOW.toISOString(),
-    columns: [myColumn(), ...otherColumns()],
+    columns: [myColumn(), ...otherColumns()].map((c) => ({
+      ...c,
+      availability: c.availability ?? availabilityFor(c.status, c.status === 'paused' ? istTime('10:20') : null, null, null, false),
+    })),
   });
 
   const decide = (entry: MockEntry | null, reason: Reason, explanation: string) => {
@@ -401,6 +452,8 @@ export async function mockQueue(page: Page, options: QueueMockOptions = {}): Pro
             view: 'patient',
             sessionId: SESSION_ID,
             status: world.status,
+            availability: availabilityFor(world.status, world.pausedAt, world.pauseUntil, world.pauseReason, false),
+            doctorName: 'Dr. Meenakshi Rao',
             queueVersion: world.version,
             capturedAt: NOW.toISOString(),
             myEntry: {
@@ -418,7 +471,7 @@ export async function mockQueue(page: Page, options: QueueMockOptions = {}): Pro
       }
       if (method === 'GET' && path.startsWith('/sessions/') && path.endsWith('/queue')) {
         note();
-        return json(route, 200, { ...staffSnapshot(), sessionId: AFTERNOON_SESSION_ID, status: 'scheduled', active: null, waiting: [], skipped: [], completedCount: 0 });
+        return json(route, 200, { ...staffSnapshot(), sessionId: AFTERNOON_SESSION_ID, status: 'scheduled', availability: availabilityFor('scheduled', null, null, null, true), active: null, waiting: [], skipped: [], completedCount: 0 });
       }
       if (method === 'GET' && path === '/display/sessions') {
         note();
@@ -497,19 +550,32 @@ export async function mockQueue(page: Page, options: QueueMockOptions = {}): Pro
       }
       if (method === 'POST' && path === `/sessions/${SESSION_ID}/pause`) {
         note();
+        // D-032: refused while a patient is called and has not started, and when the return is after the session end.
+        if (world.active?.state === 'called') return err(route, 409, 'DOCTOR_OCCUPIED', 'A patient is called and has not started.');
+        const b = body as { until?: string; reason?: string } | null;
+        if (b?.until && new Date(b.until).getTime() > new Date(istTime('13:00')).getTime()) {
+          return err(route, 400, 'VALIDATION_FAILED', 'The expected return is after the session ends. Mark the doctor unavailable instead.');
+        }
+        if (world.status !== 'paused') world.pausedAt = NOW.toISOString();
         world.status = 'paused';
-        world.pauseUntil = (body as { until?: string } | null)?.until ?? null;
+        world.pauseUntil = b?.until ?? null;
+        world.pauseReason = b?.reason ?? null;
         return done(200, {});
       }
       if (method === 'POST' && path === `/sessions/${SESSION_ID}/resume`) {
         note();
         world.status = 'open';
         world.pauseUntil = null;
+        world.pausedAt = null;
+        world.pauseReason = null;
         return done(200, {});
       }
       if (method === 'POST' && path === `/sessions/${SESSION_ID}/unavailable`) {
         note();
         world.status = 'unavailable';
+        world.pausedAt = NOW.toISOString();
+        world.pauseUntil = null;
+        world.pauseReason = (body as { reason?: string } | null)?.reason ?? null;
         return done(200, {});
       }
       return route.fallback();

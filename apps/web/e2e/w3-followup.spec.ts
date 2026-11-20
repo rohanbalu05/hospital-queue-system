@@ -93,6 +93,9 @@ test.describe('follow-up staff at 1440', () => {
     await page.keyboard.press('Enter');
     await expect(outcome).toContainText('Advice given');
     await page.keyboard.press('Tab');
+    await expect(page.getByLabel('Reply to the patient')).toBeFocused();
+    await page.keyboard.type('Your readings are in the normal range. Please continue the tablet and call us if you feel unwell.');
+    await page.keyboard.press('Tab');
     await expect(page.getByLabel('Outcome note')).toBeFocused();
     await page.keyboard.type('Readings are 128/82 and 132/84. Within range. Asked to continue the tablet.');
     await page.keyboard.press('Tab');

@@ -15,6 +15,10 @@ interface InstructionFormProps {
   sourceDraftId?: string | undefined;
   pending: boolean;
   error: string | null;
+  /** The server answered 409: another doctor verified a newer version of the chosen instruction while this form was open. */
+  conflict?: boolean;
+  /** Reload the current instruction versions, so the next Verify compares against what is really current. */
+  onRefresh?: () => void;
   onVerify: (req: VerifyInstructionRequest) => void;
 }
 
@@ -25,17 +29,19 @@ export function titleFromDraft(text: string): string {
 }
 
 /** The editable instruction: title and body, prefilled from the draft. Nothing is visible to the assistant until verified. */
-export function InstructionForm({ initialTitle, initialBody, current, sourceDraftId, pending, error, onVerify }: InstructionFormProps) {
+export function InstructionForm({ initialTitle, initialBody, current, sourceDraftId, pending, error, conflict = false, onRefresh, onVerify }: InstructionFormProps) {
   const [title, setTitle] = useState(initialTitle);
   const [body, setBody] = useState(initialBody);
   const [target, setTarget] = useState('new');
   const [errors, setErrors] = useState<{ title?: string; body?: string }>({});
 
   const submit = () => {
+    // A new version names the instruction and the version the doctor was looking at as current (compare-and-set).
+    const superseded = target !== 'new' ? current.find((c) => c.instructionId === target) : undefined;
     const req = {
       title: title.trim(),
       body: body.trim(),
-      ...(target !== 'new' ? { instructionId: target } : {}),
+      ...(superseded ? { instructionId: superseded.instructionId, expectedCurrentVersionId: superseded.id } : {}),
       ...(sourceDraftId ? { sourceDraftId } : {}),
     };
     const parsed = VerifyInstructionRequest.safeParse(req);
@@ -86,7 +92,18 @@ export function InstructionForm({ initialTitle, initialBody, current, sourceDraf
       <Field label="Instruction" error={errors.body ?? null} hint="Check this against the original document. The patient assistant may quote it once verified.">
         <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={12} maxLength={5000} className="min-h-64" />
       </Field>
-      {error ? <InlineAlert title="The instruction was not verified">{error}</InlineAlert> : null}
+      {conflict ? (
+        <InlineAlert title="The instruction was not verified">
+          <p>Another doctor verified a newer version of this instruction while you were editing. Refresh to see it, then check your text against it and verify again.</p>
+          {onRefresh ? (
+            <Button type="button" variant="outline" className="mt-2" onClick={onRefresh}>
+              Refresh instructions
+            </Button>
+          ) : null}
+        </InlineAlert>
+      ) : error ? (
+        <InlineAlert title="The instruction was not verified">{error}</InlineAlert>
+      ) : null}
       <div>
         <Button type="submit" size="lg" disabled={pending}>
           {pending ? 'Verifying…' : 'Verify instruction'}

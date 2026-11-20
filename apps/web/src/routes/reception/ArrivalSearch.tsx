@@ -27,6 +27,8 @@ interface ArrivalSearchProps {
   onActive: (key: string) => void;
   /** Enter on the search box: check in the active arrival. */
   onEnter: () => void;
+  /** False while the rows on screen belong to an older search than the text in the box. */
+  resultsCurrent: boolean;
   loading: boolean;
   error: unknown;
   onRetry: () => void;
@@ -129,9 +131,17 @@ export function ArrivalSearch(p: ArrivalSearchProps) {
           <div className="overflow-hidden rounded-xl border border-rule bg-surface">
             <h2 className="flex h-10 items-center border-b border-rule px-3 text-sm font-bold">
               {p.query.trim() ? 'Matches' : 'Today’s appointments'}
-              <span className="ml-auto font-normal text-muted-foreground tabular-nums">{p.items.length}</span>
+              <span className="ml-auto font-normal text-muted-foreground tabular-nums">
+                {p.resultsCurrent ? p.items.length : <span role="status">Searching…</span>}
+              </span>
             </h2>
-            <ul id={listId} role="listbox" aria-label="Arrivals" className="max-h-[calc(100dvh-26rem)] min-h-40 divide-y divide-rule overflow-y-auto">
+            <ul
+              id={listId}
+              role="listbox"
+              aria-label="Arrivals"
+              aria-busy={!p.resultsCurrent}
+              className={cn('max-h-[calc(100dvh-26rem)] min-h-40 divide-y divide-rule overflow-y-auto', !p.resultsCurrent && 'opacity-60')}
+            >
               {p.items.map((item) => {
                 const active = item.key === p.activeKey;
                 const a = item.appointment;

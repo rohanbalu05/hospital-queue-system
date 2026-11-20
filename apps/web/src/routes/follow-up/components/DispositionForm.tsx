@@ -25,11 +25,14 @@ export function bookedWord(a: Appointment): string {
   return `${formatLocalDate(istDate(a.scheduledAt))}, ${formatIST(a.scheduledAt)} with ${a.doctorName}`;
 }
 
-/** Disposition select, outcome note, Resolve. "Return booked" needs a linked return appointment (FR-11, FR-14). */
+const REPLY_REQUIRED: readonly Disposition[] = ['advice_given', 'referred'];
+
+/** Disposition select, reply to the patient, staff outcome note, Resolve. "Return booked" needs a linked return appointment (FR-11, FR-14). */
 export function DispositionForm({ task, booked, focusOnMount, onBookReturn, onCancel }: DispositionFormProps) {
   const [disposition, setDisposition] = useState<Disposition | ''>('');
   const [note, setNote] = useState('');
-  const [errors, setErrors] = useState<{ disposition?: string; note?: string }>({});
+  const [reply, setReply] = useState('');
+  const [errors, setErrors] = useState<{ disposition?: string; note?: string; reply?: string }>({});
   const resolve = useResolveTask();
   const selectRef = useRef<HTMLButtonElement>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
@@ -55,17 +58,21 @@ export function DispositionForm({ task, booked, focusOnMount, onBookReturn, onCa
     const next: typeof errors = {};
     if (!disposition) next.disposition = 'Choose what happened.';
     if (note.trim().length < 3) next.note = 'Add a short outcome note, at least 3 characters.';
+    const replyRequired = disposition !== '' && REPLY_REQUIRED.includes(disposition);
+    if (replyRequired && reply.trim().length < 3) next.reply = 'Write the reply the patient will read, at least 3 characters.';
+    else if (reply.trim().length > 0 && reply.trim().length < 3) next.reply = 'The reply needs at least 3 characters, or leave it empty.';
     if (disposition === 'return_booked' && !bookedId) next.disposition = 'Book the return visit first, or choose another outcome.';
     setErrors(next);
-    if (next.disposition || next.note || !disposition) return;
+    if (next.disposition || next.note || next.reply || !disposition) return;
     const body = {
       expectedVersion: task.version,
       disposition,
       outcomeNote: note.trim(),
+      ...(reply.trim() ? { patientReply: reply.trim() } : {}),
       ...(disposition === 'return_booked' && bookedId ? { returnAppointmentId: bookedId } : {}),
     };
     if (!ResolveTaskRequest.safeParse(body).success) {
-      setErrors({ note: 'Check the outcome note and try again.' });
+      setErrors({ note: 'Check the reply and the outcome note, then try again.' });
       return;
     }
     resolve.mutate({ taskId: task.id, ...body }, { onSuccess: () => toast.success('Resolved') });
@@ -113,7 +120,38 @@ export function DispositionForm({ task, booked, focusOnMount, onBookReturn, onCa
         )
       ) : null}
 
-      <Field label="Outcome note" hint="What you told or did for the patient. Staff see this; the patient does not." error={errors.note ?? null}>
+      <Field
+        label="Reply to the patient"
+        hint={
+          <>
+            <span className="font-bold text-foreground">The patient sees this</span> on their Follow-ups page. Write it in plain language, as you would say it on the phone.{' '}
+            <span className="font-bold text-foreground">
+              {disposition === '' ? 'Required for Advice given and Referred.' : REPLY_REQUIRED.includes(disposition) ? 'Required for this outcome.' : 'Optional for this outcome.'}
+            </span>
+          </>
+        }
+        error={errors.reply ?? null}
+      >
+        <Textarea
+          value={reply}
+          onChange={(e) => {
+            setReply(e.target.value);
+            setErrors((x) => ({ ...x, reply: undefined }));
+          }}
+          rows={4}
+          maxLength={1000}
+        />
+      </Field>
+
+      <Field
+        label="Outcome note"
+        hint={
+          <>
+            <span className="font-bold text-foreground">Staff only.</span> What you did or learned, for the audit trail. The patient does not see this.
+          </>
+        }
+        error={errors.note ?? null}
+      >
         <Textarea
           ref={noteRef}
           value={note}
@@ -121,7 +159,7 @@ export function DispositionForm({ task, booked, focusOnMount, onBookReturn, onCa
             setNote(e.target.value);
             setErrors((x) => ({ ...x, note: undefined }));
           }}
-          rows={4}
+          rows={3}
           maxLength={2000}
         />
       </Field>
