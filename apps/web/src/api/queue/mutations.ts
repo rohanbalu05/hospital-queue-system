@@ -18,7 +18,12 @@ import { queueKeys } from './queries';
  */
 function useRefreshSnapshot(sessionId: string) {
   const qc = useQueryClient();
-  return () => qc.invalidateQueries({ queryKey: queueKeys.snapshot(sessionId) });
+  return () => {
+    // The session lists (doctor picker, reception tabs) carry the session status too.
+    void qc.invalidateQueries({ queryKey: ['queue', 'sessions'] });
+    void qc.invalidateQueries({ queryKey: ['sessions'] });
+    return qc.invalidateQueries({ queryKey: queueKeys.snapshot(sessionId) });
+  };
 }
 
 const sessionPath = (sessionId: string) => `/sessions/${encodeURIComponent(sessionId)}`;

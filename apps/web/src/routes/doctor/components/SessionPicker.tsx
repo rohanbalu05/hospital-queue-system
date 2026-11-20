@@ -6,7 +6,7 @@ import { formatIST } from '@/lib/format';
 const STATUS_WORD: Record<Session['status'], string> = {
   scheduled: 'not started',
   open: 'open',
-  paused: 'paused',
+  paused: 'away',
   unavailable: 'unavailable',
   closed: 'closed',
 };
@@ -26,10 +26,10 @@ interface SessionPickerProps {
 /** The doctor's sessions for today. */
 export function SessionPicker({ sessions, value, onChange }: SessionPickerProps) {
   return (
-    <div className="grid gap-1.5">
+    <div className="grid min-w-0 max-w-full gap-1.5">
       <Label htmlFor="session-picker">Session</Label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger id="session-picker" className="min-w-80">
+        <SelectTrigger id="session-picker" className="w-full min-w-0 sm:min-w-80">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

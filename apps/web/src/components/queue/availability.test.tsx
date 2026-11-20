@@ -163,6 +163,16 @@ describe('StepAwayDialog', () => {
     expect(onSubmit).toHaveBeenCalledWith({ until: '2026-11-11T05:15:00.000Z', reason: 'Ward round / emergency' });
   });
 
+  it('arrow keys move between the reasons and Space selects one', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    screen.getByRole('radio', { name: 'Ward round / emergency' }).focus();
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('radio', { name: 'Break' })).toHaveFocus();
+    await user.keyboard('{ArrowDown} ');
+    expect(screen.getByRole('radio', { name: 'Meeting' })).toBeChecked();
+  });
+
   it('changes the return time when already away', () => {
     renderDialog({ current: awayAvailability() });
     expect(screen.getByRole('heading', { name: 'Change return time' })).toBeVisible();
