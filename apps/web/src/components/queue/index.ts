@@ -26,3 +26,4 @@ export {
   backAboutText,
   clock,
 } from './availability';
+export { ConfirmDialog } from './ConfirmDialog';
