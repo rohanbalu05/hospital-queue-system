@@ -26,7 +26,7 @@ needed.
 | --- | --- |
 | First-time setup (idempotent) | `./init.sh` |
 | Run api, worker and web from source | `pnpm dev` (web http://localhost:5173, api http://localhost:3000) |
-| Run the document worker from source | `pnpm --filter @hqms/worker dev:documents` (then set `WORKER_JOB_TYPES=call_timeout,reservation_release` on the main worker so OCR never competes with queue timers) |
+| Run the document worker from source | `pnpm --filter @hqms/worker dev:documents` (then set `WORKER_JOB_TYPES=call_timeout,reservation_release,deliver_notification` on the main worker so OCR never competes with queue timers and notifications) |
 | Compose demo: build and start | `docker compose up -d --build --wait` |
 | Compose demo: stop (keeps data) | `docker compose down` |
 | Compose demo: wipe everything | `docker compose down -v` |
