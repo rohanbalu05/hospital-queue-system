@@ -21,7 +21,7 @@ Every launch of the demo script **resets the demo data**, so "today" is always t
 ### macOS (Homebrew)
 
 1. Install Homebrew (https://brew.sh) if you do not have it.
-2. `brew install node@22 postgresql@16 git` then `brew link --overwrite node@22` and `corepack enable`
+2. `brew install node@22 postgresql@16 git` then `brew link --overwrite --force node@22` and `corepack enable`
    (if `corepack` is missing: `npm install -g pnpm@10.28.0`).
 3. `git clone https://github.com/rohanbalu05/hospital-queue-system.git`
 4. `cd hospital-queue-system`
@@ -44,7 +44,7 @@ Troubleshooting (macOS):
   `$(brew --prefix postgresql@16)/bin` itself; to use it in your shell, `export PATH="$(brew --prefix postgresql@16)/bin:$PATH"`.
 - **Apple Silicon vs Intel**: Homebrew lives in `/opt/homebrew` on Apple Silicon and `/usr/local` on Intel. If `brew` is
   not found in a new terminal, run `eval "$(/opt/homebrew/bin/brew shellenv)"` (or `/usr/local/bin/brew`), as Homebrew prints at the end of its installer.
-- **`node` is the wrong version**: `node -v` must print v22 or newer. `brew link --overwrite node@22` fixes it.
+- **`node` is the wrong version**: `node -v` must print v22 or newer. `brew link --overwrite --force node@22` fixes it.
 - **Permission denied on `./start-demo.sh`**: `chmod +x start-demo.sh`.
 
 ### Windows
