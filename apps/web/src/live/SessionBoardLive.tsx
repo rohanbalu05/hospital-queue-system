@@ -7,7 +7,7 @@ import { useLiveQueue, type LiveStatus } from './useQueue';
 const SESSION_STATUS_WORD: Record<StaffQueueSnapshot['status'], string> = {
   scheduled: 'Not started',
   open: 'Open',
-  paused: 'Paused',
+  paused: 'Doctor away',
   unavailable: 'Doctor unavailable',
   closed: 'Closed',
 };
@@ -122,9 +122,13 @@ function BoardBody({ snapshot, status, lastUpdated, refreshFailed, selectedEntry
             {SESSION_STATUS_WORD[snapshot.status]}
           </span>
         </p>
-        {snapshot.status === 'paused' ? (
+        {snapshot.availability.state === 'away' ? (
           <p className="text-muted-foreground">
-            {snapshot.pauseUntil ? `Resumes about ${formatIST(snapshot.pauseUntil)}.` : 'No resume time set. Patient estimates are withheld.'}
+            {snapshot.availability.overdue
+              ? 'Back later than expected. Patient estimates are withheld.'
+              : snapshot.availability.expectedBackAt
+                ? `Expected back about ${formatIST(snapshot.availability.expectedBackAt)}.`
+                : 'No return time set. Patient estimates are withheld.'}
           </p>
         ) : null}
         <p className="ml-auto text-muted-foreground tabular-nums">Completed today {snapshot.completedCount}</p>

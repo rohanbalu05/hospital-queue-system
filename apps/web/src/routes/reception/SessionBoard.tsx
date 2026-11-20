@@ -9,13 +9,14 @@ import type { StaffAppointment } from '@/api/schemas';
 import { formatIST } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { SessionBoardLive } from '@/live';
+import { AvailabilityPanel } from './AvailabilityPanel';
 import { shortRef } from './model';
 import type { QueueEntry } from '@hqms/contracts';
 
 const SESSION_WORD: Record<SessionStatus, string> = {
   scheduled: 'Not started',
   open: 'Open',
-  paused: 'Paused',
+  paused: 'Doctor away',
   unavailable: 'Doctor unavailable',
   closed: 'Closed',
 };
@@ -87,6 +88,7 @@ export function SessionBoard(p: SessionBoardProps) {
         </div>
         <BoardCapacity session={s} />
         <BoardPressure sessionId={s.id} />
+        <AvailabilityPanel session={s} />
         {/* The live board below carries the "Last updated" line; this one speaks up only when the arrivals list went stale. */}
         {p.stale ? <StaleBanner className="mt-3" status="reconnecting" lastUpdated={p.lastUpdated} /> : null}
       </div>

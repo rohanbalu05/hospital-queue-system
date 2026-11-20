@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import {
+  AffectedPatients,
   DisplaySnapshot,
   Page,
   PatientQueueSnapshot,
@@ -15,6 +16,7 @@ export const queueKeys = {
   snapshot: (sessionId: string) => ['queue', 'snapshot', sessionId] as const,
   display: (date: string) => ['queue', 'display', date] as const,
   sessions: (date: string, doctorId: string | null) => ['queue', 'sessions', date, doctorId] as const,
+  affected: (sessionId: string) => ['queue', 'affected', sessionId] as const,
 };
 
 /** GET /sessions/{id}/queue is role-scoped: staff get the full board, patients only their own entry. */
@@ -55,5 +57,20 @@ export function useDoctorSessions(date: string, doctorId: string | null) {
     },
     enabled: doctorId !== null,
     staleTime: 30_000,
+  });
+}
+
+/**
+ * GET /sessions/{id}/affected (reception in scope, admin): booked patients who have not arrived, checked-in patients
+ * still waiting, and other doctors' sessions that could take them. Only asked for while the doctor is away or unavailable.
+ */
+export function useAffectedPatients(sessionId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: queueKeys.affected(sessionId ?? 'none'),
+    queryFn: ({ signal }) =>
+      apiFetch(`/sessions/${encodeURIComponent(sessionId as string)}/affected`, { schema: AffectedPatients, ...(signal ? { signal } : {}) }),
+    enabled: enabled && sessionId !== null,
+    staleTime: 5_000,
+    refetchInterval: 20_000,
   });
 }

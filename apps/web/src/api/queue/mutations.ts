@@ -4,7 +4,9 @@ import type { z } from 'zod';
 import type { MarkUnavailableRequest } from '@hqms/contracts';
 import {
   CallNextResult,
-  type PauseSessionRequest,
+  MoveAffectedResult,
+  type MoveAffectedRequest,
+  type StepAwayRequest,
   type SetPriorityRequest,
 } from '@hqms/contracts';
 import { apiFetch, createKeyHolder, type ApiRequestError } from '@/lib/api';
@@ -112,26 +114,78 @@ export function useSetPriority(sessionId: string) {
   });
 }
 
-export function usePauseSession(sessionId: string) {
+/** Holds one Idempotency-Key per logical request and drops it once the server has answered (success or a definite error). */
+function useCommandKey() {
+  const holder = useRef(createKeyHolder());
+  return {
+    keyFor: (request: unknown) => holder.current.keyFor(request),
+    settle: (err: ApiRequestError | null) => {
+      if (err === null || (err.status > 0 && err.code !== 'NETWORK')) holder.current.release();
+    },
+  };
+}
+
+/** POST /sessions/{id}/pause: "Step away". Also used on an away session to change the expected return. */
+export function useStepAway(sessionId: string) {
   const refresh = useRefreshSnapshot(sessionId);
-  return useMutation<unknown, ApiRequestError, PauseSessionRequest>({
-    mutationFn: (body) => apiFetch(`${sessionPath(sessionId)}/pause`, { method: 'POST', body }),
+  const key = useCommandKey();
+  return useMutation<unknown, ApiRequestError, StepAwayRequest>({
+    mutationFn: (body) =>
+      apiFetch(`${sessionPath(sessionId)}/pause`, { method: 'POST', body, idempotencyKey: key.keyFor({ sessionId, body }) }),
+    onSuccess: () => key.settle(null),
+    onError: (err) => key.settle(err),
     onSettled: refresh,
   });
 }
 
-export function useResumeSession(sessionId: string) {
+/** POST /sessions/{id}/resume: "I'm back". */
+export function useImBack(sessionId: string) {
   const refresh = useRefreshSnapshot(sessionId);
+  const key = useCommandKey();
   return useMutation<unknown, ApiRequestError, undefined>({
-    mutationFn: () => apiFetch(`${sessionPath(sessionId)}/resume`, { method: 'POST', body: {} }),
+    mutationFn: () => apiFetch(`${sessionPath(sessionId)}/resume`, { method: 'POST', body: {}, idempotencyKey: key.keyFor({ sessionId }) }),
+    onSuccess: () => key.settle(null),
+    onError: (err) => key.settle(err),
     onSettled: refresh,
   });
 }
 
+/** POST /sessions/{id}/unavailable: for the rest of the session. One-way. */
 export function useMarkUnavailable(sessionId: string) {
   const refresh = useRefreshSnapshot(sessionId);
+  const key = useCommandKey();
   return useMutation<unknown, ApiRequestError, z.infer<typeof MarkUnavailableRequest>>({
-    mutationFn: (body) => apiFetch(`${sessionPath(sessionId)}/unavailable`, { method: 'POST', body }),
+    mutationFn: (body) =>
+      apiFetch(`${sessionPath(sessionId)}/unavailable`, { method: 'POST', body, idempotencyKey: key.keyFor({ sessionId, body }) }),
+    onSuccess: () => key.settle(null),
+    onError: (err) => key.settle(err),
     onSettled: refresh,
+  });
+}
+
+/**
+ * POST /sessions/{id}/affected/move: reception moves the chosen patients to another doctor's session. Each patient is
+ * its own transaction on the server, so the answer lists who moved and who was skipped (e.g. no place left).
+ */
+export function useMoveAffected(sessionId: string) {
+  const qc = useQueryClient();
+  const key = useCommandKey();
+  return useMutation<MoveAffectedResult, ApiRequestError, MoveAffectedRequest>({
+    mutationFn: (body) =>
+      apiFetch(`${sessionPath(sessionId)}/affected/move`, {
+        method: 'POST',
+        body,
+        idempotencyKey: key.keyFor({ sessionId, body }),
+        schema: MoveAffectedResult,
+      }),
+    onSuccess: () => key.settle(null),
+    onError: (err) => key.settle(err),
+    onSettled: (result) => {
+      void qc.invalidateQueries({ queryKey: queueKeys.affected(sessionId) });
+      void qc.invalidateQueries({ queryKey: queueKeys.snapshot(sessionId) });
+      if (result) void qc.invalidateQueries({ queryKey: queueKeys.snapshot(result.targetSessionId) });
+      void qc.invalidateQueries({ queryKey: ['appointments'] });
+      void qc.invalidateQueries({ queryKey: ['sessions'] });
+    },
   });
 }
