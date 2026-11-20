@@ -234,16 +234,27 @@ const RED_FLAGS: ReadonlyArray<{ category: RedFlagCategory; patterns: ReadonlyAr
   },
 ];
 
-/** Words that cancel a symptom when they sit right before it: "no chest pain", "without any chest pain or breathlessness". */
-const STRICT_NEGATION = /\b(?:no|without|never|denies|denied|free of|neither|nor)\s+(?:[a-z-]+\s+){0,2}$/;
-const LIST_NEGATION = /\b(?:no|without|never|denies|neither)\b(?:\s+[a-z-]+){0,3}\s+(?:or|and|nor)\s+(?:[a-z-]+\s+){0,2}$/;
+/**
+ * Words that cancel a symptom, but only when they sit directly before it (zero or one word between):
+ * "no chest pain", "not short of breath", "never fainted", "without any chest pain or breathlessness".
+ * The detector is biased towards escalating: a missed emergency is worse than an extra "contact the clinic" reply.
+ */
+const STRICT_NEGATION = /\b(?:no|not|without|never|denies|denied|free of|neither|nor)\s+(?:[a-z-]+\s+){0,1}$/;
+const LIST_NEGATION = /\b(?:no|not|without|never|denies|neither)\b(?:\s+[a-z-]+){0,3}\s+(?:or|and|nor)\s+(?:[a-z-]+\s+){0,1}$/;
 const CONTRACTION_NEGATION =
-  /\b(?:don't|do not|didn't|did not|haven't|have not|hasn't|doesn't|does not|never)\s+(?:(?:really|currently|any|ever)\s+)?(?:have|had|get|feel|felt|having|experience|experienced|experiencing|got)\s+(?:(?:an?|any|the|my)\s+)?(?:[a-z-]+\s+)?$/;
+  /\b(?:don't|do not|didn't|did not|haven't|have not|hasn't|doesn't|does not|never)\s+(?:(?:really|currently|ever)\s+)?(?:have|had|get|feel|felt|having|experience|experienced|experiencing|got)\s+(?:(?:an?|any|the|my)\s+)?$/;
+/** A sentence that says the symptom is new, ongoing or worse is never reassured by a negation in it. */
+const ESCALATING_CONTEXT = /\b(?:like this|before|now|today|again|still|but|worse|anymore)\b/;
 
 function negatedBefore(text: string, index: number): boolean {
-  let start = 0;
-  for (const m of text.slice(0, index).matchAll(/[.?!;,\n]| but | however | though | although | except /g)) {
-    start = (m.index ?? 0) + m[0].length;
+  let sentenceStart = 0;
+  for (const m of text.slice(0, index).matchAll(/[.?!;\n]/g)) sentenceStart = (m.index ?? 0) + 1;
+  const tail = text.slice(index).search(/[.?!;\n]/);
+  const sentence = text.slice(sentenceStart, tail === -1 ? text.length : index + tail);
+  if (ESCALATING_CONTEXT.test(sentence)) return false;
+  let start = sentenceStart;
+  for (const m of text.slice(sentenceStart, index).matchAll(/,| however | though | although | except /g)) {
+    start = sentenceStart + (m.index ?? 0) + m[0].length;
   }
   const prefix = text.slice(start, index).replace(/\bno (?:idea|clue|doubt|problem|way|matter)\b/g, 'x');
   return STRICT_NEGATION.test(prefix) || LIST_NEGATION.test(prefix) || CONTRACTION_NEGATION.test(prefix);
