@@ -3,7 +3,7 @@ import { formatIST } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Choice, ChoiceList } from './choice';
 
-const LABEL_WORD: Record<Session['label'], string> = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
+const LABEL_WORD: Record<Session['label'], string> = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', night: 'Night' };
 export const sessionLabelWord = (s: Pick<Session, 'label'>) => LABEL_WORD[s.label];
 
 export const sessionTimes = (s: Pick<Session, 'startsAt' | 'endsAt'>) => `${formatIST(s.startsAt)} to ${formatIST(s.endsAt)}`;

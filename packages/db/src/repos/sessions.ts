@@ -105,7 +105,7 @@ export interface CreateSessionInput {
   id?: string;
   doctorId: string;
   sessionDate: string;
-  label: 'morning' | 'afternoon' | 'evening';
+  label: 'morning' | 'afternoon' | 'evening' | 'night';
   startsAt: string | Date;
   endsAt: string | Date;
   slotMinutes?: number;

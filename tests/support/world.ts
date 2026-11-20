@@ -340,7 +340,7 @@ export interface RunningSessionSpec {
   /** Minutes relative to now at which the session starts (negative = already started). */
   startOffsetMin: number;
   durationMin?: number;
-  label?: 'morning' | 'afternoon' | 'evening';
+  label?: 'morning' | 'afternoon' | 'evening' | 'night';
   booked?: number;
   walkin?: number;
 }
