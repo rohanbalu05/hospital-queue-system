@@ -4,13 +4,63 @@
       "versionBeforeDisconnect": 3,
       "versionAfterMissedCommits": 5,
       "firstNoticeAfterReconnect": {
-        "sessionId": "d2db321b-247c-4f19-8cff-b06a6cd5c9d7",
+        "sessionId": "b165181d-b7d3-47d5-a880-ebed6c1f38fd",
         "queueVersion": 5,
         "eventType": "connected",
-        "committedAt": "2026-11-11T13:22:17.956Z"
+        "committedAt": "2026-11-20T04:57:14.089Z"
       },
       "snapshotVersionMatches": true,
       "snapshotActiveToken": "W-001"
+    },
+    "freshness": {
+      "clients": 50,
+      "cycles": 20,
+      "commits": 60,
+      "samples": 3000,
+      "ssePollMs": 500,
+      "note": "Measured on one machine, clients in the test process, server poll 500 ms. Not the 200-client target and not the hosted environment.",
+      "commitToClientMsFromResponse": {
+        "n": 3000,
+        "p50": 235.2,
+        "p95": 475.7,
+        "p99": 492.9,
+        "max": 493.6
+      },
+      "sinceRequestSentMs": {
+        "n": 3000,
+        "p50": 243.5,
+        "p95": 484.4,
+        "p99": 500.9,
+        "max": 501.5
+      },
+      "byCommand": {
+        "call-next": {
+          "n": 1000,
+          "p50": 202.8,
+          "p95": 440.5,
+          "p99": 465.8,
+          "max": 466
+        },
+        "start": {
+          "n": 1000,
+          "p50": 359.2,
+          "p95": 474.7,
+          "p99": 475.4,
+          "max": 475.7
+        },
+        "complete": {
+          "n": 1000,
+          "p50": 162.8,
+          "p95": 491.7,
+          "p99": 493.4,
+          "max": 493.6
+        }
+      },
+      "noticesArrivingBeforeTheResponse": 0,
+      "allClientsConvergedOnFinalVersion": true,
+      "finalVersion": 83,
+      "pingEventsSeen": 100,
+      "worstCommitMsAcrossClients": 493.6
     }
   }
 }
