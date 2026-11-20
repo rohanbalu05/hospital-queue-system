@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { ArrivalResult, QueueEntry, RegisterPatientRequest } from '@hqms/contracts';
 import {
@@ -92,6 +93,21 @@ export default function ReceptionHome() {
   const sessions = useMemo(() => [...(sessionsQ.data ?? [])].sort((a, b) => a.startsAt.localeCompare(b.startsAt)), [sessionsQ.data]);
   const [sessionPick, setSessionPick] = useState('');
   const session = sessions.find((s) => s.id === sessionPick) ?? sessions[0] ?? null;
+
+  // A notification link opens /reception?session=<id>: select that session (and its doctor) once, when it is one of today's
+  // sessions for a doctor on this desk. Otherwise the default selection stays.
+  const [params] = useSearchParams();
+  const requestedSession = params.get('session');
+  const requestedQ = useSessionsQuery({ date: today }, { enabled: requestedSession !== null && assigned.length > 0 });
+  const appliedLink = useRef<string | null>(null);
+  useEffect(() => {
+    if (!requestedSession || appliedLink.current === requestedSession) return;
+    const found = requestedQ.data?.find((s) => s.id === requestedSession);
+    if (!found || !assigned.some((d) => d.id === found.doctorId)) return;
+    appliedLink.current = requestedSession;
+    setDoctorPick(found.doctorId);
+    setSessionPick(found.id);
+  }, [requestedSession, requestedQ.data, assigned]);
 
   const apptQ = useSessionAppointmentsQuery(session?.id ?? null);
   const appointments = apptQ.data;
