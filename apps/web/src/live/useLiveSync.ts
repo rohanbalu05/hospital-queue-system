@@ -90,6 +90,14 @@ export function useLiveSync<T>({ queryKey, eventsPath, isBehind, options }: Live
     void qc.refetchQueries({ queryKey: keyRef.current, exact: true });
   }, [qc]);
 
+  // The browser regained its network: whatever the stream missed, fetch a fresh snapshot now (FR-09, PR-04).
+  useEffect(() => {
+    if (eventsPath === null) return;
+    const onOnline = () => void qc.refetchQueries({ queryKey: keyRef.current, exact: true });
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [qc, eventsPath]);
+
   return useStream({
     url: eventsPath === null ? null : `${API_BASE}${eventsPath}`,
     onEvent,

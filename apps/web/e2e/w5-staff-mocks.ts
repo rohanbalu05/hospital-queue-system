@@ -37,8 +37,8 @@ export async function mockAffected(page: Page, queue: QueueMock): Promise<Affect
   const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
   const alternatives = () => [
-    { sessionId: TARGET_FULL_WALKIN, doctorId: uuid(0xd2), doctorName: 'Dr. Farah Siddiqui', department: 'General Medicine', room: 'Room 7', sessionDate: '2026-11-11', label: 'morning', startsAt: ist('09:00'), endsAt: ist('13:00'), status: 'open', nextSlotAt: ist('10:36'), bookedAvailable: 4, walkinAvailable: 0 },
-    { sessionId: TARGET_ROOMY, doctorId: uuid(0xd3), doctorName: 'Dr. Arvind Kulkarni', department: 'General Medicine', room: 'Room 4', sessionDate: '2026-11-11', label: 'afternoon', startsAt: ist('14:00'), endsAt: ist('17:00'), status: 'scheduled', nextSlotAt: ist('14:00'), bookedAvailable: 10, walkinAvailable: 5 },
+    { sessionId: TARGET_FULL_WALKIN, doctorId: uuid(0xd2), doctorName: 'Dr. Farah Siddiqui', department: 'General Medicine', room: 'OPD 7', sessionDate: '2026-11-11', label: 'morning', startsAt: ist('09:00'), endsAt: ist('13:00'), status: 'open', nextSlotAt: ist('10:36'), bookedAvailable: 4, walkinAvailable: 0 },
+    { sessionId: TARGET_ROOMY, doctorId: uuid(0xd3), doctorName: 'Dr. Arvind Kulkarni', department: 'General Medicine', room: 'OPD 4', sessionDate: '2026-11-11', label: 'afternoon', startsAt: ist('14:00'), endsAt: ist('17:00'), status: 'scheduled', nextSlotAt: ist('14:00'), bookedAvailable: 10, walkinAvailable: 5 },
   ];
 
   await page.route(/\/api\/sessions\/[^/]+\/affected(\/move)?$/, async (route) => {

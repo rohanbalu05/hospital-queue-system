@@ -3,6 +3,7 @@ import { fetchDisplaySnapshot, fetchQueueSnapshot, queueKeys, type RoleQueueSnap
 import type { DisplaySnapshot } from '@hqms/contracts';
 import { useLiveSync } from './useLiveSync';
 import { keepNewest, keepNewestDisplay } from './monotonic';
+import { useConnectionStatus } from './connection';
 import type { StreamStatus } from './stream';
 
 /** Safety net for a missed notice: the snapshot is refetched at least once a minute while the screen is open. */
@@ -47,8 +48,9 @@ export function useQueueEvents(sessionId: string | null): LiveInfo {
     eventsPath: sessionId === null ? null : `/sessions/${encodeURIComponent(sessionId)}/events`,
     isBehind: (notice, cached) => cached === undefined || notice.queueVersion > cached.queueVersion,
   });
+  const connection = useConnectionStatus(stream);
   return {
-    status: mergeStatus(stream, snapshot.isRefetchError),
+    status: mergeStatus(connection, snapshot.isRefetchError),
     lastUpdated: snapshot.dataUpdatedAt > 0 ? snapshot.dataUpdatedAt : null,
   };
 }
@@ -86,8 +88,9 @@ export function useDisplayEvents(date: string): LiveInfo {
       return column === undefined || notice.queueVersion > column.queueVersion;
     },
   });
+  const connection = useConnectionStatus(stream);
   return {
-    status: mergeStatus(stream, snapshot.isRefetchError),
+    status: mergeStatus(connection, snapshot.isRefetchError),
     lastUpdated: snapshot.dataUpdatedAt > 0 ? snapshot.dataUpdatedAt : null,
   };
 }

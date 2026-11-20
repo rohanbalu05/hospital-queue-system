@@ -244,7 +244,7 @@ function Alternative({ alt, selected }: { alt: AlternativeSession; selected: boo
       <Label htmlFor={id} className="grid flex-1 cursor-pointer gap-0.5 font-normal">
         <span className="font-bold">
           {alt.doctorName}, {alt.department}
-          <span className="font-normal text-muted-foreground"> · Room {alt.room}</span>
+          <span className="font-normal text-muted-foreground"> · {alt.room}</span>
         </span>
         <span className="tabular-nums">
           {today ? 'Today' : formatIST(alt.startsAt, 'weekday-date')}, {sessionLabelWord(alt)} {sessionTimes(alt)}

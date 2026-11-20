@@ -73,6 +73,13 @@ export function ActionPanel(p: ActionPanelProps) {
             <Button size="lg" className="mt-3 w-full" disabled={!current || !canCheckIn(p.item) || p.checkInPending || sessionOff} onClick={p.onCheckIn}>
               {p.checkInPending ? 'Checking in…' : 'Check in'}
             </Button>
+            {sessionOff && p.session ? (
+              <p role="status" className="mt-2 rounded-md border border-l-[3px] border-rule border-l-priority bg-priority/10 px-3 py-2 font-bold">
+                {p.session.status === 'unavailable'
+                  ? `${p.session.doctorName} is unavailable for the rest of this session, so no one can be checked in. Use Affected patients on the session board to move booked and waiting patients to another doctor.`
+                  : 'This session is closed, so no one can be checked in.'}
+              </p>
+            ) : null}
             <p className="mt-1.5 text-xs text-muted-foreground">
               {!current
                 ? `Searching for “${p.searchText ?? ''}”. Check in is available once the results are in.`

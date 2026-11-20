@@ -31,8 +31,8 @@ const affected = (overrides: Partial<AffectedPatients> = {}): AffectedPatients =
     { appointmentId: uid(0xb2), patientId: uid(0xa4), patientName: 'Imran Pasha', patientMrn: 'MRN-100250', patientPhone: '+919845098765', scheduledAt: at('10:48'), status: 'booked', version: 1, hasLogin: false },
   ],
   alternatives: [
-    { sessionId: uid(0x5e61), doctorId: uid(0xd2), doctorName: 'Dr. Farah Siddiqui', department: 'General Medicine', room: 'Room 7', sessionDate: today, label: 'morning', startsAt: at('09:00'), endsAt: at('13:00'), status: 'open', nextSlotAt: at('10:36'), bookedAvailable: 2, walkinAvailable: 0 },
-    { sessionId: uid(0x5e62), doctorId: uid(0xd3), doctorName: 'Dr. Arvind Kulkarni', department: 'General Medicine', room: 'Room 4', sessionDate: today, label: 'afternoon', startsAt: at('14:00'), endsAt: at('17:00'), status: 'scheduled', nextSlotAt: at('14:00'), bookedAvailable: 9, walkinAvailable: 5 },
+    { sessionId: uid(0x5e61), doctorId: uid(0xd2), doctorName: 'Dr. Farah Siddiqui', department: 'General Medicine', room: 'OPD 7', sessionDate: today, label: 'morning', startsAt: at('09:00'), endsAt: at('13:00'), status: 'open', nextSlotAt: at('10:36'), bookedAvailable: 2, walkinAvailable: 0 },
+    { sessionId: uid(0x5e62), doctorId: uid(0xd3), doctorName: 'Dr. Arvind Kulkarni', department: 'General Medicine', room: 'OPD 4', sessionDate: today, label: 'afternoon', startsAt: at('14:00'), endsAt: at('17:00'), status: 'scheduled', nextSlotAt: at('14:00'), bookedAvailable: 9, walkinAvailable: 5 },
   ],
   ...overrides,
 });
@@ -97,7 +97,7 @@ describe('AffectedDialog', () => {
     renderDialog();
     const radio = await screen.findByRole('radio', { name: /Dr\. Farah Siddiqui/ });
     const label = document.querySelector(`label[for="${radio.id}"]`) as HTMLElement;
-    expect(label).toHaveTextContent('Room 7');
+    expect(label).toHaveTextContent('OPD 7');
     expect(label).toHaveTextContent('Morning 9:00 am to 1:00 pm');
     expect(label).toHaveTextContent('2 booked places free, 0 walk-in places free, next slot 10:36 am');
   });

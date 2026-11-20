@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion -- fixtures index arrays this file just built */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -22,6 +21,7 @@ beforeAll(() => {
   Element.prototype.scrollIntoView = () => undefined;
 });
 
+const AFTERNOON_ID = uid(0x5e52);
 const today = new Date().toISOString().slice(0, 10);
 const at = (hhmm: string) => new Date(`${today}T${hhmm}:00+05:30`).toISOString();
 
@@ -42,6 +42,7 @@ describe('reception board follows the live session state', () => {
         if (path === '/sessions') {
           // The session list is polled and still says open: the board must not trust it over the live snapshot.
           return json([
+            { id: AFTERNOON_ID, doctorId: DOCTOR_ID, doctorName: 'Dr. Meenakshi Rao', department: 'General Medicine', room: 'Room 12', sessionDate: today, label: 'afternoon', startsAt: at('14:00'), endsAt: at('17:00'), slotMinutes: 12, status: 'scheduled', policyVersion: 1, capacity: { bookedCapacity: 10, walkinCapacity: 5, bookedReserved: 0, walkinUsed: 0, bookedAvailable: 10, walkinAvailable: 5 }, version: 1 },
             { id: SESSION_ID, doctorId: DOCTOR_ID, doctorName: 'Dr. Meenakshi Rao', department: 'General Medicine', room: 'Room 12', sessionDate: today, label: 'morning', startsAt: at('09:00'), endsAt: at('13:00'), slotMinutes: 12, status: 'open', policyVersion: 1, capacity: { bookedCapacity: 10, walkinCapacity: 5, bookedReserved: 3, walkinUsed: 0, bookedAvailable: 7, walkinAvailable: 5 }, version: 1 },
           ]);
         }
@@ -59,10 +60,10 @@ describe('reception board follows the live session state', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  const renderDesk = () =>
+  const renderDesk = (url = '/reception') =>
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={[url]}>
           <AuthProvider>
             <ReceptionHome />
           </AuthProvider>
@@ -96,5 +97,17 @@ describe('reception board follows the live session state', () => {
     act(() => FakeEventSource.last.emit('queue', notice(8)));
     await waitFor(() => expect(screen.getAllByText('Doctor away').length).toBeGreaterThan(0));
     expect(screen.queryByText('Open')).toBeNull();
+  });
+
+  it('opens the session named in a notification link (?session=) instead of the default one', async () => {
+    renderDesk(`/reception?session=${AFTERNOON_ID}`);
+    const afternoon = await screen.findByRole('tab', { name: /Afternoon/ });
+    await waitFor(() => expect(afternoon).toHaveAttribute('aria-selected', 'true'));
+  });
+
+  it('keeps the default session when the linked session is not one the desk can see', async () => {
+    renderDesk(`/reception?session=${uid(0x9999)}`);
+    const morning = await screen.findByRole('tab', { name: /Morning/ });
+    await waitFor(() => expect(morning).toHaveAttribute('aria-selected', 'true'));
   });
 });
