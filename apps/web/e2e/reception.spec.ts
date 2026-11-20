@@ -241,6 +241,8 @@ test.describe('reception desk keyboard only (NFR-08-b)', () => {
     await page.keyboard.press('/');
     await page.keyboard.type('gopal');
     await expect(page.getByRole('option', { name: /Gopal Krishnan/ })).toHaveAttribute('aria-selected', 'true');
+    // Enter only acts once the results for "gopal" are in (B4): Check in enables when they are.
+    await expect(page.getByRole('button', { name: 'Check in', exact: true })).toBeEnabled();
     await page.keyboard.press('Enter');
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
