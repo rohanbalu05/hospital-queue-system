@@ -1,7 +1,7 @@
 import { createPool } from '@hqms/db';
 import type { Pool } from 'pg';
 import type { WorkerConfig } from './config.js';
-import { defaultHandlers, documentDeps, ensureReconcileJob } from './handlers/index.js';
+import { defaultHandlers, documentDeps, ensureReconcileJob, notificationDeps } from './handlers/index.js';
 import { errorSummary, type Logger } from './log.js';
 import { OutboxDispatcher } from './outbox.js';
 import { JobRunner } from './runner.js';
@@ -24,6 +24,11 @@ export class WorkerService {
         STORAGE_DIR: config.storageDir,
         OCR_PROVIDER: config.ocrProvider,
         OCR_TIMEOUT_SEC: String(config.ocrTimeoutSec),
+      }),
+      notificationDeps({
+        ...process.env,
+        NOTIFICATION_PROVIDER: config.notificationProvider,
+        NOTIFICATION_TIMEOUT_SEC: String(config.notificationTimeoutSec),
       }),
     ),
     pool?: Pool,

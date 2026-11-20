@@ -26,6 +26,10 @@ export interface WorkerConfig {
   ocrProvider: string;
   /** The OCR provider call is abandoned after this long (below the handler timeout). */
   ocrTimeoutSec: number;
+  /** NOTIFICATION_PROVIDER: fake (default) | real (stubs until an SMS/email gateway is configured). */
+  notificationProvider: string;
+  /** The notification provider call is abandoned after this long (below the handler timeout). */
+  notificationTimeoutSec: number;
   /** How often a running worker makes sure this hour's reconcile_uploads job exists (safety net). */
   reconcileSeedSec: number;
 }
@@ -64,6 +68,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
     storageDir: env['STORAGE_DIR'] || './var/storage',
     ocrProvider: env['OCR_PROVIDER'] || 'fake',
     ocrTimeoutSec: int(env, 'OCR_TIMEOUT_SEC', 90),
+    notificationProvider: env['NOTIFICATION_PROVIDER'] || 'fake',
+    notificationTimeoutSec: int(env, 'NOTIFICATION_TIMEOUT_SEC', 30),
     reconcileSeedSec: int(env, 'WORKER_RECONCILE_SEED_SEC', 600),
   };
 }

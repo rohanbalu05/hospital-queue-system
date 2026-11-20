@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- tests index rows they have just created */
 import { randomUUID } from 'node:crypto';
 import type { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -18,6 +19,8 @@ beforeAll(() => {
   pool = makePool(8);
 });
 afterAll(async () => {
+  // the delivery jobs this file queues are not run here; keep them away from other files' runners
+  await pool.query(`UPDATE jobs SET state = 'cancelled' WHERE job_type = 'deliver_notification' AND state IN ('pending', 'failed')`);
   await pool.end();
 });
 beforeEach(async () => {
