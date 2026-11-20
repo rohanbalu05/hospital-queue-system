@@ -53,12 +53,4 @@ export const OperationsReport = z.object({
 });
 export type OperationsReport = z.infer<typeof OperationsReport>;
 
-/** GET /notifications (own). */
-export const Notification = z.object({
-  id: Id,
-  kind: z.string(),
-  body: z.string(),
-  createdAt: Instant,
-  readAt: Instant.nullable(),
-});
-export type Notification = z.infer<typeof Notification>;
+// Notification moved to notifications.ts (D-034).
