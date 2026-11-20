@@ -170,7 +170,7 @@ export function SessionConsole({ session, picker }: SessionConsoleProps) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
-        {picker}
+        <div className="min-w-0 max-w-full flex-1 sm:flex-none">{picker}</div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {away ? null : (
             <Button variant="outline" disabled={!availability.canStepAway} onClick={availability.openStepAway}>
@@ -221,7 +221,7 @@ export function SessionConsole({ session, picker }: SessionConsoleProps) {
         </p>
       ) : null}
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="lg:col-start-2 lg:row-span-3 lg:row-start-1">
           <CallNextPanel
             snapshot={snapshot}
