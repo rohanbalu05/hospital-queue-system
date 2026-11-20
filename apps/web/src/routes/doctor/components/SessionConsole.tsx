@@ -76,7 +76,7 @@ export function SessionConsole({ session, picker }: SessionConsoleProps) {
   // PR-32: the patient just completed stays on screen (with Create follow-up) until the next call.
   const [completed, setCompleted] = useState<QueueEntry | null>(null);
   const [followUpFor, setFollowUpFor] = useState<QueueEntry | null>(null);
-  const [created, setCreated] = useState<Record<string, CreatedFollowUp>>({});
+  const [created, setCreated] = useState<Record<string, CreatedFollowUp[]>>({});
   // PR-35: Skip asks first.
   const [skipFor, setSkipFor] = useState<QueueEntry | null>(null);
 
@@ -275,12 +275,12 @@ export function SessionConsole({ session, picker }: SessionConsoleProps) {
             onComplete={onComplete}
             onSkip={onSkip}
             onFollowUp={() => active && setFollowUpFor(active)}
-            confirmation={active && created[active.visitId] ? <FollowUpConfirmation created={created[active.visitId] as CreatedFollowUp} /> : null}
+            confirmation={active && created[active.visitId] ? <FollowUpConfirmation created={created[active.visitId] ?? []} /> : null}
             busy={busy}
           />
           {completed && (active === null || active.visitId !== completed.visitId) ? (
             <div className="mt-4">
-              <JustCompleted entry={completed} created={created[completed.visitId]} onFollowUp={() => setFollowUpFor(completed)} />
+              <JustCompleted entry={completed} created={created[completed.visitId] ?? []} onFollowUp={() => setFollowUpFor(completed)} />
             </div>
           ) : null}
         </div>
@@ -339,7 +339,7 @@ export function SessionConsole({ session, picker }: SessionConsoleProps) {
       <FollowUpDialog
         entry={followUpFor}
         onClose={() => setFollowUpFor(null)}
-        onCreated={(visitId, c) => setCreated((all) => ({ ...all, [visitId]: c }))}
+        onCreated={(visitId, c) => setCreated((all) => ({ ...all, [visitId]: [...(all[visitId] ?? []), c] }))}
       />
       <ConfirmDialog
         open={skipFor !== null}

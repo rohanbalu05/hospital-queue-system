@@ -26,7 +26,10 @@ import {
  * PR-26 late markers, PR-27 Mark absent asks first.
  */
 
-vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn() }), Toaster: () => null }));
+vi.mock('sonner', () => ({
+  toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn() }),
+  Toaster: () => null,
+}));
 
 polyfillRadix();
 afterEach(() => {
@@ -39,13 +42,25 @@ const duplicateReply = (candidates: unknown[]) => (body: Record<string, unknown>
     ? { status: 201, body: patient(91, String(body.fullName), (body.phone as string | null) ?? null) }
     : {
         status: 409,
-        body: { error: { code: 'CONFLICT', message: 'This may be an existing patient.', details: { reason: 'POSSIBLE_DUPLICATE', candidates } } },
+        body: {
+          error: {
+            code: 'CONFLICT',
+            message: 'This may be an existing patient.',
+            details: { reason: 'POSSIBLE_DUPLICATE', candidates },
+          },
+        },
       };
 
 function base(): DeskWorld {
   const s1 = makeSession(1, DOC_RAO);
   const s2 = makeSession(2, DOC_KULKARNI);
-  return { doctors: [DOC_RAO, DOC_KULKARNI], sessions: [s1, s2], patients: [HARISH, LAKSHMI], appointments: [], alternatives: [] };
+  return {
+    doctors: [DOC_RAO, DOC_KULKARNI],
+    sessions: [s1, s2],
+    patients: [HARISH, LAKSHMI],
+    appointments: [],
+    alternatives: [],
+  };
 }
 
 async function fillRegister(user: ReturnType<typeof userEvent.setup>, name: string, phone: string) {
@@ -119,7 +134,10 @@ describe('PR-23: other doctors when walk-in places are full', () => {
   function full(): DeskWorld {
     const w = base();
     w.sessions[0] = makeSession(1, DOC_RAO, { cap: capacity({ walkinUsed: 5 }) });
-    w.alternatives = [alt(), alt({ sessionId: uid(0x5e99), doctorId: uid(0xd9), doctorName: 'Dr. Anil Bhat', walkinAvailable: 0 })];
+    w.alternatives = [
+      alt(),
+      alt({ sessionId: uid(0x5e99), doctorId: uid(0xd9), doctorName: 'Dr. Anil Bhat', walkinAvailable: 0 }),
+    ];
     return w;
   }
 
@@ -240,7 +258,10 @@ describe('PR-27: Mark absent asks first', () => {
     await user.type(within(dialog).getByLabelText('Reason (optional)'), 'Went to pharmacy');
     await user.click(within(dialog).getByRole('button', { name: 'Mark absent' }));
     await waitFor(() => expect(posts.filter((p) => p.path.includes('/absent'))).toHaveLength(1));
-    expect(posts.find((p) => p.path.includes('/absent'))!.body).toMatchObject({ reason: 'Went to pharmacy', expectedVersion: 1 });
+    expect(posts.find((p) => p.path.includes('/absent'))!.body).toMatchObject({
+      reason: 'Went to pharmacy',
+      expectedVersion: 1,
+    });
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Marked absent', expect.anything()));
   });
 

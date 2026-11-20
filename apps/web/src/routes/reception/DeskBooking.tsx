@@ -6,7 +6,14 @@ import { useBookForPatient, useCancelForPatient } from '@/api/queue';
 import { Field } from '@/components/layout/Field';
 import { ErrorState, SkeletonRows } from '@/components/queue';
 import { Choice, ChoiceList } from '@/components/scheduling/choice';
-import { PlacesLeft, SessionChoiceList, bookability, placesLeft, sessionLabelWord, sessionTimes } from '@/components/scheduling/sessions';
+import {
+  PlacesLeft,
+  SessionChoiceList,
+  bookability,
+  placesLeft,
+  sessionLabelWord,
+  sessionTimes,
+} from '@/components/scheduling/sessions';
 import { InlineAlert } from '@/components/scheduling/status';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,9 +32,16 @@ export function bookingErrorWords(err: unknown, what: string): { title: string; 
         return { title, message: 'That session has no places left. Choose another session.' };
       case 'CONFLICT':
       case 'INVALID_TRANSITION':
-        return { title, message: 'The appointment changed while you were working. The list has been refreshed. Check it and try again.' };
+        return {
+          title,
+          message:
+            'The appointment changed while you were working. The list has been refreshed. Check it and try again.',
+        };
       case 'NETWORK':
-        return { title, message: `${err.message} Press the button again: the same request is sent, so nothing is done twice.` };
+        return {
+          title,
+          message: `${err.message} Press the button again: the same request is sent, so nothing is done twice.`,
+        };
       case 'FORBIDDEN':
         return { title, message: 'Your role cannot do this for this doctor.' };
       default:
@@ -52,7 +66,10 @@ function SlotSummary({ session }: { session: Session }) {
   const next = slots.data?.slots.find((s) => s.available) ?? null;
   const { left, of } = placesLeft(session);
   return (
-    <div className="rounded-md border border-l-[3px] border-rule border-l-appt bg-surface px-3 py-2.5" data-testid="slot-summary">
+    <div
+      className="rounded-md border border-l-[3px] border-rule border-l-appt bg-surface px-3 py-2.5"
+      data-testid="slot-summary"
+    >
       {slots.isPending ? (
         <p className="text-muted-foreground">Checking the next free slot…</p>
       ) : slots.isError ? (
@@ -73,7 +90,15 @@ function SlotSummary({ session }: { session: Session }) {
 // Book appointment
 // ---------------------------------------------------------------------------------------------------------------------
 
-export function BookPanel({ patient, onBack, onDone }: { patient: DeskPatient; onBack: () => void; onDone: () => void }) {
+export function BookPanel({
+  patient,
+  onBack,
+  onDone,
+}: {
+  patient: DeskPatient;
+  onBack: () => void;
+  onDone: () => void;
+}) {
   const doctorsQ = useDoctorsQuery();
   const doctors = useMemo(() => (doctorsQ.data ?? []).filter((d) => d.active), [doctorsQ.data]);
   const departments = useMemo(() => [...new Set(doctors.map((d) => d.department))].sort(), [doctors]);
@@ -84,7 +109,10 @@ export function BookPanel({ patient, onBack, onDone }: { patient: DeskPatient; o
   const bookRef = useRef<HTMLButtonElement>(null);
 
   const days = useMemo(() => nextDays(DAYS), []);
-  const sessionsQ = useSessionsQuery({ doctorId, from: days[0] as string, to: days[DAYS - 1] as string }, { enabled: doctorId !== '' });
+  const sessionsQ = useSessionsQuery(
+    { doctorId, from: days[0] as string, to: days[DAYS - 1] as string },
+    { enabled: doctorId !== '' },
+  );
   const sessions = useMemo(() => sessionsQ.data ?? [], [sessionsQ.data]);
   const onDay = sessions.filter((s) => s.sessionDate === date);
   const session = sessions.find((s) => s.id === sessionId) ?? null;
@@ -94,7 +122,10 @@ export function BookPanel({ patient, onBack, onDone }: { patient: DeskPatient; o
   const error = book.error ? bookingErrorWords(book.error, 'booked') : null;
 
   if (doctorsQ.isPending) return <SkeletonRows count={4} />;
-  if (doctorsQ.isError) return <ErrorState title="Doctors could not be loaded" error={doctorsQ.error} onRetry={() => void doctorsQ.refetch()} />;
+  if (doctorsQ.isError)
+    return (
+      <ErrorState title="Doctors could not be loaded" error={doctorsQ.error} onRetry={() => void doctorsQ.refetch()} />
+    );
 
   const confirm = () => {
     if (!session || book.isPending) return;
@@ -172,7 +203,11 @@ export function BookPanel({ patient, onBack, onDone }: { patient: DeskPatient; o
         sessionsQ.isPending ? (
           <SkeletonRows count={3} />
         ) : sessionsQ.isError ? (
-          <ErrorState title="Sessions could not be loaded" error={sessionsQ.error} onRetry={() => void sessionsQ.refetch()} />
+          <ErrorState
+            title="Sessions could not be loaded"
+            error={sessionsQ.error}
+            onRetry={() => void sessionsQ.refetch()}
+          />
         ) : sessions.length === 0 ? (
           <InlineAlert tone="notice" title={`No sessions for ${doctor?.fullName ?? 'this doctor'} in the next 7 days`}>
             Choose another doctor, or ask an admin to add sessions.
@@ -196,8 +231,7 @@ export function BookPanel({ patient, onBack, onDone }: { patient: DeskPatient; o
                     const open = day.filter((s) => bookability(s).ok);
                     return (
                       <SelectItem key={d} value={d} disabled={open.length === 0}>
-                        {dayWord(d)}
-                        {d === days[0] || d === days[1] ? `, ${formatLocalDate(d)}` : ''}
+                        {d === days[0] || d === days[1] ? `${dayWord(d)} (${formatLocalDate(d)})` : dayWord(d)}
                         {day.length === 0 ? ' (no sessions)' : open.length === 0 ? ' (full)' : ''}
                       </SelectItem>
                     );
@@ -210,7 +244,12 @@ export function BookPanel({ patient, onBack, onDone }: { patient: DeskPatient; o
       ) : null}
 
       {date !== '' && onDay.length > 0 ? (
-        <SessionChoiceList sessions={onDay} value={sessionId} onValueChange={setSessionId} onEnter={() => bookRef.current?.focus()} />
+        <SessionChoiceList
+          sessions={onDay}
+          value={sessionId}
+          onValueChange={setSessionId}
+          onEnter={() => bookRef.current?.focus()}
+        />
       ) : null}
 
       {session ? <SlotSummary session={session} /> : null}
@@ -232,9 +271,21 @@ export function BookPanel({ patient, onBack, onDone }: { patient: DeskPatient; o
 // Reschedule
 // ---------------------------------------------------------------------------------------------------------------------
 
-export function ReschedulePanel({ appointment, onBack, onDone }: { appointment: Appointment; onBack: () => void; onDone: () => void }) {
+export function ReschedulePanel({
+  appointment,
+  onBack,
+  onDone,
+}: {
+  appointment: Appointment;
+  onBack: () => void;
+  onDone: () => void;
+}) {
   const days = useMemo(() => nextDays(DAYS), []);
-  const sessionsQ = useSessionsQuery({ department: appointment.department, from: days[0] as string, to: days[DAYS - 1] as string });
+  const sessionsQ = useSessionsQuery({
+    department: appointment.department,
+    from: days[0] as string,
+    to: days[DAYS - 1] as string,
+  });
   const options = useMemo(
     () =>
       (sessionsQ.data ?? [])
@@ -266,28 +317,40 @@ export function ReschedulePanel({ appointment, onBack, onDone }: { appointment: 
   return (
     <div className="grid gap-4">
       <p className="text-muted-foreground">
-        Now with {appointment.doctorName}, {dayWord(istDate(appointment.scheduledAt))}, {formatIST(appointment.scheduledAt)}. Sessions of other doctors in {appointment.department} and later sessions of the same doctor are shown.
+        Now with {appointment.doctorName}, {dayWord(istDate(appointment.scheduledAt))},{' '}
+        {formatIST(appointment.scheduledAt)}. Other {appointment.department} sessions with a place, for the next 7 days.
       </p>
       {sessionsQ.isPending ? (
         <SkeletonRows count={4} />
       ) : sessionsQ.isError ? (
-        <ErrorState title="Sessions could not be loaded" error={sessionsQ.error} onRetry={() => void sessionsQ.refetch()} />
+        <ErrorState
+          title="Sessions could not be loaded"
+          error={sessionsQ.error}
+          onRetry={() => void sessionsQ.refetch()}
+        />
       ) : options.length === 0 ? (
         <InlineAlert tone="notice" title={`No other ${appointment.department} session has a place in the next 7 days`}>
           Cancel the appointment instead, or ask an admin to add sessions.
         </InlineAlert>
       ) : (
-        <ChoiceList label="Session" value={sessionId} onValueChange={setSessionId} onEnter={() => confirmRef.current?.focus()}>
-          {options.map((s) => (
-            <Choice
-              key={s.id}
-              value={s.id}
-              title={`${dayWord(s.sessionDate)}, ${sessionLabelWord(s)}`}
-              detail={`${s.doctorName}, room ${s.room}, ${sessionTimes(s)}`}
-              aside={<PlacesLeft session={s} />}
-            />
-          ))}
-        </ChoiceList>
+        <div className="max-h-80 overflow-y-auto rounded-xl">
+          <ChoiceList
+            label="Session"
+            value={sessionId}
+            onValueChange={setSessionId}
+            onEnter={() => confirmRef.current?.focus()}
+          >
+            {options.map((s) => (
+              <Choice
+                key={s.id}
+                value={s.id}
+                title={`${dayWord(s.sessionDate)}, ${sessionLabelWord(s)}`}
+                detail={`${s.doctorName}, room ${s.room}, ${sessionTimes(s)}`}
+                aside={<PlacesLeft session={s} />}
+              />
+            ))}
+          </ChoiceList>
+        </div>
       )}
       {target ? <SlotSummary session={target} /> : null}
       {error ? <InlineAlert title={error.title}>{error.message}</InlineAlert> : null}
@@ -307,14 +370,23 @@ export function ReschedulePanel({ appointment, onBack, onDone }: { appointment: 
 // Cancel
 // ---------------------------------------------------------------------------------------------------------------------
 
-export function CancelPanel({ appointment, onBack, onDone }: { appointment: Appointment; onBack: () => void; onDone: () => void }) {
+export function CancelPanel({
+  appointment,
+  onBack,
+  onDone,
+}: {
+  appointment: Appointment;
+  onBack: () => void;
+  onDone: () => void;
+}) {
   const [reason, setReason] = useState('');
   const cancel = useCancelForPatient();
   const error = cancel.error ? bookingErrorWords(cancel.error, 'cancelled') : null;
   return (
     <div className="grid gap-4">
       <p>
-        {appointment.doctorName}, {dayWord(istDate(appointment.scheduledAt))}, {formatIST(appointment.scheduledAt)}. The place is released so another patient can book it.
+        {appointment.doctorName}, {dayWord(istDate(appointment.scheduledAt))}, {formatIST(appointment.scheduledAt)}. The
+        place is released so another patient can book it.
       </p>
       <Field label="Reason (optional)">
         <Input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} autoComplete="off" />
@@ -330,10 +402,16 @@ export function CancelPanel({ appointment, onBack, onDone }: { appointment: Appo
           disabled={cancel.isPending}
           onClick={() =>
             cancel.mutate(
-              { appointmentId: appointment.id, expectedVersion: appointment.version, ...(reason.trim() ? { reason: reason.trim() } : {}) },
+              {
+                appointmentId: appointment.id,
+                expectedVersion: appointment.version,
+                ...(reason.trim() ? { reason: reason.trim() } : {}),
+              },
               {
                 onSuccess: () => {
-                  toast.success('Cancelled', { description: `${appointment.doctorName}, ${dayWord(istDate(appointment.scheduledAt))}, ${formatIST(appointment.scheduledAt)}` });
+                  toast.success('Cancelled', {
+                    description: `${appointment.doctorName}, ${dayWord(istDate(appointment.scheduledAt))}, ${formatIST(appointment.scheduledAt)}`,
+                  });
                   onDone();
                 },
               },

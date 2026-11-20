@@ -25,7 +25,10 @@ import {
  * the only way they get a future appointment.
  */
 
-vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn() }), Toaster: () => null }));
+vi.mock('sonner', () => ({
+  toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn() }),
+  Toaster: () => null,
+}));
 
 polyfillRadix();
 afterEach(() => {
@@ -35,7 +38,17 @@ afterEach(() => {
 
 function world(): DeskWorld {
   const s1 = makeSession(1, DOC_RAO);
-  const s2 = makeSession(2, DOC_KULKARNI, { label: 'afternoon', cap: { bookedCapacity: 10, walkinCapacity: 5, bookedReserved: 4, walkinUsed: 0, bookedAvailable: 6, walkinAvailable: 5 } });
+  const s2 = makeSession(2, DOC_KULKARNI, {
+    label: 'afternoon',
+    cap: {
+      bookedCapacity: 10,
+      walkinCapacity: 5,
+      bookedReserved: 4,
+      walkinUsed: 0,
+      bookedAvailable: 6,
+      walkinAvailable: 5,
+    },
+  });
   const s3 = makeSession(3, DOC_KULKARNI, { day: TOMORROW });
   const s4 = makeSession(4, DOC_SHETTY, { day: TOMORROW });
   return {
@@ -54,7 +67,7 @@ async function openDesk(user: ReturnType<typeof userEvent.setup>, name = /Harish
 }
 
 describe('reception patient desk', () => {
-  it('lists the patient\'s upcoming appointments with date, time, doctor and status', async () => {
+  it("lists the patient's upcoming appointments with date, time, doctor and status", async () => {
     installDesk(world());
     const user = userEvent.setup();
     renderDesk();
@@ -115,11 +128,15 @@ describe('reception patient desk', () => {
     const user = userEvent.setup();
     renderDesk();
     const desk = await openDesk(user);
-    await user.click(await within(desk).findByRole('button', { name: /^Reschedule appointment with Dr. Meenakshi Rao/ }));
+    await user.click(
+      await within(desk).findByRole('button', { name: /^Reschedule appointment with Dr. Meenakshi Rao/ }),
+    );
     expect(await within(desk).findByRole('heading', { name: 'Reschedule appointment' })).toBeVisible();
     // Same department only: Dr. Kulkarni's sessions are offered, ENT's are not.
     expect(within(desk).queryByText(/Dr. Ramesh Shetty/)).toBeNull();
-    await user.click(await within(desk).findByRole('radio', { name: /Dr. Shweta Kulkarni.*Afternoon|Afternoon.*Dr. Shweta Kulkarni/ }));
+    await user.click(
+      await within(desk).findByRole('radio', { name: /Dr. Shweta Kulkarni.*Afternoon|Afternoon.*Dr. Shweta Kulkarni/ }),
+    );
     expect(await within(desk).findByText(/Next free slot/)).toHaveTextContent('10:12 am');
     expect(within(desk).getByText(/6 of 10 places left/)).toBeVisible();
     await user.click(within(desk).getByRole('button', { name: 'Reschedule' }));
@@ -156,7 +173,9 @@ describe('reception patient desk', () => {
     expect(sent.body).toEqual({ sessionId: makeSession(3, DOC_KULKARNI, { day: TOMORROW }).id, patientId: HARISH.id });
     expect(sent.key).toBeTruthy();
     await waitFor(() =>
-      expect(toast.success).toHaveBeenCalledWith('Booked', { description: expect.stringMatching(/Harish Gowda with Dr. Shweta Kulkarni, Tomorrow, about 10:12 am/) }),
+      expect(toast.success).toHaveBeenCalledWith('Booked', {
+        description: expect.stringMatching(/Harish Gowda with Dr. Shweta Kulkarni, Tomorrow, about 10:12 am/),
+      }),
     );
     // Back on the list, which refetches.
     expect(await within(desk).findByRole('heading', { name: 'Upcoming appointments' })).toBeVisible();

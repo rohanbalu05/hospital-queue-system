@@ -203,8 +203,10 @@ function AppointmentRow({
     <li className={cn('flex min-h-10 items-center gap-3 border-l-[3px] px-3 text-sm', muted ? 'border-l-rule text-muted-foreground' : 'border-l-appt')}>
       {tag ? <GroupTag group="A" className="min-w-6 justify-center" /> : null}
       <span className="w-[4.25rem] shrink-0 font-bold tabular-nums">{formatIST(a.scheduledAt)}</span>
-      <span className="min-w-0 flex-1 truncate font-bold">{a.patientName ?? shortRef(a.patientId)}</span>
-      {late ? <LateMark scheduledAt={a.scheduledAt} /> : null}
+      <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5 py-1">
+        <span className="w-full truncate font-bold">{a.patientName ?? shortRef(a.patientId)}</span>
+        {late ? <LateMark scheduledAt={a.scheduledAt} /> : null}
+      </span>
       {a.patientMrn ? <span className="hidden shrink-0 text-xs text-muted-foreground tabular-nums sm:inline">{a.patientMrn}</span> : null}
       {token ? <TokenText token={token.token} size="md" className="shrink-0" /> : null}
       <StatusWord status={a.status} className="w-24 shrink-0 text-right" />
