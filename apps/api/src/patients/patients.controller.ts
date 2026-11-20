@@ -1,8 +1,9 @@
 import { Body, Controller, Get, Headers, Inject, Param, Post, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { PatientSearchQuery, RegisterPatientRequest, type Patient } from '@hqms/contracts';
+import { PatientSearchQuery, RegisterPatientRequest, type Patient, type PossibleDuplicates } from '@hqms/contracts';
 import {
   createPatient,
+  findPossibleDuplicates,
   getPatient,
   hashRequest,
   searchPatients,
@@ -12,7 +13,7 @@ import {
   type Tx,
 } from '@hqms/db';
 import { DB_POOL } from '../common/tokens.js';
-import { notFound, validationFailed } from '../common/errors.js';
+import { conflict, notFound, validationFailed } from '../common/errors.js';
 import { optionalIdempotencyKey, sendResult } from '../common/http.js';
 import type { RequestCtx } from '../common/request-context.js';
 import { UuidPipe, ZodPipe } from '../common/zod.pipe.js';
@@ -21,6 +22,13 @@ import { ALL_ROLES, Ctx, Roles } from '../identity/auth.decorators.js';
 
 /** Same shape as the contract's PatientSearchQuery; the minimum length is enforced in the handler (400). */
 const SearchQuery = PatientSearchQuery;
+
+/** Thrown inside the registration transaction to roll it back and answer 409 with the candidates. */
+class DuplicateFound extends Error {
+  constructor(readonly candidates: Patient[]) {
+    super('possible duplicate patient');
+  }
+}
 
 @Controller('patients')
 export class PatientsController {
@@ -39,7 +47,13 @@ export class PatientsController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<Patient> {
     const key = optionalIdempotencyKey(keyHeader);
+    // PR-22: look for an existing patient first (same phone, or same name when no phone is given), inside the same
+    // transaction, so an idempotent replay returns the stored 201 instead of re-checking. A hit is a 409 with the
+    // candidates unless reception confirms a new record. The refusal is audited in its own transaction, by count only
+    // (never names or numbers). Not a unique constraint: two people can really share a phone.
     const work = async (tx: Tx) => {
+      const candidates = await findPossibleDuplicates(tx, { phone: body.phone ?? null, fullName: body.fullName });
+      if (candidates.length > 0 && body.confirmNew !== true) throw new DuplicateFound(candidates);
       const patient = await createPatient(tx, {
         fullName: body.fullName.trim(),
         phone: body.phone ?? null,
@@ -52,25 +66,42 @@ export class PatientsController {
         operation: 'patient.register',
         entityType: 'patient',
         entityId: patient.id,
-        next: { mrn: patient.mrn },
+        next: candidates.length > 0 ? { mrn: patient.mrn, confirmedNew: true, candidateCount: candidates.length } : { mrn: patient.mrn },
         correlationId: ctx.correlationId,
       });
       return patient;
     };
-    if (!key) {
-      const patient = await withTransaction(this.pool, work);
-      res.status(201);
-      return patient;
+    try {
+      if (!key) {
+        const patient = await withTransaction(this.pool, work);
+        res.status(201);
+        return patient;
+      }
+      const result = await withTransaction(this.pool, async (tx) => ({ status: 201, body: await work(tx) }), {
+        idempotency: {
+          actorId: ctx.user.userId,
+          operation: 'patient.register',
+          key,
+          requestHash: hashRequest(body),
+        },
+      });
+      return sendResult(res, result);
+    } catch (err) {
+      if (!(err instanceof DuplicateFound)) throw err;
+      await withTransaction(this.pool, (tx) =>
+        writeAudit(tx, {
+          actorId: ctx.user.userId,
+          actorRole: ctx.user.role,
+          operation: 'patient.register.duplicate',
+          entityType: 'user',
+          entityId: ctx.user.userId,
+          next: { candidateCount: err.candidates.length },
+          correlationId: ctx.correlationId,
+        }),
+      );
+      const details: PossibleDuplicates = { reason: 'POSSIBLE_DUPLICATE', candidates: err.candidates };
+      throw conflict('CONFLICT', 'A patient with the same phone number or name already exists', details);
     }
-    const result = await withTransaction(this.pool, async (tx) => ({ status: 201, body: await work(tx) }), {
-      idempotency: {
-        actorId: ctx.user.userId,
-        operation: 'patient.register',
-        key,
-        requestHash: hashRequest(body),
-      },
-    });
-    return sendResult(res, result);
   }
 
   /**
