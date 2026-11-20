@@ -17,6 +17,8 @@ describe('audit wording', () => {
     expect(entityLabel('queue_entry')).toBe('Queue entry');
     expect(entityLabel('follow_up_task')).toBe('Follow-up task');
     expect(entityLabel('ledger')).toBe('ledger');
+    // A patient sign-in is not a staff account (PR-45).
+    expect(entityLabel('user')).toBe('User account');
     expect(roleWord('followup')).toBe('Follow-up');
     expect(roleWord('porter')).toBe('porter');
   });
