@@ -120,7 +120,8 @@ describe('FR-01 identity', () => {
     }
     const health = await request(t.server).get('/health');
     expect(health.status).toBe(200);
-    expect(health.body).toEqual({ status: 'ok', db: 'up' });
+    // No worker runs in tests: degraded + worker down is the correct answer; still HTTP 200 (PR-02).
+    expect(health.body).toEqual({ status: 'degraded', db: 'up', worker: 'down' });
   });
 
   it('a route that declares no roles is refused', () => {

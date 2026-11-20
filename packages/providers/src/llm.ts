@@ -9,7 +9,7 @@ export interface LlmContextItem {
   body: string;
 }
 
-export type LlmUnsupportedCode = 'denied_intent' | 'no_context' | 'no_match' | 'too_long';
+export type LlmUnsupportedCode = 'denied_intent' | 'no_context' | 'no_match' | 'too_long' | 'red_flag';
 
 export type LlmAnswer =
   | { kind: 'answer'; text: string; citedVersionIds: string[] }
@@ -121,6 +121,150 @@ const DENIED_INTENTS: ReadonlyArray<{ intent: string; patterns: RegExp[] }> = [
   },
 ];
 
+/** Red-flag symptom groups (PR-13). Safety-net advice and an urgent staff task, never an answer. */
+export type RedFlagCategory =
+  | 'chest_pain'
+  | 'breathing'
+  | 'fainting'
+  | 'bleeding'
+  | 'swelling'
+  | 'stroke'
+  | 'seizure'
+  | 'suicide'
+  | 'medicine_reaction';
+
+const CHEST_WORDS = '(?:pain\\w*|pressure|tightness|tight|heaviness|squeez\\w*|crushing|discomfort|ache|aching|burning)';
+const MED_SYMPTOM = '(?:dizz\\w*|light-?headed\\w*|rash(?:es)?|hives|itch\\w*|swell\\w*|swollen|puffy)';
+const MED_WORD = '(?:tablets?|medicines?|medications?|pills?|injections?|drugs?|antibiotics?|capsules?|dose|doses|syrup)';
+
+/**
+ * Red-flag symptoms in the patient's question (PR-13): chest pain or pressure, trouble breathing, fainting, severe
+ * bleeding or vomiting blood, swelling of the face, lips, tongue or throat, stroke signs, a seizure, suicidal
+ * thoughts, and dizziness, rash, swelling or itching soon after a (new) medicine. Matched on the QUESTION only and
+ * before any provider call, like the deny-list: no provider can widen or narrow it. `negatable: false` patterns carry
+ * their own negation ("don't want to live") and are never cancelled by a nearby "no".
+ */
+const RED_FLAGS: ReadonlyArray<{ category: RedFlagCategory; patterns: ReadonlyArray<{ re: RegExp; negatable?: boolean }> }> = [
+  {
+    category: 'chest_pain',
+    patterns: [
+      { re: new RegExp(`\\bchest\\b[^.?!,;]{0,25}\\b${CHEST_WORDS}\\b|\\bchest\\b[^.?!,;]{0,25}\\b(?:heavy|feels? (?:heavy|tight))\\b`, 'g') },
+      { re: new RegExp(`\\b${CHEST_WORDS}\\b[^.?!,;]{0,25}\\bchest\\b`, 'g') },
+      { re: /\bheart attack\b/g },
+    ],
+  },
+  {
+    category: 'breathing',
+    patterns: [
+      { re: /\b(?:difficulty|trouble|problems?|struggl\w+|hard|harder|difficult)\b[^.?!,;]{0,15}\bbreath\w*\b/g },
+      { re: /\b(?:can't|cannot|can not|couldn't|unable to)\b[^.?!,;]{0,15}\bbreath\w*\b/g, negatable: false },
+      { re: /\bshort(?:ness)? of breath\b/g },
+      { re: /\bbreathless\w*\b/g },
+      { re: /\bgasping\b/g },
+      { re: /\bbreathing\b[^.?!,;]{0,15}\b(?:difficult|hard|laboured|labored|heavy|painful|worse)\b/g },
+    ],
+  },
+  {
+    category: 'fainting',
+    patterns: [
+      {
+        re: /\b(?:fainted|fainting|faints|feel(?:ing)? faint|felt faint|going to faint|about to faint|(?:nearly|almost) faint\w*|passed out|pass(?:ing)? out|black(?:ed|ing) out|unconscious|unresponsive|collapsed|lost consciousness|loss of consciousness)\b/g,
+      },
+    ],
+  },
+  {
+    category: 'bleeding',
+    patterns: [
+      { re: /\b(?:severe|heavy|massive|uncontrolled|profuse|excessive)\b[^.?!,;]{0,25}\bbleed\w*\b/g },
+      {
+        re: /\bbleed\w*\b[^.?!,;]{0,25}\b(?:won't stop|will not stop|wont stop|not stopping|doesn't stop|does not stop|heav\w+|severe\w*|profuse\w*|uncontrolled|a lot|non-?stop)\b/g,
+      },
+      { re: /\b(?:vomit\w*|throw\w* up|threw up|cough\w*|spit\w*)(?: up)?\s+(?:\w+\s+){0,2}blood\b/g },
+      { re: /\bblood in (?:my |the )?vomit\b/g },
+    ],
+  },
+  {
+    category: 'swelling',
+    patterns: [
+      { re: /\b(?:swollen|swelling|swell\w*|puffy|puffed)\b[^.?!,;]{0,25}\b(?:face|lips?|tongue|throat)\b/g },
+      { re: /\b(?:face|lips?|tongue|throat)\b[^.?!,;]{0,15}\b(?:swollen|swelling|swell\w*|puffy|puffed)\b/g },
+      { re: /\bthroat\b[^.?!,;]{0,20}\b(?:clos\w+|tight\w*)\b/g },
+    ],
+  },
+  {
+    category: 'stroke',
+    patterns: [
+      { re: /\b(?:face|mouth|smile)\b[^.?!,;]{0,15}\b(?:droop\w*|sagging|lopsided|crooked)\b/g },
+      { re: /\bdroop\w*\b[^.?!,;]{0,15}\b(?:face|mouth)\b/g },
+      { re: /\bslurr\w*\b[^.?!,;]{0,15}\b(?:speech|words|talking|voice)\b/g },
+      { re: /\b(?:speech|talking|words)\b[^.?!,;]{0,15}\b(?:slurred|slurring|garbled)\b/g },
+      { re: /\b(?:one[- ]sided|one side)\b[^.?!,;]{0,25}\b(?:weak\w*|numb\w*|paraly\w+)\b/g },
+      { re: /\b(?:weak\w*|numb\w*|paraly\w+)\b[^.?!,;]{0,25}\b(?:one side|one-sided|half of (?:my |the )?(?:body|face))\b/g },
+      { re: /\b(?:having|had|think i(?:'m| am) having|might be having|signs of|symptoms of) (?:a )?stroke\b|\bstroke (?:symptoms|signs)\b/g },
+    ],
+  },
+  {
+    category: 'seizure',
+    patterns: [
+      {
+        re: /\b(?:had|having|have had|got|get|gets|getting|keep having|keeps having|just had|another|a|an)\s+(?:\w+\s+){0,1}(?:seizures?|convulsions?)\b(?!\s+(?:medic\w*|tablets?|pills?|drugs?|disorder|history|disease|condition|control|prevention))/g,
+      },
+      { re: /\b(?:had|having|have had|got|get|gets|getting) (?:a |an )?fits?\b/g },
+      { re: /\b(?:seizing|convulsing|convulsions)\b/g },
+    ],
+  },
+  {
+    category: 'suicide',
+    patterns: [
+      { re: /\bsuicid\w*\b/g },
+      { re: /\b(?:kill|end|hurt|harm)\b[^.?!,;]{0,10}\b(?:myself|my life)\b/g },
+      { re: /\bwant to die\b|\bbetter off dead\b|\bself[- ]harm\w*\b/g },
+      {
+        re: /\b(?:don't|do not) want to (?:live|be alive|go on)\b|\bno (?:reason|point) (?:to|in) (?:live|living|go on|going on)\b/g,
+        negatable: false,
+      },
+    ],
+  },
+  {
+    category: 'medicine_reaction',
+    patterns: [
+      { re: new RegExp(`\\b${MED_SYMPTOM}\\b[^.?!;]{0,40}\\b(?:after|since|when|every time)\\b[^.?!;]{0,30}\\b${MED_WORD}\\b`, 'g') },
+      { re: new RegExp(`\\b(?:after|since)\\b[^.?!;]{0,30}\\b${MED_WORD}\\b[^.?!;]{0,40}\\b${MED_SYMPTOM}\\b`, 'g') },
+    ],
+  },
+];
+
+/** Words that cancel a symptom when they sit right before it: "no chest pain", "without any chest pain or breathlessness". */
+const STRICT_NEGATION = /\b(?:no|without|never|denies|denied|free of|neither|nor)\s+(?:[a-z-]+\s+){0,2}$/;
+const LIST_NEGATION = /\b(?:no|without|never|denies|neither)\b(?:\s+[a-z-]+){0,3}\s+(?:or|and|nor)\s+(?:[a-z-]+\s+){0,2}$/;
+const CONTRACTION_NEGATION =
+  /\b(?:don't|do not|didn't|did not|haven't|have not|hasn't|doesn't|does not|never)\s+(?:(?:really|currently|any|ever)\s+)?(?:have|had|get|feel|felt|having|experience|experienced|experiencing|got)\s+(?:(?:an?|any|the|my)\s+)?(?:[a-z-]+\s+)?$/;
+
+function negatedBefore(text: string, index: number): boolean {
+  let start = 0;
+  for (const m of text.slice(0, index).matchAll(/[.?!;,\n]| but | however | though | although | except /g)) {
+    start = (m.index ?? 0) + m[0].length;
+  }
+  const prefix = text.slice(start, index).replace(/\bno (?:idea|clue|doubt|problem|way|matter)\b/g, 'x');
+  return STRICT_NEGATION.test(prefix) || LIST_NEGATION.test(prefix) || CONTRACTION_NEGATION.test(prefix);
+}
+
+/**
+ * The red-flag symptom group named in the question, or null (PR-13). Pure and provider-independent. A symptom that is
+ * negated ("no chest pain") does not count; a different, un-negated one in the same question still does.
+ */
+export function redFlagSymptom(question: string): RedFlagCategory | null {
+  const q = ' ' + question.toLowerCase().replace(/[‘’]/g, "'").replace(/\s+/g, ' ') + ' ';
+  for (const flag of RED_FLAGS) {
+    for (const { re, negatable = true } of flag.patterns) {
+      for (const m of q.matchAll(re)) {
+        if (!negatable || !negatedBefore(q, m.index ?? 0)) return flag.category;
+      }
+    }
+  }
+  return null;
+}
+
 const STOPWORDS = new Set(
   `a an and are as at be been but by can could did do does for from had has have how i if in into is it its may me my of on or our should so than that the their them then there these they this to us was we were what when where which who why will with would you your about after before also not any some very just get got take takes taking took use using often long many much need tell know please want time times day days one ones two three give gives gave giving new make makes made let lets go goes going come comes say said see look like other another same more less only own still well yes no ok okay thing things way back out up down off over again here now today tomorrow next first last each every either both few other another`.split(
     /\s+/,
@@ -185,6 +329,13 @@ export class FakeLlmProvider implements LlmProvider {
         kind: 'unsupported',
         reason: 'The question is too long for the assistant; staff will follow up.',
         code: 'too_long',
+      };
+    }
+    if (redFlagSymptom(question) !== null) {
+      return {
+        kind: 'unsupported',
+        reason: 'This may need urgent care; the assistant does not answer it. Staff will follow up.',
+        code: 'red_flag',
       };
     }
     const denied = deniedIntent(question);

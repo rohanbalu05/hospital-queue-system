@@ -343,26 +343,37 @@ export class QueueService {
         });
       }
       const now = this.clock.now();
+      let eligibleAt = entry.eligibleAt;
       if (body.priorityClass === null) {
+        // Clearing never restores the old eligibility: the patient was already made callable.
         await tx.query(
           `UPDATE queue_entries SET priority_class = NULL, priority_reason = NULL, priority_set_by = NULL,
                   priority_set_at = NULL, version = version + 1, updated_at = $2 WHERE id = $1`,
           [entry.id, now],
         );
       } else {
-        await tx.query(
+        // PR-29 / D-038: an authorised clinical decision on a present WAITING patient makes them eligible now
+        // (never later than before). Skipped/absent patients keep the eligibility their re-entry will set.
+        const res = await tx.query<{ eligible_at: string }>(
           `UPDATE queue_entries SET priority_class = $2, priority_reason = $3, priority_set_by = $4,
-                  priority_set_at = $5, version = version + 1, updated_at = $5 WHERE id = $1`,
+                  priority_set_at = $5, version = version + 1, updated_at = $5,
+                  eligible_at = CASE WHEN state = 'waiting' THEN LEAST(eligible_at, $5) ELSE eligible_at END
+            WHERE id = $1 RETURNING eligible_at`,
           [entry.id, body.priorityClass, body.reason, ctx.user.userId, now],
         );
+        eligibleAt = res.rows[0]?.eligible_at ?? eligibleAt;
       }
       return this.finish(tx, ctx, s.policy, entry, {
         operation: 'queue.priority',
         eventType: 'QueuePriorityChanged',
         reason: body.reason,
         eventExtra: { priorityClass: body.priorityClass },
-        previousExtra: { priorityClass: entry.priorityClass, priorityReason: entry.priorityReason },
-        next: { priorityClass: body.priorityClass },
+        previousExtra: {
+          priorityClass: entry.priorityClass,
+          priorityReason: entry.priorityReason,
+          eligibleAt: new Date(entry.eligibleAt).toISOString(),
+        },
+        next: { priorityClass: body.priorityClass, eligibleAt: new Date(eligibleAt).toISOString() },
       });
     });
   }

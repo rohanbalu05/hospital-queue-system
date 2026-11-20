@@ -156,8 +156,14 @@ export function projectEta(input: EtaInput): Eta {
   const coldStart = input.estimator.samples < COLD_START_SAMPLES;
   const band = coldStart ? COLD_START_BAND : WARM_BAND;
   // Round outwards (low down, high up) to whole minutes; EPSILON absorbs float noise such as 7.000000000000001.
-  const low = Math.max(0, Math.floor(offsetMin * (1 - band) + EPSILON));
-  const high = Math.max(0, Math.ceil(offsetMin * (1 + band) + (overrun ? m : 0) - EPSILON)); // max() also turns -0 into 0
+  let low = Math.max(0, Math.floor(offsetMin * (1 - band) + EPSILON));
+  let high = Math.max(0, Math.ceil(offsetMin * (1 + band) + (overrun ? m : 0) - EPSILON)); // max() also turns -0 into 0
+  if (pauseMs !== null) {
+    // PR-10: nobody is called before the doctor's stated return, so the range cannot start earlier than that (whole
+    // minutes, rounded up so "low" is never before the return). The upper bound follows the lower one.
+    low = Math.max(low, Math.ceil((pauseMs - nowMs) / MINUTE_MS - EPSILON));
+    high = Math.max(high, low);
+  }
 
   const notes = [MODEL_NOTE];
   if (coldStart) notes.push(`Few completed consultations so far (${input.estimator.samples}), so the range is wider.`);

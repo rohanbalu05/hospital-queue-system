@@ -2,6 +2,7 @@ import { createPool } from '@hqms/db';
 import type { Pool } from 'pg';
 import type { WorkerConfig } from './config.js';
 import { defaultHandlers, documentDeps, ensureReconcileJob, notificationDeps } from './handlers/index.js';
+import { Heartbeat } from './heartbeat.js';
 import { errorSummary, type Logger } from './log.js';
 import { OutboxDispatcher } from './outbox.js';
 import { JobRunner } from './runner.js';
@@ -12,6 +13,7 @@ export class WorkerService {
   readonly pool: Pool;
   readonly runner: JobRunner;
   readonly dispatcher: OutboxDispatcher | null;
+  readonly heartbeat: Heartbeat;
   private seedTimer: NodeJS.Timeout | null = null;
 
   constructor(
@@ -52,6 +54,14 @@ export class WorkerService {
       jobTypes: config.jobTypes,
       log,
     });
+    this.heartbeat = new Heartbeat({
+      pool: this.pool,
+      workerId: config.workerId,
+      jobTypes: config.jobTypes,
+      dispatchOutbox: config.dispatchOutbox,
+      intervalMs: config.heartbeatSec * 1000,
+      log,
+    });
     this.dispatcher = config.dispatchOutbox
       ? new OutboxDispatcher({ pool: this.pool, pollMs: config.pollMs, batch: config.outboxBatch, log })
       : null;
@@ -80,6 +90,7 @@ export class WorkerService {
       this.seedTimer = setInterval(() => this.seedReconciler(), this.config.reconcileSeedSec * 1000);
       this.seedTimer.unref();
     }
+    void this.heartbeat.start();
     this.runner.start();
     this.dispatcher?.start();
     this.log.info('worker.started', {
@@ -96,6 +107,7 @@ export class WorkerService {
   async stop(): Promise<void> {
     this.log.info('worker.stopping');
     if (this.seedTimer) clearInterval(this.seedTimer);
+    await this.heartbeat.stop();
     await this.dispatcher?.stop();
     const { abandoned } = await this.runner.stop(this.config.shutdownTimeoutMs);
     if (abandoned > 0) this.log.warn('worker.abandoned_jobs', { count: abandoned });
