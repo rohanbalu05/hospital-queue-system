@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AdminModule } from './admin/admin.module.js';
+import { AffectedModule } from './affected/affected.module.js';
 import { AuditModule } from './audit/audit.module.js';
 import { LiveModule } from './live/live.module.js';
 import { QueueModule } from './queue/queue.module.js';
@@ -26,6 +27,7 @@ import { ReportsModule } from './reports/reports.module.js';
     PatientsModule,
     CatalogueModule,
     SchedulingModule,
+    AffectedModule,
     ArrivalsModule,
     QueueModule,
     LiveModule,
