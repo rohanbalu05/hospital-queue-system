@@ -216,3 +216,37 @@ other `apps/web/src/api/*`).
   session that covers now with time left is opened; one starting within 30 min is opened early; otherwise a session is
   created from now (minus 5 min) for up to 3 h, ending before the doctor's next session so sessions never overlap, labelled
   with `sessionLabelFor`, and opened.
+
+## D-038 Persona-review triage and B6 rules (session 3)
+The persona review (docs/review/persona-review.md) logged 4 P0 and 25 P1 findings. Already covered by B1-B5:
+PR-03, 05, 07, 09, 10 (return time shown; ETA clamp below), 11, 12, 20, 24, 31, 33, 37, 43, 48. Fixed in B6:
+- **PR-01 (P0)** the worker gets the same local default `DATABASE_URL` as the API outside production, and refuses to
+  start only in production; **PR-02** workers write `worker_heartbeats` (migration 0010); `/health` reports
+  `worker: up|down` and `status: degraded` (still HTTP 200) when no heartbeat for 60 s; `GET /admin/system` gives job
+  backlog, dead jobs, undispatched outbox and queued/failed notifications for an admin panel.
+- **PR-29 (P0)** setting a clinical priority on a present waiting patient refreshes `eligible_at` to now when it is later
+  (a class-1 patient with a 09:40 appointment is callable at 09:00). The selection procedure (§6.4, Table 8) is unchanged:
+  it still selects among eligible entries; the authorised clinical actor's priority decision is what makes the entry
+  eligible, recorded in the priority audit row. Clearing the priority does not restore the old eligibility.
+- **PR-40 (P0)** admin Sessions page creates sessions (label from `sessionLabelFor`, optional repeat on the next N days),
+  opens, closes and reopens them; **PR-41** `POST /sessions` refuses an overlap with the same doctor (409 SESSION_OVERLAP,
+  checked under the doctor lock; no DB exclusion constraint because existing demo databases may hold overlaps).
+- **PR-30** admin-only `POST /sessions/{id}/reopen` (unavailable -> open, before the end, reason required, notifies).
+- **PR-10** the ETA lower bound is never earlier than the doctor's stated return (`pauseUntil - now`).
+- **PR-13** red-flag symptom questions (chest pain, breathing difficulty, fainting, severe bleeding, face/throat swelling,
+  stroke signs, "dizzy/rash/swelling after new tablets") are detected on the question before any provider call, answered
+  with fixed safety-net advice (call 108 / Emergency) and escalated as `urgent` with a 2-hour due time.
+- **PR-14 / PR-38** staff resolve with an optional patient-visible reply (required for advice_given/referred), shown on
+  the patient's Follow-ups page; the notification only says a reply is waiting. Task detail shows MRN, phone and doctor
+  (staff in scope).
+- **PR-21** reception books, cancels and reschedules for a patient from the desk (API already allowed it).
+- **PR-22** registration warns about possible duplicates (same phone, or same name with no phone) and needs `confirmNew`.
+- **PR-23** walk-in full → same-department alternatives today (`GET /sessions/{id}/alternatives`). No over-capacity
+  override: the capacity guard is a core invariant (T1); an admin can still raise capacity.
+- **PR-32** the doctor console creates a follow-up task for the current/just-completed patient. Clinical outcome notes
+  stay out of scope (no EMR; report §2).
+- **PR-42** admin creates staff logins (one-time temporary password), deactivates/reactivates (sessions revoked; not
+  self, not the last admin) and resets passwords.
+- **PR-04 / PR-08** offline/stale banner on live screens; no error page for "See my place" before check-in.
+Everything else (P2, or large: doctor schedule templates, holidays, EMR outcome notes, real SMS/email providers, policy
+editing, multi-page display layout) is listed as future work with reasons in the review document.
