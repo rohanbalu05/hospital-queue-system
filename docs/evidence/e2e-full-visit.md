@@ -99,9 +99,12 @@ What changed in this spec, and nothing else in its flow or assertions:
   Enter. Earlier the spec pressed Enter as soon as the arrivals list showed one row; Enter is ignored while the debounced
   patient search for the typed text is still running (product behaviour, noted in e2e-availability.md), which made the
   spec fail on the first run after the web changes.
-- **Measured, this machine, final tree, two consecutive full `pnpm e2e` runs:** this spec passed both times (6.4 s and 6.6 s
+- **Measured earlier in session 3 (superseded by the next bullet), two consecutive full `pnpm e2e` runs:** this spec passed both times (6.4 s and 6.6 s
   for the test); in the last run call to display 436 ms, call to patient 517 ms, complete to patient 828 ms (single
   observations, not a distribution). No 5xx, no page error; the only 4xx are the 401 `GET /api/me` probes.
+- **Final tree `1697f3e` (2026-11-20, session 3 re-run):** `pnpm e2e` was run twice by the orchestrator, 3 of 3 specs passing each time (this spec, `availability-away`, `availability-unavailable`); I did not run it for this update, so the pass counts are as reported to me.
+  The raw file `e2e-full-visit.raw.json` is from the second run: **call to display 391 ms, call to patient 446 ms, complete to patient 830 ms** (single observations); database after: visit, entry and appointment `completed`, one `ROTATION` decision under policy 1,
+  audit `appointment.book`, `visit.check_in`, `queue.call_next`, `consultation.start`, `consultation.complete`, no active allocation left for the doctor; 5 x `401 GET /api/me`, no 5xx, no page error.
 
 ## Findings (status on the final tree)
 
@@ -130,8 +133,8 @@ Original text:
 
 - Vite **dev** server, not a production build (cold-start compile is part of the 11 to 13 s). The production nginx image
   was not exercised.
-- One visit, one doctor, appointment path only (group A). Walk-ins, priority, skip, pause and the follow-up loop are covered
-  by the API suites, not by this flow.
+- One visit, one doctor, appointment path only (group A). Walk-ins, priority, skip and the follow-up loop are covered
+  by the API suites, not by this flow. Pause (Step away) and unavailable are covered by the two real-stack specs in `e2e-availability.md`. **The browser e2e does not include the follow-up task and return booking**: that part of the loop (task creation, owner, return booking, link back) is evidenced over HTTP in `T4-followup-instruction-controls.md` and by the mocked Playwright specs in `apps/web/e2e`, not by a real-stack browser run.
 - The fixture depends on the wall clock: it needs "now minus 12 minutes" and a four-hour session to stay on the same
   hospital-local date and "today" for the booking pickers (not exercised between 20:00 and 00:12 Asia/Kolkata; the
   sessions would cross midnight).

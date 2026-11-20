@@ -4,6 +4,9 @@ Evidence for NFR-06 (a patient can never read another patient's data; roles and 
 on every route) and the authorization half of Table 5. Numbers marked **measured** come from the run described below.
 The target is stated separately and is not a result.
 
+> **Session 3 update:** the counts, route list and the skipped check in the sections below are from the original (session 1) run and are **superseded**: the suite now covers 74 derived routes and 640
+> checks (378 that must be refused), with nothing skipped. See "Session 3 re-run" at the end for the current measured numbers; the earlier text is kept as history.
+
 |                                                 | Value                                                                                                                             |
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | Target                                          | 0 unauthorized successes, 0 side effects from refused requests                                                                    |
@@ -125,3 +128,32 @@ doctor-3 appointment, doctor@ reads a doctor-1 appointment, admin reads both (al
   behaviour; it will need updating then.
 - The side-effect fingerprint excludes audit rows for login and search operations, which the build is allowed to write
   on a refused or read request.
+
+## Session 3 re-run (2026-11-20, code tree of commit `1697f3e`)
+
+`tests/integration/authz.test.ts` was re-run on the final tree as part of the `tests/integration` folder (6 files, 58 of 58 tests passed, 63.5 s; this file: **10 of 10 tests passed, 0 skipped**, 4.5 s in Vitest's report),
+and `authz-tests.raw.json` was rewritten by that run (scratch databases suffixed `_ev`, Node v22.23.5, same 4 vCPU cloud VM class). The route table is still derived from the Nest controllers at run time, so the routes added in
+sessions 2 and 3 (sessions administration, availability, notifications, affected-patient moves, documents, assistant, follow-up, reports and the rest) are in the matrix without hand-editing.
+
+**Target (not a result):** 0 unauthorized successes, 0 side effects from refused requests.
+
+**Measured (raw `summary`):**
+
+| Category                                                                    | Checks | Must be refused | Unauthorized successes | Requests that changed the DB | Statuses seen                           |
+| --------------------------------------------------------------------------- | -----: | --------------: | ---------------------: | ---------------------------: | --------------------------------------- |
+| Cross-patient (patient@ against patient2 and the reverse, plus shape checks) |     26 |              20 |                      0 |                            0 | 404 x 20, 403 x 2, 200 x 4 (list leak checks) |
+| Role matrix (74 derived routes x 6 roles)                                   |    444 |             199 |                      0 |                            0 | 403 x 199, 200 x 58, 400 x 67, 404 x 120 |
+| Assignment scope (reception3, doctor@)                                      |     15 |              13 |                      0 |                            0 | 403 x 13, 200 x 2                       |
+| Unauthenticated (no cookie and forged cookie)                               |    146 |             146 |                      0 |                            0 | 401 x 146                               |
+| Positive controls                                                           |      9 |               0 |                    n/a |                            0 | 200 x 9                                 |
+| **Total**                                                                   | **640** |          **378** |                  **0** |                        **0** | skipped 0, failed 0                     |
+
+In the role matrix the 199 refused cells are the roles outside a route's `@Roles`, each of which got 403; the other 245 cells are permitted roles whose dummy request must not be 401, 403 or 5xx (they were 200, 400 or 404). "Unauthorized
+successes" counts a request that had to be refused and got a status below 400.
+
+Changes against the session 1 table above: 640 checks against 199, 378 must-refuse against 100, 74 routes against 18, and no skipped check: `GET /sessions/:id/queue` now exists and the cross-patient case
+"`GET /sessions/{id}/queue` as patient@ for a session where only patient2 has an entry" answers 404 (it was recorded as skipped before). The per-route status table above is the 18-route session 1 matrix and is not repeated for 74
+routes; the full per-request list (actor, request, expected, status, side-effect flag) is in the raw file's `matrix` array.
+
+Limits are those listed above plus: the matrix proves the guard's role decision for a dummy request, not that every route's ownership check is right for every valid payload (the targeted cross-patient and assignment cases, T4 section 7
+and the API's own integration tests cover those); one run is the sample.

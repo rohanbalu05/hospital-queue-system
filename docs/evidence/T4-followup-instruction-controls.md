@@ -97,7 +97,7 @@ pnpm test                                             # the same files run as pa
 The first run builds `apps/api` and `apps/worker` (esbuild, about 1 s each). `SKIP_API_BUILD=1` and
 `SKIP_WORKER_BUILD=1` skip the builds.
 
-## Results (measured)
+## Results (measured; first run 2026-11-11, superseded where the "Session 3 re-run" at the end gives a number)
 
 **36 of 36 T4 tests passed in each of 3 consecutive runs**; the whole `tests/integration` folder (T3, T4, T6 and the
 route matrix, 58 tests in 6 files) was green in each of the same 3 runs (about 70 s per full-folder run on the shared
@@ -295,3 +295,38 @@ Test-first record:
 - After the fix: providers 105/105; assistant + deny-list API suites 13/13; full `pnpm verify` green.
 
 Measured on this tree: 22 direct medicine-name treatment-change questions → all refused before any provider call, escalated to an owned task with a due time, audit reason `denied_intent`, zero provider calls, no instruction text in the reply. 32 benign questions (including every question the T4 and assistant suites expect to be answered) → still answered. Known gap: "Should I take X only when I have pain?" is not caught; "Can I lower my fever?" now escalates (safe direction).
+
+## Session 3 re-run (2026-11-20, code tree of commit `1697f3e`)
+
+The three T4 files were re-run on the final tree as part of the `tests/integration` folder (6 files, **58 of 58 tests passed**, 63.5 s). T4 itself: `t4-instruction-controls` 19 of 19 (0.9 s in Vitest's report), `t4-followup-tasks` 11 of 11 (2.9 s),
+`t4-ocr-failure-isolation` 6 of 6 (13.9 s); **36 of 36**. The run used scratch databases suffixed `_ev`, Node v22.23.5, the same 4 vCPU cloud VM class, and rewrote `T4-followup-instruction-controls.raw.json`. One run is the sample here; the three-run statement above belongs to 2026-11-11.
+
+**What changed since the text above (asserted by these suites or by the API suites named):**
+
+- **A patient-visible reply is now required for `advice_given` and `referred`** (PR-14, D-038). Resolving a follow-up task with either disposition and no reply is refused with `400` ("A reply for the patient is required when advice is given or the patient is referred");
+  other dispositions do not need one. The reply is shown to the patient on `GET /me/follow-ups` (`reply`), while the staff `outcomeNote` stays staff-only (asserted: the patient's task object has no `outcomeNote` key). In this suite every `advice_given` resolve now carries a `patientReply`, and the patient's own view is
+  asserted to show it; the refusal rule itself is asserted in `apps/api/test/w6-followup-reply.int.test.ts` (blank and too-short replies give `400`), which is an API test, not a T4 file. Section 5 above describes resolution without this requirement; read it with this change.
+- Red-flag symptoms in an assistant question now produce an urgent escalation with fixed safety advice (PR-13); tested in the API and provider suites, not in T4.
+- The reply and care-team notification path were added to the worker (PR-14); T4 does not exercise notifications.
+
+**Current numbers from the raw file (these supersede the matching figures above):**
+
+| Check | Measured on 2026-11-20 | Earlier (2026-11-11 runs 1 to 3) |
+| --- | --- | --- |
+| Upload to `ocr_ready` (client-observed, polling 100 ms) | 122 ms (one run) | 167, 150, 148 ms |
+| Failing OCR document: 5 attempts, job `dead`, document `ocr_failed` | yes; wall time 4,205 ms with the 1 s backoff cap (a test setting) | 4.3, 4.3, 4.4 s |
+| Core operations while OCR was failing (book, walk-in, call-next, start, complete) | 43 cycles, 215 requests: 129 x `200`, 86 x `201`, 0 5xx; latency p50 6 ms, p95 9 ms, max 21 ms (client-side, same machine) | p50 / p95 / max 12 / 21 / 42, 12 / 18 / 25, 13 / 19 / 35 ms |
+| Manual review of a failed document | doctor verify `201` | same |
+| `retry-ocr` by reception | `202`, 2 jobs, document still `ocr_failed` after 10 attempts | same |
+| Worker stopped during an upload | document `accepted`, job `pending`; after restart `ocr_ready` | same |
+| Worker error-level logs | exactly `job.dead` x 3; no clinical text in the logs | same |
+| Pre-verification questions escalated | 3 of 3; v1 cited after verification; v2 only after supersede | same |
+| Immutability of `instruction_versions` (5 attempts) | all 5 failed with `instruction_versions rows are immutable (only current -> superseded allowed)` | same |
+| Deny-list with verified context | 3 of 3 escalated, audit reason `denied_intent`; weak-overlap question `escalated` | same |
+| Escalation cap, patient 1 | 13 escalations, 3 open tasks, 13 audit rows | same |
+| Escalation cap, clean patient | 5 questions, 3 distinct tasks, 2 joined | same |
+| Cross-patient probes | 12 probes, 0 unauthorized successes | same |
+| Follow-up tasks | overdue stays open; default owner; owner-only resolve/cancel (non-owner `403`, admin `200`); return into a full session `409 CAPACITY_FULL`; return booking linked both ways and replay-safe; `return_booked` resolve | same |
+| Whole-database invariant violations after each file | 0 in all three groups | same |
+
+Latency and wall-time figures change from run to run (shared machine; fake providers answer in microseconds); the counts and invariants repeat. The limitations above still hold: fake providers (nothing is said about Gemini or Google Vision), the OCR retry cannot recover in this setup, backoff timing is a test setting, and a single run is not a flakiness bound.

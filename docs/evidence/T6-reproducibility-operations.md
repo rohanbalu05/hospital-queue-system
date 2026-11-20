@@ -231,3 +231,40 @@ branch, so no keyboard walkthrough of those exists.
    waiting walk-ins" and is not updated here. Observation for the API owner: a call-next on an empty session while the doctor
    is occupied returns `200 NO_ALLOCATION` rather than `409 DOCTOR_OCCUPIED`; harmless to the guard, but not the same answer
    as for a non-empty session.
+
+## Session 3 re-run (2026-11-20, code tree of commit `1697f3e`)
+
+What was re-run and what was not, stated plainly.
+
+| Part                                       | Status in session 3                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A audit trail, B operations report         | **Re-run and measured** on 2026-11-20 as part of the `tests/integration` folder (6 files, **58 of 58 tests passed**, 63.5 s; `t6-audit-trail.test.ts` is 10 of 10, 309 ms in Vitest's report); `T6-reproducibility-operations.raw.json` was rewritten by that run. Scratch databases suffixed `_ev`; Node v22.23.5. |
+| C1 `./init.sh`                             | **Not re-run** (it touches the shared `hqms` database, which this task was told not to use). The C1 table is the earlier measurement on `496bcdf`.                                                                                                                                                                       |
+| C2 `pnpm verify`                           | **Not re-run by this task.** The orchestrator reported `pnpm verify` green on `1697f3e` with 1,271 tests. This task measured the same population in parts: 1,213 tests in the eight package suites (`unit-tests.md`) plus 58 integration tests = 1,271, which matches that figure; it also re-measured typecheck, ESLint, dependency-cruiser and Semgrep (`static-analysis.md`). The 1 m 59 s timing above is from the earlier tree and is not a current figure. |
+| C3 keyboard walkthrough, `pnpm e2e`        | **Not re-run by this task** (told not to). The orchestrator reported `pnpm e2e` 3 of 3 twice on `1697f3e`; the committed outputs are `e2e-full-visit.raw.json`, `e2e-availability*.raw.json` and the screenshots. Treat the pass counts as reported by the orchestrator, not measured here.                              |
+| C4 release record                          | Migrations read from the raw file: **11 applied** (see below). Queue policy values unchanged.                                                                                                                                                                                                                            |
+
+**Superseded by this section:** the migration count of 6 and the "17 of 17" concurrency count in the release record above are the session-1/2 values; the current values are 11 migrations and 19 of 19 concurrency tests
+(`T1-booking-collision.md`, `T2-policy-doctor-guard.md`).
+
+### Part A, current raw numbers
+
+- Audit trail of the visit: **18 rows**, same operations, actors and order as the table above (`trailOperations` in the raw file); 12 of 18 rows carry policy version 1 (the 10 queue operations plus the two
+  `appointment.book` rows); the other 6 are session creation (2) and follow-up task changes (4).
+- Priority override row: `queue.priority`, actor `doctor`, reason "Chest pain on arrival", policy version 1; the next decision is `CLINICAL_PRIORITY`.
+- Default owner: a `followup` user assigned to the doctor.
+- Append-only (migration 0006, still present as `0006_audit_append_only`): 1 trigger on `audit_events`; UPDATE of `reason`, UPDATE of the actor and DELETE each fail with
+  `audit_events is append-only (UPDATE|DELETE is not allowed)`.
+- Whole-database invariant violations: 0.
+
+### Part B, current raw numbers
+
+`GET /reports/operations` after the visit: `completedVisits` 2; **8 target rows** and **8 measured rows**, no metric in both. Measured rows this run: median wait 0 min (n=2), p95 wait 0 min (n=2), mean consultation 0 min (n=2),
+no-show rate 0 % (n=1), follow-up tasks closed on time 75 % (n=4), follow-up tasks open and overdue now 2 (n=2), assistant questions escalated 81.8 % (n=22), documents whose OCR failed 0 % (n=1). These are the same figures as in the 2026-11-11
+run; they come from a freshly seeded scratch database that also holds the T4 suites' tasks and questions, and are not hospital figures. The wait figures are 0 because the test calls patients immediately.
+
+### C4, release record as read by the session 3 run
+
+Migrations applied (11 of 11, read from `schema_migrations` by the test): `0001_init`, `0002_patient_mrn_sequence`, `0003_active_appointment_uq`, `0004_ownership_and_email`, `0005_instruction_version_title`,
+`0006_audit_append_only`, `0007_one_open_visit_per_patient_session`, `0008_availability_notifications`, `0009_session_label_night`, `0010_review_fixes`, `0011_delivery_per_recipient`. Queue policy version 1 with the Table 7 values (rotation A,A,W; early 10 min;
+late grace 15 min; aging 45 min; called timeout 120 s; EWMA alpha 0.2; initial estimate 12 min; capacity 10 booked + 5 walk-in). Source: commit `1697f3e` (product tree); evidence commits on top change documents only.
