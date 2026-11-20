@@ -209,7 +209,7 @@ function AppointmentRow({
       </span>
       {a.patientMrn ? <span className="hidden shrink-0 text-xs text-muted-foreground tabular-nums sm:inline">{a.patientMrn}</span> : null}
       {token ? <TokenText token={token.token} size="md" className="shrink-0" /> : null}
-      <StatusWord status={a.status} className="w-24 shrink-0 text-right" />
+      <StatusWord status={a.status} transferredTo={a.transferredTo} showToken className={cn('shrink-0 text-right', a.transferredTo ? 'w-40' : 'w-24')} />
     </li>
   );
 }

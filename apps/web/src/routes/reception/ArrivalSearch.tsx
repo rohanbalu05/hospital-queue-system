@@ -29,6 +29,8 @@ interface ArrivalSearchProps {
   onEnter: () => void;
   /** False while the rows on screen belong to an older search than the text in the box. */
   resultsCurrent: boolean;
+  /** Enter was pressed before the results arrived and they did not point to one patient: ask for a choice. */
+  enterHint?: boolean;
   loading: boolean;
   error: unknown;
   onRetry: () => void;
@@ -110,6 +112,11 @@ export function ArrivalSearch(p: ArrivalSearchProps) {
               className="h-10 pl-9"
             />
           </div>
+          {p.enterHint ? (
+            <p role="status" className="text-sm font-bold text-ink">
+              Choose a patient, then press Enter
+            </p>
+          ) : null}
           <p className="text-xs text-muted-foreground">
             Press <kbd className="rounded-xs border border-rule bg-paper px-1 font-bold">/</kbd> to search, arrows to choose,{' '}
             <kbd className="rounded-xs border border-rule bg-paper px-1 font-bold">Enter</kbd> to check in.
@@ -169,7 +176,7 @@ export function ArrivalSearch(p: ArrivalSearchProps) {
                     {a ? (
                       <span className="flex shrink-0 flex-col items-end gap-0.5">
                         <GroupTag group="A" />
-                        <StatusWord status={a.status} className="text-xs" />
+                        <StatusWord status={a.status} transferredTo={a.transferredTo} showToken className="text-xs" />
                       </span>
                     ) : (
                       <span className="shrink-0 text-xs text-muted-foreground">No appointment</span>

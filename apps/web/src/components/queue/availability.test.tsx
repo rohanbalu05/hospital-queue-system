@@ -53,6 +53,8 @@ describe('availability words', () => {
     expect(displayBannerText(awayAvailability({ expectedBackAt: null }), 'Dr. Meenakshi Rao')).toBe('Dr. Meenakshi Rao is temporarily away');
     expect(displayBannerText(AVAILABLE, 'Dr. Meenakshi Rao')).toBeNull();
     expect(doctorNameOnly('Dr. Farah Siddiqui, ENT')).toBe('Dr. Farah Siddiqui');
+    expect(doctorNameOnly('Dr. Hegde \u00b7 General Medicine')).toBe('Dr. Hegde');
+    expect(doctorNameOnly('Dr. Hegde')).toBe('Dr. Hegde');
   });
 
   it('refuses a return time that is not in the future or is after the session end', () => {
