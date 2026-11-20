@@ -83,7 +83,7 @@ out.push(
   '',
 );
 out.push(
-  `Tool: ${toolVersion('pnpm', ['exec', 'vitest', '--version'])}, coverage provider \`v8\` (\`@vitest/coverage-v8\`).`,
+  `Tool: ${toolVersion('pnpm', ['--filter', '@hqms/domain', 'exec', 'vitest', '--version'])}, coverage provider \`v8\` (\`@vitest/coverage-v8\`).`,
   '',
 );
 out.push('## Results per package', '');
