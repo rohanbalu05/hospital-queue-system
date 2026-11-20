@@ -1,7 +1,7 @@
 import type { Pool } from 'pg';
 import { enqueueJob, withTransaction, type Tx } from '@hqms/db';
 import { errorSummary, silentLogger, type Logger } from './log.js';
-import { renderSessionEvent, renderTransfer, SESSION_FANOUT_EVENTS } from './notifications.js';
+import { renderFollowUpReply, renderSessionEvent, renderTransfer, SESSION_FANOUT_EVENTS } from './notifications.js';
 import { systemClock, type Clock, type OutboxEventRow, type RenderedNotification } from './types.js';
 
 export type { OutboxEventRow, RenderedNotification } from './types.js';
@@ -114,6 +114,7 @@ export function reservationReleasedBody(reason: unknown, when: string | null): s
 export const renderNotification = async (tx: Tx, ev: OutboxEventRow): Promise<RenderedNotification[]> => {
   if (SESSION_FANOUT_EVENTS.has(ev.eventType)) return renderSessionEvent(tx, ev);
   if (ev.eventType === 'QueuePatientTransferred') return renderTransfer(tx, ev);
+  if (ev.eventType === 'FollowUpResolved') return renderFollowUpReply(tx, ev);
   const single = await renderSingle(tx, ev);
   return single ? [single] : [];
 };
