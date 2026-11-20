@@ -4,7 +4,7 @@ import type { Server } from 'node:http';
 import { Test } from '@nestjs/testing';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
-import type { Pool } from '@hqms/db';
+import { createSession, withTransaction, type Pool } from '@hqms/db';
 import { AppModule } from '../src/app.module.js';
 import { FakeClock } from '../src/common/clock.js';
 import { loadConfig } from '../src/common/config.js';
@@ -152,7 +152,8 @@ export async function count(pool: Pool, sql: string, params: unknown[] = []): Pr
 
 /** Register a fresh patient (reception, assisted registration). */
 export async function newPatient(reception: Client, name = 'Test Patient'): Promise<string> {
-  const res = await reception.post('/patients', { fullName: name }, null);
+  // confirmNew: many tests register the same default name; duplicates are not what they are about (PR-22).
+  const res = await reception.post('/patients', { fullName: name, confirmNew: true }, null);
   if (res.status !== 201) throw new Error(`could not register patient: ${res.status}`);
   return res.body.id as string;
 }
@@ -189,4 +190,29 @@ export async function newLoginPatient(
     [`w3-${tag}@hqms.test`, name, id],
   );
   return { id, client: await loginAs(t.server, `w3-${tag}@hqms.test`) };
+}
+
+/**
+ * A session inserted straight into the database, bypassing POST /sessions. The API now refuses two overlapping sessions
+ * of one doctor (PR-41), but databases created before that rule may still hold them, and the doctor-level allocation
+ * guard (FR-07) must keep working there: tests of that guard build the overlap this way.
+ */
+export async function makeSessionDirect(
+  pool: Pool,
+  opts: { doctor: number; date: string; from: string; to: string; label?: 'morning' | 'afternoon' | 'evening' | 'night'; booked?: number; walkin?: number },
+): Promise<MadeSession> {
+  const startsAt = `${opts.date}T${opts.from}:00+05:30`;
+  const id = await withTransaction(pool, (tx) =>
+    createSession(tx, {
+      doctorId: doctorId(opts.doctor),
+      sessionDate: opts.date,
+      label: opts.label ?? 'afternoon',
+      startsAt,
+      endsAt: `${opts.date}T${opts.to}:00+05:30`,
+      bookedCapacity: opts.booked ?? 10,
+      walkinCapacity: opts.walkin ?? 5,
+    }),
+  );
+  if (!id) throw new Error('could not insert session directly');
+  return { id, date: opts.date, startsAt: new Date(startsAt).toISOString() };
 }

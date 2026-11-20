@@ -8,7 +8,8 @@ import { notFound } from '../common/errors.js';
 const TASK_COLS = `
   t.id, t.patient_id, p.full_name AS patient_name, t.source_visit_id, t.source_message_id, t.kind, t.title, t.detail,
   t.owner_id, ou.display_name AS owner_name, t.status, t.due_at, t.acknowledged_at, t.disposition, t.outcome_note,
-  t.resolved_at, t.return_appointment_id, t.version, t.created_at,
+  t.resolved_at, t.return_appointment_id, t.version, t.created_at, t.urgent, t.patient_reply, t.patient_reply_at,
+  p.mrn AS patient_mrn, p.phone AS patient_phone,
   ss.session_date AS sv_date, sd.id AS sv_doctor_id, sd.full_name AS sv_doctor_name, sd.department AS sv_department`;
 const TASK_FROM = `FROM follow_up_tasks t JOIN patients p ON p.id = t.patient_id LEFT JOIN users ou ON ou.id = t.owner_id
   LEFT JOIN visits sv ON sv.id = t.source_visit_id LEFT JOIN sessions ss ON ss.id = sv.session_id
@@ -42,12 +43,47 @@ function mapTask(r: any, now: Date): FollowUpTask {
     returnAppointmentId: r.return_appointment_id,
     version: r.version,
     createdAt: r.created_at,
+    urgent: r.urgent,
+    // Staff reads only (the patient projection is built field by field in the service and never copies these).
+    patientMrn: r.patient_mrn,
+    patientPhone: r.patient_phone,
+    doctorName: r.sv_doctor_name ?? null,
+    patientReply: r.patient_reply ?? null,
   };
 }
 
-export async function readTask(db: Queryable, id: string, now: Date): Promise<FollowUpTask | null> {
+/**
+ * PR-38: the doctor a task is about when it has no source visit: the patient's most recent appointment (or visit)
+ * doctor among the reader's doctors. `scope` null = every doctor (admin). One query for the whole page of tasks.
+ */
+export async function fillDoctorNames(db: Queryable, tasks: FollowUpTask[], scope: readonly string[] | null): Promise<FollowUpTask[]> {
+  const missing = [...new Set(tasks.filter((t) => t.doctorName === null || t.doctorName === undefined).map((t) => t.patientId))];
+  if (missing.length === 0) return tasks;
+  const res = await db.query<{ patient_id: string; full_name: string }>(
+    `SELECT DISTINCT ON (x.patient_id) x.patient_id, d.full_name
+       FROM (SELECT a.patient_id, a.doctor_id, a.scheduled_at AS at FROM appointments a
+              WHERE a.patient_id = ANY($1::uuid[]) AND a.status IN ('booked','checked_in','completed')
+             UNION ALL
+             SELECT v.patient_id, v.doctor_id, v.checked_in_at AS at FROM visits v WHERE v.patient_id = ANY($1::uuid[])) x
+       JOIN doctors d ON d.id = x.doctor_id
+      WHERE ($2::uuid[] IS NULL OR x.doctor_id = ANY($2::uuid[]))
+      ORDER BY x.patient_id, x.at DESC, d.id`,
+    [missing, scope === null ? null : [...scope]],
+  );
+  const byPatient = new Map(res.rows.map((r) => [r.patient_id, r.full_name]));
+  return tasks.map((t) => (t.doctorName ? t : { ...t, doctorName: byPatient.get(t.patientId) ?? null }));
+}
+
+export async function readTask(
+  db: Queryable,
+  id: string,
+  now: Date,
+  scope: readonly string[] | null,
+): Promise<FollowUpTask | null> {
   const res = await db.query(`SELECT ${TASK_COLS} ${TASK_FROM} WHERE t.id = $1`, [id]);
-  return res.rows[0] ? mapTask(res.rows[0], now) : null;
+  const row = res.rows[0];
+  if (!row) return null;
+  return (await fillDoctorNames(db, [mapTask(row, now)], scope))[0] ?? null;
 }
 
 /**
@@ -102,7 +138,8 @@ export function buildTaskListQuery(now: Date, f: TaskListFilter): { text: string
     const u = bind(f.userId);
     where.push(`(${linkedToDoctorsSql('t.patient_id', d, n)} OR t.owner_id = ${u})`);
   }
-  const order = f.status ? 't.due_at, t.id' : "(t.status IN ('open','acknowledged')) DESC, t.due_at, t.id";
+  // Red-flag (urgent) tasks first within the existing order (PR-13).
+  const order = f.status ? 't.urgent DESC, t.due_at, t.id' : "(t.status IN ('open','acknowledged')) DESC, t.urgent DESC, t.due_at, t.id";
   return {
     text: `SELECT ${TASK_COLS} ${TASK_FROM}${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY ${order}`,
     values,
@@ -112,7 +149,7 @@ export function buildTaskListQuery(now: Date, f: TaskListFilter): { text: string
 export async function listTasks(db: Queryable, now: Date, f: TaskListFilter): Promise<FollowUpTask[]> {
   const q = buildTaskListQuery(now, f);
   const res = await db.query(q.text, q.values);
-  return res.rows.map((r) => mapTask(r, now));
+  return fillDoctorNames(db, res.rows.map((r) => mapTask(r, now)), f.scopeDoctors);
 }
 
 /**
@@ -141,10 +178,17 @@ export async function pickOwner(db: Queryable, patientId: string, doctorIds: str
   return any.rows[0]?.id ?? null;
 }
 
-/** A patient's own tasks (the patient-safe projection is built by the service). */
-export async function listTasksOfPatient(db: Queryable, patientId: string, now: Date): Promise<FollowUpTask[]> {
+/** A patient's own tasks (the patient-safe projection is built by the service), with when the reply was written. */
+export async function listTasksOfPatient(
+  db: Queryable,
+  patientId: string,
+  now: Date,
+): Promise<Array<{ task: FollowUpTask; repliedAt: string | null }>> {
   const res = await db.query(`SELECT ${TASK_COLS} ${TASK_FROM} WHERE t.patient_id = $1 ORDER BY t.created_at DESC, t.id`, [
     patientId,
   ]);
-  return res.rows.map((r) => mapTask(r, now));
+  return res.rows.map((r) => ({
+    task: mapTask(r, now),
+    repliedAt: r.patient_reply_at ? new Date(r.patient_reply_at).toISOString() : null,
+  }));
 }

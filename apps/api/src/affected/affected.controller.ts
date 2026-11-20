@@ -2,6 +2,7 @@ import { Body, Controller, Get, Headers, HttpCode, Inject, Param, Post } from '@
 import {
   MoveAffectedRequest,
   type AffectedPatients,
+  type AlternativeSession,
   type AppointmentAlternatives,
   type MoveAffectedResult,
 } from '@hqms/contracts';
@@ -21,6 +22,13 @@ export class AffectedController {
   @Get('appointments/:id/alternatives')
   alternatives(@Ctx() ctx: RequestCtx, @Param('id', new UuidPipe()) id: string): Promise<AppointmentAlternatives> {
     return this.affected.alternativesFor(ctx, id);
+  }
+
+  /** PR-23: where else today (same department, free place) when this session's walk-in places are full or it is away. */
+  @Roles('reception', 'admin')
+  @Get('sessions/:id/alternatives')
+  sessionAlternatives(@Ctx() ctx: RequestCtx, @Param('id', new UuidPipe()) id: string): Promise<AlternativeSession[]> {
+    return this.affected.sessionAlternatives(ctx, id);
   }
 
   @Roles('reception', 'admin')

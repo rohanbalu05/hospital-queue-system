@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { AskAssistantRequest, AssistantAnswer, AssistantConversation, ConversationMessage } from '@hqms/contracts';
 import { findIdempotencyRecord, hashRequest, withTransaction, writeAudit, writeOutbox, type Pool, type Tx } from '@hqms/db';
-import { deniedIntent } from '@hqms/providers';
+import { deniedIntent, redFlagSymptom } from '@hqms/providers';
 import { PatientScope } from '../access/patient-scope.service.js';
 import type { Clock } from '../common/clock.js';
 import type { AppConfig } from '../common/config.js';
@@ -14,6 +14,17 @@ import type { LlmAnswer, LlmContextItem, LlmProvider } from '../providers/ports.
 
 /** The patient hears back within this long when a question is escalated (FR-14). */
 export const ESCALATION_DUE_HOURS = 24;
+/** A red-flag question (PR-13) is due much sooner. */
+export const URGENT_ESCALATION_DUE_HOURS = 2;
+
+/** Fixed safety-net advice shown above the answer of a red-flag question (PR-13). Never generated, never changed by a provider. */
+export const URGENT_ADVICE =
+  'If you have chest pain, trouble breathing, fainting, a swollen face or throat, signs of a stroke or a seizure, call 108 or come to the Emergency department now. Do not wait for our reply.';
+
+const URGENT_TEXT = (due: string | null) =>
+  due === null
+    ? 'What you describe may need urgent care. Please follow the advice above. Your message has been marked urgent for the care team.'
+    : `What you describe may need urgent care. Please follow the advice above. Your message has been marked urgent for the care team, who will contact you by ${due}.`;
 
 /** "by 3:30 pm, 12 Nov" in hospital-local time (the patient never sees UTC). */
 export function formatDue(at: Date, timeZone: string): string {
@@ -90,6 +101,9 @@ export class AssistantService {
 
   /** Decide what to do with a question, outside any transaction: deny-list, then context, then the provider. */
   private async decide(patientId: string, question: string): Promise<Decision> {
+    // Red flags first (PR-13): on the question only, before the deny-list and before any provider call, so "this is an
+    // emergency, I have chest pain" is urgent care advice and not merely a refused priority request.
+    if (redFlagSymptom(question) !== null) return { kind: 'escalate', code: 'red_flag', urgent: true };
     const denied = deniedIntent(question);
     if (denied) return { kind: 'escalate', code: 'denied_intent' };
 
@@ -125,6 +139,7 @@ export class AssistantService {
     const { user } = ctx;
     const now = this.clock.now();
     let escalate: { code: string } | null = decision.kind === 'escalate' ? { code: decision.code } : null;
+    const urgent = decision.kind === 'escalate' && decision.urgent === true;
 
     // The answer's citations must still be current now (a clinician may have superseded one while the provider
     // was thinking). FOR SHARE makes a concurrent verify wait until this transaction ends.
@@ -177,11 +192,13 @@ export class AssistantService {
     const code = escalate?.code ?? 'unsupported';
     // One escalation at a time per patient: concurrent questions queue behind this lock, so the cap below is exact.
     await tx.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`assistant-escalation:${patientId}`]);
+    // The open-escalation cap is per class: an urgent question never disappears into an older routine task, and a
+    // routine one is never shown as urgent because it joined an urgent task.
     const open = await tx.query<{ id: string; due_at: string; detail: string | null; owner_id: string | null }>(
       `SELECT id, due_at, detail, owner_id FROM follow_up_tasks
-        WHERE patient_id = $1 AND kind = 'assistant_escalation' AND status IN ('open','acknowledged')
+        WHERE patient_id = $1 AND kind = 'assistant_escalation' AND status IN ('open','acknowledged') AND urgent = $2
         ORDER BY created_at DESC, id DESC FOR NO KEY UPDATE`,
-      [patientId],
+      [patientId, urgent],
     );
     let taskId: string;
     let dueAt: string;
@@ -200,18 +217,27 @@ export class AssistantService {
         [taskId, addition, now],
       );
     } else {
-      dueAt = new Date(now.getTime() + ESCALATION_DUE_HOURS * 3_600_000).toISOString();
+      dueAt = new Date(now.getTime() + (urgent ? URGENT_ESCALATION_DUE_HOURS : ESCALATION_DUE_HOURS) * 3_600_000).toISOString();
       ownerId = await pickOwner(tx, patientId, await this.scope.linkedDoctorIds(patientId, tx));
       const task = await tx.query<{ id: string }>(
-        `INSERT INTO follow_up_tasks (patient_id, source_message_id, kind, title, detail, owner_id, due_at, created_by)
-         VALUES ($1, $2, 'assistant_escalation', 'Patient question the assistant could not answer', $3, $4, $5, NULL)
+        `INSERT INTO follow_up_tasks (patient_id, source_message_id, kind, title, detail, owner_id, due_at, created_by, urgent)
+         VALUES ($1, $2, 'assistant_escalation', $6, $3, $4, $5, NULL, $7)
          RETURNING id`,
-        [patientId, askedId, body.question.trim(), ownerId, dueAt],
+        [
+          patientId,
+          askedId,
+          body.question.trim(),
+          ownerId,
+          dueAt,
+          urgent ? 'URGENT: patient reported a possible red-flag symptom' : 'Patient question the assistant could not answer',
+          urgent,
+        ],
       );
       taskId = task.rows[0]?.id as string;
     }
     const dueDate = new Date(dueAt);
-    const text = ESCALATION_TEXT(dueDate.getTime() > now.getTime() ? formatDue(dueDate, this.config.hospitalTz) : null);
+    const dueText = dueDate.getTime() > now.getTime() ? formatDue(dueDate, this.config.hospitalTz) : null;
+    const text = urgent ? URGENT_TEXT(dueText) : ESCALATION_TEXT(dueText);
     const reply = await tx.query<{ id: string; created_at: string }>(
       `INSERT INTO messages (conversation_id, patient_id, role, body, outcome, escalation_task_id, provider, created_at)
        VALUES ($1, $2, 'assistant', $3, 'escalated', $4, $5, clock_timestamp()) RETURNING id, created_at`,
@@ -224,7 +250,7 @@ export class AssistantService {
       operation: 'assistant.escalate',
       entityType: 'follow_up_task',
       entityId: taskId,
-      next: { status: 'open', ownerId, dueAt, messageId: r.id, questionLength: body.question.length, joinedExisting: joined },
+      next: { status: 'open', ownerId, dueAt, messageId: r.id, questionLength: body.question.length, joinedExisting: joined, urgent },
       reason: code,
       correlationId: ctx.correlationId,
     });
@@ -235,7 +261,7 @@ export class AssistantService {
         entityId: taskId,
         entityVersion: 1,
         patientId,
-        payload: { kind: 'assistant_escalation', ownerId },
+        payload: { kind: 'assistant_escalation', ownerId, urgent },
       });
     }
     return {
@@ -244,7 +270,8 @@ export class AssistantService {
       outcome: 'escalated' as const,
       answer: text,
       citations: [],
-      escalation: { taskId, dueAt },
+      escalation: { taskId, dueAt, urgent },
+      urgentAdvice: urgent ? URGENT_ADVICE : null,
       createdAt: r.created_at,
     };
   }
@@ -276,6 +303,7 @@ export class AssistantService {
     const res = await this.pool.query(
       `SELECT m.id, m.role, m.body, m.outcome, m.escalation_task_id, m.created_at,
               (SELECT t.due_at FROM follow_up_tasks t WHERE t.id = m.escalation_task_id AND t.patient_id = m.patient_id) AS escalation_due_at,
+              (SELECT t.urgent FROM follow_up_tasks t WHERE t.id = m.escalation_task_id AND t.patient_id = m.patient_id) AS escalation_urgent,
               COALESCE((SELECT json_agg(json_build_object('instructionVersionId', iv.id, 'title', COALESCE(iv.title, i.title), 'version', iv.version, 'verifiedAt', iv.verified_at)
                                         ORDER BY iv.version, iv.id)
                           FROM instruction_versions iv JOIN instructions i ON i.id = iv.instruction_id
@@ -291,6 +319,7 @@ export class AssistantService {
       citations: r.citations,
       escalationTaskId: r.escalation_task_id,
       escalationDueAt: r.escalation_due_at ? new Date(r.escalation_due_at).toISOString() : null,
+      urgentAdvice: r.escalation_urgent === true ? URGENT_ADVICE : null,
       createdAt: r.created_at,
     }));
   }
@@ -331,4 +360,4 @@ type CitedVersion = LlmContextItem & { verifiedAt: string };
 
 type Decision =
   | { kind: 'answer'; text: string; cited: CitedVersion[] }
-  | { kind: 'escalate'; code: string };
+  | { kind: 'escalate'; code: string; urgent?: boolean };

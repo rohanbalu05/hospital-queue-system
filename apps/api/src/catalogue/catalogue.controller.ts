@@ -8,6 +8,7 @@ import {
   type Doctor,
   type QueuePolicy,
   type Session,
+  type SessionOverlap,
   type SlotAvailability,
 } from '@hqms/contracts';
 import {
@@ -135,6 +136,26 @@ export class CatalogueController {
     if (!doctor || !doctor.active) throw notFound('Doctor');
     const id = await withTransaction(this.pool, async (tx) => {
       await lockDoctor(tx, body.doctorId);
+      // PR-41 / D-038: a doctor cannot run two sessions at once. scheduled, open, paused and unavailable sessions all
+      // block (for an unavailable one the admin reopens it instead). A CLOSED session does not: a doctor whose session
+      // was closed early can be given a new one in that window (orchestrator decision).
+      // Half-open intervals: a session may start exactly when the previous one ends. Checked under the doctor lock, so
+      // two parallel creates cannot both pass.
+      const clash = await tx.query<{ id: string; starts_at: string; ends_at: string }>(
+        `SELECT id, starts_at, ends_at FROM sessions
+          WHERE doctor_id = $1 AND status <> 'closed' AND starts_at < $3::timestamptz AND ends_at > $2::timestamptz
+          ORDER BY starts_at LIMIT 1`,
+        [body.doctorId, body.startsAt, body.endsAt],
+      );
+      if (clash.rows[0]) {
+        const details: SessionOverlap = {
+          reason: 'SESSION_OVERLAP',
+          overlappingSessionId: clash.rows[0].id,
+          startsAt: new Date(clash.rows[0].starts_at).toISOString(),
+          endsAt: new Date(clash.rows[0].ends_at).toISOString(),
+        };
+        throw conflict('CONFLICT', 'This doctor already has a session at that time', details);
+      }
       const created = await createSession(tx, {
         doctorId: body.doctorId,
         sessionDate: body.sessionDate,

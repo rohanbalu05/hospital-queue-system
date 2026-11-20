@@ -5,6 +5,7 @@ import {
   MarkUnavailableRequest,
   PauseSessionRequest,
   QueueEntryActionRequest,
+  ReopenSessionRequest,
   SetPriorityRequest,
   VisitActionRequest,
   type CallNextResult,
@@ -198,6 +199,19 @@ export class QueueController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<Session> {
     return sendResult(res, await this.control.close(ctx, id, optionalIdempotencyKey(key)));
+  }
+
+  /** Admin only (PR-30): undo "unavailable" before the session ends. Reason required; audited; patients are told. */
+  @Roles('admin')
+  @Post('sessions/:id/reopen')
+  async reopen(
+    @Ctx() ctx: RequestCtx,
+    @Param('id', new UuidPipe()) id: string,
+    @Body(new ZodPipe(ReopenSessionRequest)) body: ReopenSessionRequest,
+    @Headers('idempotency-key') key: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<Session> {
+    return sendResult(res, await this.control.reopen(ctx, id, body, optionalIdempotencyKey(key)));
   }
 
   // ---- read models -------------------------------------------------------

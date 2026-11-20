@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { deriveAvailability, type Session, type SessionStatus } from '@hqms/contracts';
+import { deriveAvailability, type ReopenSessionRequest, type Session, type SessionStatus } from '@hqms/contracts';
 import {
   bumpQueueVersion,
   getPolicyById,
@@ -20,7 +20,7 @@ import { AccessPolicy } from '../access/access-policy.service.js';
 import { runCommand } from './command.js';
 import type { MarkUnavailableRequestDto, PauseSessionRequestDto } from './dto.js';
 
-type Command = 'open' | 'pause' | 'resume' | 'unavailable' | 'close';
+type Command = 'open' | 'pause' | 'resume' | 'unavailable' | 'close' | 'reopen';
 
 /** Session status machine (kept here: the domain package has no session lifecycle). */
 const ALLOWED: Record<Command, { from: SessionStatus[]; to: SessionStatus }> = {
@@ -30,6 +30,8 @@ const ALLOWED: Record<Command, { from: SessionStatus[]; to: SessionStatus }> = {
   resume: { from: ['paused'], to: 'open' },
   unavailable: { from: ['scheduled', 'open', 'paused'], to: 'unavailable' },
   close: { from: ['scheduled', 'open', 'paused', 'unavailable'], to: 'closed' },
+  // PR-30 (admin only): undo a mistaken "unavailable"; the route also refuses once the session has ended.
+  reopen: { from: ['unavailable'], to: 'open' },
 };
 
 const VERB: Record<Command, string> = {
@@ -38,12 +40,15 @@ const VERB: Record<Command, string> = {
   resume: 'resumed',
   unavailable: 'marked unavailable',
   close: 'closed',
+  reopen: 'reopened',
 };
 
 const EVENT: Partial<Record<Command, 'SessionPaused' | 'SessionResumed' | 'SessionUnavailable'>> = {
   pause: 'SessionPaused',
   resume: 'SessionResumed',
   unavailable: 'SessionUnavailable',
+  // A reopened session tells patients the doctor is available again (payload.reopened = true).
+  reopen: 'SessionResumed',
 };
 
 @Injectable()
@@ -75,6 +80,14 @@ export class SessionControlService {
     return this.run(ctx, id, 'unavailable', key, body);
   }
 
+  /**
+   * PR-30: admin-only undo of "unavailable". Same command path and lock order as the other controls. Patients already
+   * moved to other doctors stay moved; everyone still in the session is told the doctor is available again.
+   */
+  reopen(ctx: RequestCtx, id: string, body: ReopenSessionRequest, key: string | undefined) {
+    return this.run(ctx, id, 'reopen', key, body);
+  }
+
   /** Waiting entries stay visible after close; nothing is deleted. */
   close(ctx: RequestCtx, id: string, key: string | undefined) {
     return this.run(ctx, id, 'close', key, {});
@@ -104,6 +117,14 @@ export class SessionControlService {
         });
       }
       const now = this.clock.now();
+      if (command === 'reopen' && !(now.getTime() < new Date(session.endsAt).getTime())) {
+        throw conflict('INVALID_TRANSITION', 'The session has already ended and cannot be reopened', {
+          machine: 'session',
+          from: session.status,
+          to: rule.to,
+          endsAt: new Date(session.endsAt).toISOString(),
+        });
+      }
       const isUpdate = command === 'pause' && session.status === 'paused';
       let pauseUntil: Date | null = null;
       if (command === 'pause' && body.until !== undefined) {
@@ -177,6 +198,7 @@ export class SessionControlService {
             pauseUntil: pauseUntil?.toISOString() ?? null,
             update: isUpdate,
             doctorId: session.doctorId,
+            ...(command === 'reopen' ? { reopened: true } : {}),
           },
         });
       }

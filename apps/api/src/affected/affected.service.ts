@@ -1,7 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   deriveAvailability,
+  SESSION_ALTERNATIVES_LIMIT,
   type AffectedPatients,
+  type AlternativeSession,
   type AppointmentAlternatives,
   type MoveAffectedRequest,
   type MoveAffectedResult,
@@ -44,6 +46,7 @@ import { AppointmentsService } from '../scheduling/appointments.service.js';
 import {
   carryEntryState,
   findAlternatives,
+  findSessionAlternatives,
   insertTransferVisit,
   readInQueue,
   readNotArrived,
@@ -89,6 +92,27 @@ export class AffectedService {
       sourceAvailability: deriveAvailability(source.availability, now, { includeReason: user.role !== 'patient' }),
       alternatives,
     };
+  }
+
+  /**
+   * GET /sessions/{id}/alternatives (PR-23): reception in scope of the session's doctor, admin. Other doctors of the
+   * department with a free walk-in or booked place today, limited to the caller's own scope.
+   */
+  async sessionAlternatives(ctx: RequestCtx, sessionId: string): Promise<AlternativeSession[]> {
+    const record = await getSessionRecord(this.pool, sessionId);
+    if (!record) throw notFound('Session');
+    const { session } = record;
+    this.access.assertDoctorScope(ctx.user, session.doctorId);
+    const now = this.clock.now();
+    return findSessionAlternatives(this.pool, {
+      sourceDoctorId: session.doctorId,
+      department: session.department,
+      now,
+      today: localDate(now, this.config.hospitalTz),
+      minArrivalWindowMin: this.config.minArrivalWindowMin,
+      scopeDoctorIds: this.access.doctorScope(ctx.user),
+      limit: SESSION_ALTERNATIVES_LIMIT,
+    });
   }
 
   /** GET /sessions/{id}/affected: reception in scope of the doctor, admin (the route guard keeps everyone else out). */
