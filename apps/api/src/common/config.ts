@@ -52,6 +52,8 @@ const EnvSchema = z.object({
   DISPLAY_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(120),
   /** Shared cache of the public display snapshot (0 turns it off). */
   DISPLAY_CACHE_MS: z.coerce.number().int().min(0).default(1000),
+  /** A worker with no heartbeat for this long counts as down (PR-02): /health reports degraded. */
+  WORKER_STALE_SEC: z.coerce.number().int().min(5).default(60),
 });
 
 export interface AppConfig {
@@ -92,6 +94,8 @@ export interface AppConfig {
   displayCacheMs: number;
   /** Minimum minutes a patient must have to reach a slot before its late-grace window closes (D-035). */
   minArrivalWindowMin: number;
+  /** Heartbeat age after which a worker counts as down (PR-02). */
+  workerStaleSec: number;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -132,5 +136,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     displayRateLimitPerMin: e.DISPLAY_RATE_LIMIT_PER_MIN,
     displayCacheMs: e.DISPLAY_CACHE_MS,
     minArrivalWindowMin: e.MIN_ARRIVAL_WINDOW_MIN,
+    workerStaleSec: e.WORKER_STALE_SEC,
   };
 }
