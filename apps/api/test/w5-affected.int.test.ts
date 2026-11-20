@@ -143,7 +143,7 @@ describe('B3.1 GET /appointments/{id}/alternatives and one-click rebook', () => 
     expect(alt.alternatives).toHaveLength(6);
     const starts = alt.alternatives.map((a) => iso(a.startsAt));
     expect([...starts].sort((a, b) => a - b)).toEqual(starts);
-    // today's 09:00-13:00 session at 10:00: first assignable slot is 10:20 (10:00 closes 10:15 < 10:10? no: 10:15 >= 10:10, so 10:00)
+    // today's 09:00-13:00 session at 10:00: the 10:00 slot closes 10:15, after the arrival window (10:10), so it is still offered
     const todayRow = alt.alternatives.find((a) => a.sessionId === targets[0]!.id)!;
     expect(iso(todayRow.nextSlotAt)).toBe(ist(day, '10:00').getTime());
   });
@@ -154,7 +154,7 @@ describe('B3.1 GET /appointments/{id}/alternatives and one-click rebook', () => 
     const source = await mk(1, day);
     const mine = await newLoginPatient(t, reception, 'Rebook Patient');
     const appt = await book(source, mine.id);
-    expect((await reception.post(`/sessions/${source.id}/unavailable`, {})).status).toBe(200);
+    expect((await reception.post(`/sessions/${source.id}/unavailable`, { reason: 'Doctor unwell' })).status).toBe(200);
     const target = await mk(2, day);
     const alt = AppointmentAlternatives.parse((await mine.client.get(`/appointments/${appt.id}/alternatives`)).body);
     expect(alt.alternatives.map((a) => a.sessionId)).toContain(target.id);

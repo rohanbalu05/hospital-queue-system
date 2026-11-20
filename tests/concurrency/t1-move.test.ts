@@ -133,7 +133,7 @@ describe('T1 bulk move and transfer', () => {
         appts.push(res.body.id);
       }
       const T = await makeTodaySession(admin, { doctor: 2, booked: 2, walkin: 0 });
-      expect((await reception.post(`/sessions/${S.id}/unavailable`, {})).status).toBe(200);
+      expect((await reception.post(`/sessions/${S.id}/unavailable`, { reason: 'Doctor unwell' })).status).toBe(200);
 
       const [ra, rb] = await Promise.all([
         reception.post(`/sessions/${S.id}/affected/move`, { targetSessionId: T.id, appointmentIds: appts.slice(0, 4) }),
