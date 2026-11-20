@@ -70,7 +70,6 @@ function QueuePage() {
         <SessionConsole
           key={selected.id}
           session={selected}
-          date={date}
           picker={
             <SessionPicker
               sessions={list}

@@ -14,6 +14,10 @@ interface ActionPanelProps {
   item: ArrivalItem | null;
   session: Session | null;
   knownToken: ArrivalResult | undefined;
+  /** False while the list on screen is for an older search than the text in the box: nothing is actionable. */
+  resultsCurrent?: boolean;
+  /** The text in the search box, for the "waiting for results" line. */
+  searchText?: string;
   onCheckIn: () => void;
   checkInPending: boolean;
   onAdmit: () => void;
@@ -28,6 +32,7 @@ interface ActionPanelProps {
 }
 
 export function ActionPanel(p: ActionPanelProps) {
+  const current = p.resultsCurrent ?? true;
   const appt = p.item?.appointment ?? null;
   const walkinFull = p.session ? p.session.capacity.walkinAvailable <= 0 : false;
   const sessionOff = p.session ? p.session.status === 'closed' || p.session.status === 'unavailable' : false;
@@ -65,11 +70,20 @@ export function ActionPanel(p: ActionPanelProps) {
                 <p className="mt-1">No appointment in this session.</p>
               )}
             </div>
-            <Button size="lg" className="mt-3 w-full" disabled={!canCheckIn(p.item) || p.checkInPending || sessionOff} onClick={p.onCheckIn}>
+            <Button size="lg" className="mt-3 w-full" disabled={!current || !canCheckIn(p.item) || p.checkInPending || sessionOff} onClick={p.onCheckIn}>
               {p.checkInPending ? 'Checking in…' : 'Check in'}
             </Button>
+            {sessionOff && p.session ? (
+              <p role="status" className="mt-2 rounded-md border border-l-[3px] border-rule border-l-priority bg-priority/10 px-3 py-2 font-bold">
+                {p.session.status === 'unavailable'
+                  ? `${p.session.doctorName} is unavailable for the rest of this session, so no one can be checked in. Use Affected patients on the session board to move booked and waiting patients to another doctor.`
+                  : 'This session is closed, so no one can be checked in.'}
+              </p>
+            ) : null}
             <p className="mt-1.5 text-xs text-muted-foreground">
-              {canCheckIn(p.item)
+              {!current
+                ? `Searching for “${p.searchText ?? ''}”. Check in is available once the results are in.`
+                : canCheckIn(p.item)
                 ? 'Press Enter in the search box to check in.'
                 : appt?.status === 'checked_in'
                   ? 'Already checked in.'
@@ -95,7 +109,7 @@ export function ActionPanel(p: ActionPanelProps) {
             size="lg"
             variant="outline"
             className="mt-3 w-full"
-            disabled={p.admitPending || walkinFull || sessionOff}
+            disabled={!current || p.admitPending || walkinFull || sessionOff}
             onClick={p.onAdmit}
           >
             {p.admitPending ? 'Admitting…' : `Admit walk-in: ${p.item.name}`}

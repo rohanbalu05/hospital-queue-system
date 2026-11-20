@@ -89,8 +89,9 @@ test.describe('doctor console at 1280', () => {
     await setup(page, 'doctor');
     await page.goto('/doctor');
     await doctorReady(page);
-    await page.getByRole('button', { name: 'Pause session' }).click();
-    const reason = page.getByLabel('Reason (optional)');
+    await page.getByRole('button', { name: 'Step away' }).click();
+    await page.getByRole('radio', { name: 'Other' }).check();
+    const reason = page.getByLabel('Other reason');
     await reason.fill('');
     await reason.press('n');
     await expect(reason).toHaveValue('n');
@@ -141,50 +142,55 @@ test.describe('doctor console at 1280', () => {
     await expect(page.getByRole('region', { name: 'Waiting, in call order' })).toContainText('A-017');
   });
 
-  test('pause with unknown duration, then resume', async ({ page }) => {
+  test('step away for 15 minutes shows the away strip, blocks Call next, then I\'m back resumes', async ({ page }) => {
     const mock = await setup(page, 'doctor');
     await page.goto('/doctor');
     await doctorReady(page);
-    await page.getByRole('button', { name: 'Pause session' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Pause session' });
-    await expect(dialog).toContainText('Unknown duration withholds patient estimates');
-    await dialog.getByRole('button', { name: 'Pause session' }).click();
-    await expect(page.getByTestId('session-status')).toContainText('No resume time set');
-    expect(mock.requests.find((r) => r.line.endsWith('/pause'))?.body).toEqual({});
+    await page.getByRole('button', { name: 'Step away' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Step away' });
+    await expect(dialog.getByTestId('back-about')).toHaveText('Back about 10:20 am');
+    await dialog.getByRole('button', { name: 'Step away' }).click();
+    const strip = page.getByTestId('availability-strip');
+    await expect(strip).toContainText('You are away · since 10:05 am · expected back about 10:20 am');
+    expect(mock.requests.find((r) => r.line.endsWith('/pause'))?.body).toEqual({ until: '2026-11-11T04:50:00.000Z', reason: 'Ward round / emergency' });
     await expect(callNext(page)).toHaveAttribute('aria-disabled', 'true');
-    await expect(page.getByText('The session is paused. Resume it to call the next patient.')).toBeVisible();
-    await page.getByRole('button', { name: 'Resume session' }).click();
-    await expect(page.getByTestId('session-status')).toBeHidden();
+    await expect(page.getByText("You are away, so no one can be called. Press I'm back to call the next patient.")).toBeVisible();
+    await strip.getByRole('button', { name: "I'm back" }).click();
+    await expect(strip).toBeHidden();
     await expect(callNext(page)).toHaveAttribute('aria-disabled', 'false');
   });
 
-  test('pause until a time sends an IST instant', async ({ page }) => {
+  test('a custom return time sends an IST instant, and an earlier or later time is refused in the dialog', async ({ page }) => {
     const mock = await setup(page, 'doctor');
     await page.goto('/doctor');
     await doctorReady(page);
-    await page.getByRole('button', { name: 'Pause session' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Pause session' });
-    await dialog.getByLabel('Back at (optional)').fill('09:30');
-    await dialog.getByRole('button', { name: 'Pause session' }).click();
-    await expect(dialog.getByRole('alert')).toContainText('later than now');
-    await dialog.getByLabel('Back at (optional)').fill('10:30');
-    await dialog.getByRole('button', { name: 'Pause session' }).click();
-    await expect(page.getByTestId('session-status')).toContainText('Back at 10:30 am');
-    expect(mock.requests.find((r) => r.line.endsWith('/pause'))?.body).toEqual({ until: '2026-11-11T05:00:00.000Z' });
+    await page.getByRole('button', { name: 'Step away' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Step away' });
+    await dialog.getByRole('button', { name: 'Custom time' }).click();
+    await dialog.getByLabel('Back at (India time)').fill('09:30');
+    await dialog.getByRole('button', { name: 'Step away' }).click();
+    await expect(dialog).toContainText('Choose a time later than now');
+    await dialog.getByLabel('Back at (India time)').fill('14:00');
+    await expect(dialog).toContainText('The session ends at 1:00 pm');
+    await dialog.getByLabel('Back at (India time)').fill('10:30');
+    await expect(dialog.getByTestId('back-about')).toHaveText('Back about 10:30 am');
+    await dialog.getByRole('button', { name: 'Step away' }).click();
+    await expect(page.getByTestId('availability-strip')).toContainText('expected back about 10:30 am');
+    expect(mock.requests.find((r) => r.line.endsWith('/pause'))?.body).toEqual({ until: '2026-11-11T05:00:00.000Z', reason: 'Ward round / emergency' });
   });
 
-  test('mark unavailable asks for a reason and says patients are not reassigned', async ({ page }) => {
+  test('unavailable for the rest of the session states the consequences, asks for a reason and names the action', async ({ page }) => {
     await setup(page, 'doctor');
     await page.goto('/doctor');
     await doctorReady(page);
-    await page.getByRole('button', { name: 'Mark unavailable' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Mark session unavailable' });
-    await expect(dialog).toContainText('not reassigned to another doctor');
-    await dialog.getByRole('button', { name: 'Mark unavailable' }).click();
+    await page.getByRole('button', { name: 'Unavailable for rest of session' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Unavailable for the rest of this session' });
+    await expect(dialog).toContainText('Patients waiting and booked for this session will be told and offered other doctors. This cannot be undone.');
+    await dialog.getByRole('button', { name: 'Mark unavailable and notify patients' }).click();
     await expect(dialog.getByRole('alert')).toBeVisible();
     await dialog.getByLabel('Reason').fill('Called to emergency theatre');
-    await dialog.getByRole('button', { name: 'Mark unavailable' }).click();
-    await expect(page.getByTestId('session-status')).toContainText('Session marked unavailable');
+    await dialog.getByRole('button', { name: 'Mark unavailable and notify patients' }).click();
+    await expect(page.getByTestId('availability-strip')).toContainText('You are unavailable for the rest of this session');
   });
 
   test('a notice from another screen refreshes the queue without a reload; a 409 shows the real state', async ({ page }) => {
@@ -218,11 +224,11 @@ test.describe('doctor console at 1280', () => {
     await expect(callNext(page)).toHaveAttribute('aria-disabled', 'true');
   });
 
-  test('paused session screenshot', async ({ page }) => {
-    await setup(page, 'doctor', { status: 'paused' });
+  test('away session screenshot', async ({ page }) => {
+    await setup(page, 'doctor', { status: 'paused', pauseUntil: '2026-11-11T05:15:00.000Z' });
     await page.goto('/doctor');
-    await expect(page.getByTestId('session-status')).toContainText('Session paused');
-    await expect(page.getByRole('button', { name: 'Resume session' })).toBeVisible();
+    await expect(page.getByTestId('availability-strip')).toContainText('You are away');
+    await expect(page.getByRole('button', { name: "I'm back" })).toBeVisible();
     await shot(page, 'doctor-paused-1280');
   });
 });
@@ -277,7 +283,7 @@ test.describe('waiting-room display at 1920', () => {
     await expect(page.getByTestId('display-column')).toHaveCount(4);
     await expect(page.getByTestId('last-updated')).toContainText('Last updated 10:05:00 am');
     await expect(page.getByTestId('display-column').nth(1).getByTestId('now-calling')).toHaveText('A-022');
-    await expect(page.getByTestId('display-column').nth(3)).toContainText('Doctor has paused');
+    await expect(page.getByTestId('display-column').nth(3)).toContainText('Dr. Suresh Gowda is temporarily away');
     await shot(page, 'display-1920');
 
     // The doctor calls A-014: the first column's token changes and flashes.

@@ -1,21 +1,18 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { CallNextResult, QueueDecision, QueueEntry, Session } from '@hqms/contracts';
-import { ErrorState, PressureNote, SkeletonRows, StaleBanner } from '@/components/queue';
+import type { CallNextResult, QueueDecision, QueueEntry, Session, SessionAvailability } from '@hqms/contracts';
+import { AvailabilityStrip, ErrorState, PressureNote, SkeletonRows, StaleBanner, useAvailabilityControls } from '@/components/queue';
 import { Button } from '@/components/ui/button';
 import {
   useCallNext,
   useCompleteVisit,
   useEntryAction,
-  useMarkUnavailable,
-  usePauseSession,
-  useResumeSession,
   useSetPriority,
   useStartVisit,
 } from '@/api/queue';
 import { useLiveQueue } from '@/live';
-import { formatIST } from '@/lib/format';
-import { AbsentDialog, PauseDialog, PriorityDialog, UnavailableDialog } from './Dialogs';
+import { AbsentDialog, PriorityDialog } from './Dialogs';
 import { CallNextPanel } from './CallNextPanel';
 import { NowPanel } from './NowPanel';
 import { SkippedList, WaitingList } from './Lists';
@@ -25,9 +22,10 @@ import { toastFailure } from './commandError';
 type DialogState =
   | { kind: 'priority'; entry: QueueEntry }
   | { kind: 'absent'; entry: QueueEntry }
-  | { kind: 'pause' }
-  | { kind: 'unavailable' }
   | null;
+
+/** Until the first snapshot arrives the availability controls need something to hold; nothing is offered from it. */
+const NOT_LOADED: SessionAvailability = { state: 'not_started', since: null, expectedBackAt: null, overdue: false, reason: null };
 
 function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -42,22 +40,34 @@ function newest(a: QueueDecision | null | undefined, b: QueueDecision | null | u
 
 interface SessionConsoleProps {
   session: Session;
-  date: string;
   /** Session picker, rendered at the start of the toolbar. */
   picker: ReactNode;
 }
 
-/** The doctor's working screen for one session: Now, Call next with its reason, the waiting list, Pause and Resume. */
-export function SessionConsole({ session, date, picker }: SessionConsoleProps) {
+/** The doctor's working screen for one session: Now, Call next with its reason, the waiting list, Step away and I'm back. */
+export function SessionConsole({ session, picker }: SessionConsoleProps) {
   const { query, snapshot, status, lastUpdated } = useLiveQueue(session.id);
   const callNext = useCallNext(session.id);
   const start = useStartVisit(session.id);
   const complete = useCompleteVisit(session.id);
   const entryAction = useEntryAction(session.id);
   const setPriority = useSetPriority(session.id);
-  const pause = usePauseSession(session.id);
-  const resume = useResumeSession(session.id);
-  const unavailable = useMarkUnavailable(session.id);
+  const availability = useAvailabilityControls({
+    sessionId: session.id,
+    sessionDate: session.sessionDate,
+    sessionEndsAt: session.endsAt,
+    availability: snapshot?.view === 'staff' ? snapshot.availability : NOT_LOADED,
+    subject: 'you',
+    role: 'doctor',
+  });
+
+  // The session list behind the picker is polled; when the live status moves (away, unavailable, back) refresh it so the
+  // picker's "(open)" never lags the console (PR-34).
+  const qc = useQueryClient();
+  const liveStatus = snapshot?.view === 'staff' ? snapshot.status : null;
+  useEffect(() => {
+    if (liveStatus !== null && liveStatus !== session.status) void qc.invalidateQueries({ queryKey: ['queue', 'sessions'] });
+  }, [liveStatus, session.status, qc]);
 
   const [dialog, setDialog] = useState<DialogState>(null);
   const [justCalled, setJustCalled] = useState<CallNextResult | null>(null);
@@ -164,60 +174,50 @@ export function SessionConsole({ session, date, picker }: SessionConsoleProps) {
     );
   }
 
-  const paused = snapshot.status === 'paused';
-  const canPause = snapshot.status === 'open';
-  const canMarkUnavailable = snapshot.status === 'open' || snapshot.status === 'paused';
+  const away = snapshot.availability.state === 'away';
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
-        {picker}
+        <div className="min-w-0 max-w-full flex-1 sm:flex-none">{picker}</div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {paused ? (
-            <Button
-              variant="outline"
-              disabled={resume.isPending}
-              onClick={() =>
-                resume.mutate(undefined, {
-                  onSuccess: () => toast.success('Resumed session'),
-                  onError: (err) => toastFailure('Resume', err),
-                })
-              }
-            >
-              Resume session
-            </Button>
-          ) : (
-            <Button variant="outline" disabled={!canPause} onClick={() => setDialog({ kind: 'pause' })}>
-              Pause session
+          {away ? null : (
+            <Button variant="outline" disabled={!availability.canStepAway} onClick={availability.openStepAway}>
+              Step away
             </Button>
           )}
-          <Button variant="outline" className="text-priority" disabled={!canMarkUnavailable} onClick={() => setDialog({ kind: 'unavailable' })}>
-            Mark unavailable
+          <Button
+            variant="outline"
+            className="border-priority/50 text-priority hover:text-priority"
+            disabled={!availability.canUnavailable}
+            onClick={availability.openUnavailable}
+          >
+            Unavailable for rest of session
           </Button>
         </div>
       </div>
 
-      {snapshot.status !== 'open' ? (
+      <AvailabilityStrip availability={snapshot.availability} who="You">
+        {away ? (
+          <>
+            <Button size="lg" disabled={availability.backPending} onClick={availability.imBack}>
+              {availability.backPending ? 'Saving…' : "I'm back"}
+            </Button>
+            <Button variant="outline" size="lg" onClick={availability.openStepAway}>
+              Change return time
+            </Button>
+          </>
+        ) : null}
+      </AvailabilityStrip>
+
+      {snapshot.status === 'closed' || snapshot.status === 'scheduled' ? (
         <div
           role="status"
           data-testid="session-status"
           className="rounded-md border border-l-[3px] border-rule border-l-ink bg-surface px-3 py-2"
         >
-          <p className="font-bold">
-            {snapshot.status === 'paused' && 'Session paused'}
-            {snapshot.status === 'unavailable' && 'Session marked unavailable'}
-            {snapshot.status === 'closed' && 'Session closed'}
-            {snapshot.status === 'scheduled' && 'Session has not started'}
-          </p>
-          <p>
-            {snapshot.status === 'paused'
-              ? snapshot.pauseUntil
-                ? `Back at ${formatIST(snapshot.pauseUntil)}. Patients see a resume time and their estimates continue.`
-                : 'No resume time set. Patient estimates are withheld until you resume.'
-              : snapshot.status === 'unavailable'
-                ? 'Patients are not reassigned automatically. Reception will advise or rebook them.'
-                : `The ${sessionLabel} is not taking calls.`}
-          </p>
+          <p className="font-bold">{snapshot.status === 'closed' ? 'Session closed' : 'Session has not started'}</p>
+          <p>The {sessionLabel} is not taking calls.</p>
         </div>
       ) : null}
 
@@ -230,7 +230,7 @@ export function SessionConsole({ session, date, picker }: SessionConsoleProps) {
         </p>
       ) : null}
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="lg:col-start-2 lg:row-span-3 lg:row-start-1">
           <CallNextPanel
             snapshot={snapshot}
@@ -306,38 +306,7 @@ export function SessionConsole({ session, date, picker }: SessionConsoleProps) {
           );
         }}
       />
-      <PauseDialog
-        open={dialog?.kind === 'pause'}
-        onOpenChange={(open) => !open && setDialog(null)}
-        pending={pause.isPending}
-        date={date}
-        onSubmit={(vars) =>
-          pause.mutate(vars, {
-            onSuccess: () => {
-              toast.success('Paused session');
-              setDialog(null);
-            },
-            onError: (err) => toastFailure('Pause', err),
-          })
-        }
-      />
-      <UnavailableDialog
-        open={dialog?.kind === 'unavailable'}
-        onOpenChange={(open) => !open && setDialog(null)}
-        pending={unavailable.isPending}
-        onSubmit={(reason) =>
-          unavailable.mutate(
-            { reason },
-            {
-              onSuccess: () => {
-                toast.success('Marked session unavailable');
-                setDialog(null);
-              },
-              onError: (err) => toastFailure('Mark unavailable', err),
-            },
-          )
-        }
-      />
+      {availability.dialogs}
     </div>
   );
 }

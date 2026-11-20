@@ -5,6 +5,9 @@ import { API_BASE } from '@/lib/api';
 import { useStream } from './useStream';
 import type { StreamOptions, StreamStatus } from './stream';
 
+/** Fetches made for one notice before giving up on a server that keeps answering with an older version. */
+const MAX_ROUNDS = 3;
+
 export interface LiveSyncArgs<T> {
   /** Query key of the snapshot this stream keeps fresh. */
   queryKey: QueryKey;
@@ -41,12 +44,21 @@ export function useLiveSync<T>({ queryKey, eventsPath, isBehind, options }: Live
     if (running.current) return;
     running.current = true;
     try {
+      // A refetch that was already in flight when a notice arrived is joined, and it may have been served from before
+      // that notice's commit. So after every round, a notice the held snapshot is still behind stays queued and
+      // gets a fresh fetch. The round cap stops a server that keeps answering with an older version from being hammered
+      // (the one-minute poll and the next notice are the safety net then).
+      const rounds = new Map<string, number>();
       while (alive.current && pending.current.size > 0) {
         const batch = new Map(pending.current);
         await qc.refetchQueries({ queryKey: keyRef.current, exact: true }, { cancelRefetch: false });
         if (qc.getQueryState(keyRef.current)?.status === 'error') break;
+        const held = qc.getQueryData<T>(keyRef.current);
         for (const [id, notice] of batch) {
-          if (pending.current.get(id) === notice) pending.current.delete(id);
+          if (pending.current.get(id) !== notice) continue; // a newer notice for this session arrived meanwhile: keep it
+          const round = (rounds.get(id) ?? 0) + 1;
+          rounds.set(id, round);
+          if (!behindRef.current(notice, held) || round >= MAX_ROUNDS) pending.current.delete(id);
         }
       }
     } finally {
@@ -77,6 +89,14 @@ export function useLiveSync<T>({ queryKey, eventsPath, isBehind, options }: Live
   const onReconnect = useCallback(() => {
     void qc.refetchQueries({ queryKey: keyRef.current, exact: true });
   }, [qc]);
+
+  // The browser regained its network: whatever the stream missed, fetch a fresh snapshot now (FR-09, PR-04).
+  useEffect(() => {
+    if (eventsPath === null) return;
+    const onOnline = () => void qc.refetchQueries({ queryKey: keyRef.current, exact: true });
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [qc, eventsPath]);
 
   return useStream({
     url: eventsPath === null ? null : `${API_BASE}${eventsPath}`,
