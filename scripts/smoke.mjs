@@ -62,7 +62,9 @@ console.log(`HQMS smoke against ${API}`);
 await check('GET /health', async () => {
   const { res, json } = await call('/health');
   expect(res.status === 200, `status ${res.status}`);
-  expect(json?.status === 'ok' && json?.db === 'up', 'body is not {status:ok, db:up}');
+  // `degraded` (still 200) means the API and database are fine but no worker heartbeat is recent (D-038).
+  expect((json?.status === 'ok' || json?.status === 'degraded') && json?.db === 'up', 'body is not {status:ok|degraded, db:up}');
+  if (json?.status === 'degraded') console.log('  note: /health is degraded: no recent worker heartbeat (timers and notifications stopped)');
 });
 
 let doctorCookie;
