@@ -181,11 +181,11 @@ describe('B3.1 GET /appointments/{id}/alternatives and one-click rebook', () => 
 });
 
 /** The standard story: doctor 1 has booked, checked-in and walk-in patients, then becomes unavailable. */
-async function story() {
+async function story(srcDoctor = 1, tgtDoctor = 2) {
   const day = nextDay();
   t.clock.set(ist(day, '08:00'));
-  const S = await mk(1, day);
-  const T = await mk(2, day);
+  const S = await mk(srcDoctor, day);
+  const T = await mk(tgtDoctor, day);
   const pc = await newLoginPatient(t, reception, 'Story Checked In A');
   const pa1 = await newLoginPatient(t, reception, 'Story Booked One');
   const pa2 = await newPatient(reception, 'Story Booked Two');
@@ -391,7 +391,7 @@ describe('B3.3 POST /sessions/{id}/affected/move', () => {
   });
 
   it('skips a patient who already holds a place in the target (CONFLICT), a called patient and a foreign id', async () => {
-    const w = await story();
+    const w = await story(9, 10) /* doctors 9 and 10: no called entries left over by other test files */;
     // pw is also admitted as a walk-in in the target before the move
     t.clock.set(ist(w.day, '09:00'));
     expect((await reception.post(`/sessions/${w.T.id}/walk-ins`, { patientId: w.pw.id })).status).toBe(201);
