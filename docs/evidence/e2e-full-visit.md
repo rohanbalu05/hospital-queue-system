@@ -23,7 +23,7 @@ page says "It is your turn" -> the doctor starts and completes -> the patient's 
 | Web       | Vite dev server of `apps/web` on port 5188 with its `/api` proxy (D-013) pointed at that API (`API_URL`); **not** a production build |
 | Browser   | Chromium 153 (Playwright 1.63.0, headless), four separate browser contexts                                                           |
 | Viewports | patient 390 x 844 (device scale 2), reception and doctor 1440 x 900, waiting-room display 1920 x 1080                                |
-| Worker    | not running                                                                                                                          |
+| Worker    | not running when the table above was measured; since session 3 the harness also starts the built worker (see update below)         |
 | Date      | 2026-11-11                                                                                                                           |
 
 ## Method
@@ -85,6 +85,24 @@ These include Playwright's polling and the snapshot refetch, and are n = 3 singl
 `e2e-12-doctor-completed-1440.png`, `e2e-13-patient-completed-390.png` and `e2e-14-display-after-1920.png`
 (regenerated on the final tree; the finding-1 screenshot was removed once the display was fixed).
 
+## Update (session 3): worker in the stack, time-of-day-proof fixture
+
+What changed in this spec, and nothing else in its flow or assertions:
+- `tests/e2e/stack.ts` now also starts the built worker (`apps/worker/dist/main.js`, `NOTIFICATION_PROVIDER=fake`,
+  `WORKER_POLL_MS=200`), so outbox fan-out and notification jobs run for real. The flow itself does not depend on it.
+- The fixture is built by the shared helper `tests/e2e/fixtures.ts`: the seed's still-booked appointments of today are
+  cancelled through the API, every non-closed session of today is closed, and a session labelled by `sessionLabelFor`
+  (D-037, so "Morning" at 10 am, never "Evening") that **started 12 minutes ago** is created and opened. Its first slot is
+  past the late-grace window, the patient gets the next slot (about 8 minutes ahead), which is already eligible.
+  The patient's session choice and the reception tab are selected by label word and start time instead of the fixed word "Evening".
+- The reception search step waits until the action panel says "Press Enter in the search box to check in." before pressing
+  Enter. Earlier the spec pressed Enter as soon as the arrivals list showed one row; Enter is ignored while the debounced
+  patient search for the typed text is still running (product behaviour, noted in e2e-availability.md), which made the
+  spec fail on the first run after the web changes.
+- **Measured, this machine, final tree, two consecutive full `pnpm e2e` runs:** this spec passed both times (6.4 s and 6.6 s
+  for the test); in the last run call to display 436 ms, call to patient 517 ms, complete to patient 828 ms (single
+  observations, not a distribution). No 5xx, no page error; the only 4xx are the 401 `GET /api/me` probes.
+
 ## Findings (status on the final tree)
 
 All three findings below were fixed after this file was first written; the spec now asserts the fixed behaviour.
@@ -114,7 +132,8 @@ Original text:
   was not exercised.
 - One visit, one doctor, appointment path only (group A). Walk-ins, priority, skip, pause and the follow-up loop are covered
   by the API suites, not by this flow.
-- The fixture depends on the wall clock: it needs "now minus 16 minutes" to fall on the same hospital-local date (it
-  fails in the first 16 minutes after 00:00 Asia/Kolkata).
+- The fixture depends on the wall clock: it needs "now minus 12 minutes" and a four-hour session to stay on the same
+  hospital-local date and "today" for the booking pickers (not exercised between 20:00 and 00:12 Asia/Kolkata; the
+  sessions would cross midnight).
 - The display and patient screens were checked here at the viewports listed; the other staff screens and the 390 px
   reception and doctor layouts are covered by the existing mock-based Playwright specs in `apps/web/e2e`.

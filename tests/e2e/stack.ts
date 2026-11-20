@@ -165,7 +165,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     await waitFor(`${apiUrl}/health`, api, apiLogs, 'API');
     await waitFor(`${webUrl}/login`, web, webLogs, 'Vite dev server');
     await new Promise((r) => setTimeout(r, 300));
-    if (worker.exitCode !== null) throw new Error(`worker exited early (code ${worker.exitCode}):\n${workerLogs.join('')}`);
+    if (worker.exitCode !== null)
+      throw new Error(`worker exited early (code ${worker.exitCode}):\n${workerLogs.join('')}`);
   } catch (err) {
     await Promise.all([stop(api), stop(web), stop(worker)]);
     throw err;

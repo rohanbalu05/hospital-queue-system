@@ -16,7 +16,7 @@ import pg from 'pg';
 import { expect, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import { sessionLabelFor } from '../../packages/contracts/src/scheduling.js';
 import { stableId } from '../../db/seed/seed.js';
-import { ApiClient, login } from '../support/client.js';
+import { type ApiClient, login } from '../support/client.js';
 
 export const SHOTS = path.resolve(import.meta.dirname, '../../docs/evidence/screenshots');
 export const EVIDENCE = path.resolve(import.meta.dirname, '../../docs/evidence');
@@ -35,7 +35,12 @@ export const patientEmail = (n: number): string => `patient${n === 1 ? '' : n}@h
 export const doctorEmail = (n: number): string => `doctor${n === 1 ? '' : n}@hqms.test`;
 
 export const istDate = (d: Date): string =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
 
 /** Same rendering as the web app's formatIST(…, 'time'): "9:22 am". */
 export const clock = (value: string | Date): string =>
@@ -82,9 +87,17 @@ export async function resetToday(): Promise<void> {
       [today],
     );
     for (const row of booked.rows) {
-      const res = await reception.post(`/appointments/${row.id}/cancel`, { expectedVersion: row.version, reason: 'e2e fixture reset' });
+      const res = await reception.post(`/appointments/${row.id}/cancel`, {
+        expectedVersion: row.version,
+        reason: 'e2e fixture reset',
+      });
       if (res.status !== 200) throw new Error(`reset cancel ${row.id}: ${res.status} ${JSON.stringify(res.body)}`);
     }
+    // A patient left in `called` by an earlier run would hold the doctor's single active allocation; the 2-minute
+    // call timeout would skip them anyway, so reset them the same way.
+    await pool.query(
+      `UPDATE queue_entries SET state = 'skipped', skipped_at = now(), version = version + 1 WHERE state = 'called'`,
+    );
     await pool.query(`UPDATE sessions SET status = 'closed' WHERE session_date = $1 AND status <> 'closed'`, [today]);
   } finally {
     await pool.end();
@@ -98,7 +111,10 @@ export async function createSession(n: number, admin: ApiClient): Promise<Fixtur
     let startMs = Math.floor((Date.now() - STARTED_MIN_AGO * 60_000) / 60_000) * 60_000;
     // The (doctor, starts_at) pair is unique and the seed starts sessions on the hour: step back one minute on a clash.
     for (;;) {
-      const clash = await pool.query(`SELECT 1 FROM sessions WHERE doctor_id = $1 AND starts_at = $2`, [doctorId(n), new Date(startMs).toISOString()]);
+      const clash = await pool.query(`SELECT 1 FROM sessions WHERE doctor_id = $1 AND starts_at = $2`, [
+        doctorId(n),
+        new Date(startMs).toISOString(),
+      ]);
       if (clash.rowCount === 0) break;
       startMs -= 60_000;
     }
@@ -107,7 +123,15 @@ export async function createSession(n: number, admin: ApiClient): Promise<Fixtur
     const label = sessionLabelFor(startsAt);
     const res = await admin.post(
       '/sessions',
-      { doctorId: doctorId(n), sessionDate: istDate(new Date(startMs)), label, startsAt, endsAt, bookedCapacity: 10, walkinCapacity: 5 },
+      {
+        doctorId: doctorId(n),
+        sessionDate: istDate(new Date(startMs)),
+        label,
+        startsAt,
+        endsAt,
+        bookedCapacity: 10,
+        walkinCapacity: 5,
+      },
       null,
     );
     if (res.status !== 201) throw new Error(`fixture session: ${res.status} ${JSON.stringify(res.body)}`);
@@ -130,24 +154,37 @@ export async function createSession(n: number, admin: ApiClient): Promise<Fixtur
 }
 
 /** Preparation only: a patient books the next free slot of a session (same API the Book page uses). */
-export async function bookAs(patientNumber: number, sessionId: string): Promise<{ id: string; scheduledAt: string; version: number }> {
+export async function bookAs(
+  patientNumber: number,
+  sessionId: string,
+): Promise<{ id: string; scheduledAt: string; version: number }> {
   const client = await login(API(), patientEmail(patientNumber));
   const res = await client.post('/appointments', { sessionId });
-  if (res.status !== 201) throw new Error(`book as patient ${patientNumber}: ${res.status} ${JSON.stringify(res.body)}`);
+  if (res.status !== 201)
+    throw new Error(`book as patient ${patientNumber}: ${res.status} ${JSON.stringify(res.body)}`);
   return res.body;
 }
 
 /** Preparation only: reception checks a booked appointment in. */
-export async function checkIn(reception: ApiClient, appointmentId: string): Promise<{ token: string; queueEntryId: string; visitId: string }> {
+export async function checkIn(
+  reception: ApiClient,
+  appointmentId: string,
+): Promise<{ token: string; queueEntryId: string; visitId: string }> {
   const res = await reception.post(`/appointments/${appointmentId}/check-in`, {});
-  if (res.status !== 200 && res.status !== 201) throw new Error(`check-in ${appointmentId}: ${res.status} ${JSON.stringify(res.body)}`);
+  if (res.status !== 200 && res.status !== 201)
+    throw new Error(`check-in ${appointmentId}: ${res.status} ${JSON.stringify(res.body)}`);
   return res.body;
 }
 
 /** Preparation only: reception admits a walk-in. */
-export async function admitWalkIn(reception: ApiClient, sessionId: string, patientNumber: number): Promise<{ token: string; queueEntryId: string; visitId: string }> {
+export async function admitWalkIn(
+  reception: ApiClient,
+  sessionId: string,
+  patientNumber: number,
+): Promise<{ token: string; queueEntryId: string; visitId: string }> {
   const res = await reception.post(`/sessions/${sessionId}/walk-ins`, { patientId: patientId(patientNumber) });
-  if (res.status !== 200 && res.status !== 201) throw new Error(`walk-in ${patientNumber}: ${res.status} ${JSON.stringify(res.body)}`);
+  if (res.status !== 200 && res.status !== 201)
+    throw new Error(`walk-in ${patientNumber}: ${res.status} ${JSON.stringify(res.body)}`);
   return res.body;
 }
 
@@ -199,12 +236,18 @@ export function watch(page: Page, who: string, sink: Problems): void {
   page.on('response', (res) => {
     const status = res.status();
     if (status >= 500) sink.fiveXx.push(`${who} ${status} ${res.request().method()} ${res.url()}`);
-    else if (status >= 400) sink.fourXx.push(`${who} ${status} ${res.request().method()} ${new URL(res.url()).pathname}`);
+    else if (status >= 400)
+      sink.fourXx.push(`${who} ${status} ${res.request().method()} ${new URL(res.url()).pathname}`);
   });
   page.on('pageerror', (err) => sink.pageErrors.push(`${who}: ${err.message}`));
 }
 
-export async function newContext(browser: Browser, width: number, height: number, deviceScaleFactor = 1): Promise<BrowserContext> {
+export async function newContext(
+  browser: Browser,
+  width: number,
+  height: number,
+  deviceScaleFactor = 1,
+): Promise<BrowserContext> {
   return browser.newContext({ baseURL: WEB(), viewport: { width, height }, deviceScaleFactor });
 }
 
@@ -216,4 +259,16 @@ export function summariseFourXx(list: string[]): Record<string, number> {
     out[key] = (out[key] ?? 0) + 1;
   }
   return out;
+}
+
+/** Reception desk: make sure the doctor's session tab is the selected one (pointer-operated pickers, see the evidence notes). */
+export async function selectReceptionSession(page: Page, session: FixtureSession): Promise<void> {
+  await expect(page.getByRole('heading', { name: 'Reception desk', level: 1 })).toBeVisible();
+  const doctorSelect = page.getByRole('combobox', { name: 'Doctor' });
+  if (!(await doctorSelect.innerText()).includes(session.doctorName)) {
+    await doctorSelect.click();
+    await page.getByRole('option', { name: new RegExp(session.doctorName) }).click();
+  }
+  await page.getByRole('tab', { name: session.tabName }).click();
+  await expect(page.getByText(/Last updated/)).toBeVisible();
 }

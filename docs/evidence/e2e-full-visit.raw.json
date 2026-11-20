@@ -1,21 +1,26 @@
 {
   "fixture": {
-    "sessionId": "66a7f9d8-dc1a-4b2f-b2bf-5e54db78b270",
-    "startsAt": "2026-11-11T14:56:00.000Z",
+    "sessionId": "231cfd86-8f48-4fcb-8a7d-4561736692bb",
+    "doctorNumber": 1,
+    "doctorName": "Dr. Suresh Hegde",
+    "label": "morning",
+    "startsAt": "2026-11-20T04:25:00.000Z",
+    "endsAt": "2026-11-20T08:25:00.000Z",
+    "tabName": "Morning 9:55 am",
     "roomLabel": "OPD 1"
   },
   "timingsMs": {
-    "callToDisplayMs": 490,
-    "callToPatientMs": 564,
-    "completeToPatientMs": 357
+    "callToDisplayMs": 436,
+    "callToPatientMs": 517,
+    "completeToPatientMs": 828
   },
   "databaseAfter": {
     "visit": {
-      "id": "c6e84294-ac76-4ddc-9491-bd1899f35352",
+      "id": "457d4c4b-0da6-478f-b76e-d5fb808e4a79",
       "status": "completed",
       "kind": "appointment",
-      "started_at": "2026-11-11T15:12:54.602Z",
-      "completed_at": "2026-11-11T15:12:55.091Z",
+      "started_at": "2026-11-20T04:39:50.823Z",
+      "completed_at": "2026-11-20T04:39:51.253Z",
       "entry_state": "completed",
       "token": "A-001",
       "call_count": 1,

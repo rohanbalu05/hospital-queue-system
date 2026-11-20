@@ -50,7 +50,8 @@ async function closeOverlapping(admin: ApiClient, res: ApiResponse): Promise<boo
   const details = res.body?.error?.details ?? res.body?.details;
   if (res.status !== 409 || details?.reason !== 'SESSION_OVERLAP') return false;
   const closed = await admin.post(`/sessions/${details.overlappingSessionId}/close`, {});
-  if (closed.status !== 200) throw new Error(`could not close overlapping session: ${closed.status} ${JSON.stringify(closed.body)}`);
+  if (closed.status !== 200)
+    throw new Error(`could not close overlapping session: ${closed.status} ${JSON.stringify(closed.body)}`);
   return true;
 }
 

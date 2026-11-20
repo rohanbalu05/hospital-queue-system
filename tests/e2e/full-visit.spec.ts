@@ -184,7 +184,9 @@ test('book -> check in -> call -> start -> complete, keyboard only, real stack',
     await expect(reception.getByRole('listbox', { name: 'Arrivals' }).getByRole('option')).toHaveCount(1);
     // Enter is ignored while the debounced patient search for the typed text is still running (the panel says
     // "Searching for ..."), so wait until the panel says Enter will check in.
-    await expect(reception.getByText('Press Enter in the search box to check in.', { exact: true }).first()).toBeVisible();
+    await expect(
+      reception.getByText('Press Enter in the search box to check in.', { exact: true }).first(),
+    ).toBeVisible();
     await reception.keyboard.press('Enter');
     const outcome = reception.getByTestId('arrival-outcome');
     await expect(outcome).toContainText('Checked in');
