@@ -14,7 +14,16 @@ import MyVisitPage from './MyVisitPage';
  * and the banner clears.
  */
 
-const eta = { status: 'ok', lowMinutes: 25, highMinutes: 40, note: null, computedAt: '2026-11-11T04:35:00.000Z', estimatorMeanMinutes: 12, estimatorSamples: 3, uncertainty: 'warm' };
+const eta = {
+  status: 'ok',
+  lowMinutes: 25,
+  highMinutes: 40,
+  note: null,
+  computedAt: '2026-11-11T04:35:00.000Z',
+  estimatorMeanMinutes: 12,
+  estimatorSamples: 3,
+  uncertainty: 'warm',
+};
 const snapshot = (position: number, version: number) => ({
   view: 'patient',
   sessionId: SESSION_ID,
@@ -46,8 +55,18 @@ beforeEach(() => {
     'fetch',
     vi.fn(async (input: RequestInfo | URL) => {
       const path = new URL(String(input), 'http://localhost').pathname.replace(/^\/api/, '');
-      const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
-      if (path === '/me') return json({ userId: uid(9), email: 'p@hqms.test', displayName: 'Ananya Iyer', role: 'patient', patientId: uid(0xa1), doctorId: null, assignedDoctorIds: [] });
+      const json = (body: unknown, status = 200) =>
+        new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+      if (path === '/me')
+        return json({
+          userId: uid(9),
+          email: 'p@hqms.test',
+          displayName: 'Ananya Iyer',
+          role: 'patient',
+          patientId: uid(0xa1),
+          doctorId: null,
+          assignedDoctorIds: [],
+        });
       if (path === `/sessions/${SESSION_ID}/queue`) {
         snapshotFetches += 1;
         return json(snapshot(position, version));

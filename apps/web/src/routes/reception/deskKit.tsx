@@ -25,20 +25,52 @@ export const TOMORROW = addDays(TODAY, 1);
 /** An instant at hh:mm IST on a hospital-local day. */
 export const at = (hhmm: string, day: string = TODAY) => new Date(`${day}T${hhmm}:00+05:30`).toISOString();
 
-export const DOC_RAO = { id: uid(0xd1), fullName: 'Dr. Meenakshi Rao', department: 'General Medicine', room: 'Room 12', active: true };
-export const DOC_KULKARNI = { id: uid(0xd2), fullName: 'Dr. Shweta Kulkarni', department: 'General Medicine', room: 'Room 14', active: true };
-export const DOC_SHETTY = { id: uid(0xd3), fullName: 'Dr. Ramesh Shetty', department: 'ENT', room: 'Room 3', active: true };
+export const DOC_RAO = {
+  id: uid(0xd1),
+  fullName: 'Dr. Meenakshi Rao',
+  department: 'General Medicine',
+  room: 'Room 12',
+  active: true,
+};
+export const DOC_KULKARNI = {
+  id: uid(0xd2),
+  fullName: 'Dr. Shweta Kulkarni',
+  department: 'General Medicine',
+  room: 'Room 14',
+  active: true,
+};
+export const DOC_SHETTY = {
+  id: uid(0xd3),
+  fullName: 'Dr. Ramesh Shetty',
+  department: 'ENT',
+  room: 'Room 3',
+  active: true,
+};
 
 export const capacity = (over: Partial<{ bookedReserved: number; walkinUsed: number }> = {}) => {
   const bookedReserved = over.bookedReserved ?? 3;
   const walkinUsed = over.walkinUsed ?? 0;
-  return { bookedCapacity: 10, walkinCapacity: 5, bookedReserved, walkinUsed, bookedAvailable: 10 - bookedReserved, walkinAvailable: 5 - walkinUsed };
+  return {
+    bookedCapacity: 10,
+    walkinCapacity: 5,
+    bookedReserved,
+    walkinUsed,
+    bookedAvailable: 10 - bookedReserved,
+    walkinAvailable: 5 - walkinUsed,
+  };
 };
 
 export function makeSession(
   n: number,
   doctor: typeof DOC_RAO,
-  over: { day?: string; start?: string; end?: string; label?: string; status?: string; cap?: ReturnType<typeof capacity> } = {},
+  over: {
+    day?: string;
+    start?: string;
+    end?: string;
+    label?: string;
+    status?: string;
+    cap?: ReturnType<typeof capacity>;
+  } = {},
 ) {
   const day = over.day ?? TODAY;
   return {
@@ -74,7 +106,13 @@ export const patient = (n: number, fullName: string, phone: string | null, over:
 export const HARISH = patient(1, 'Harish Gowda', '+919845012345', { dateOfBirth: '1978-03-14' });
 export const LAKSHMI = patient(2, 'Lakshmi Narayanan', '+919880123456');
 
-export function appointment(n: number, p: ReturnType<typeof patient>, s: ReturnType<typeof makeSession>, scheduledAt: string, over: Record<string, unknown> = {}) {
+export function appointment(
+  n: number,
+  p: ReturnType<typeof patient>,
+  s: ReturnType<typeof makeSession>,
+  scheduledAt: string,
+  over: Record<string, unknown> = {},
+) {
   return {
     id: uid(0xb00 + n),
     patientId: p.id,
@@ -122,7 +160,8 @@ export function installDesk(world: DeskWorld) {
   vi.stubGlobal('EventSource', FakeEventSource);
   const posts: PostRecord[] = [];
   let registerCalls = 0;
-  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -134,7 +173,15 @@ export function installDesk(world: DeskWorld) {
       if (method === 'POST') posts.push({ path, body, key: new Headers(init?.headers).get('Idempotency-Key') });
 
       if (path === '/me') {
-        return json({ userId: uid(2), email: 'reception@hqms.test', displayName: 'Deepa Nair', role: 'reception', patientId: null, doctorId: null, assignedDoctorIds: [DOC_RAO.id] });
+        return json({
+          userId: uid(2),
+          email: 'reception@hqms.test',
+          displayName: 'Deepa Nair',
+          role: 'reception',
+          patientId: null,
+          doctorId: null,
+          assignedDoctorIds: [DOC_RAO.id],
+        });
       }
       if (path === '/doctors') return json(world.doctors);
       if (path === '/sessions' && method === 'GET') {
@@ -152,7 +199,13 @@ export function installDesk(world: DeskWorld) {
       let m = /^\/sessions\/([^/]+)\/queue$/.exec(path);
       if (m) {
         const s = world.sessions.find((x) => x.id === m![1]);
-        return json(staffSnapshot({ sessionId: m[1]!, status: (world.snapshotStatus ?? s?.status ?? 'open') as 'open', ...(world.snapshot ?? {}) }));
+        return json(
+          staffSnapshot({
+            sessionId: m[1]!,
+            status: (world.snapshotStatus ?? s?.status ?? 'open') as 'open',
+            ...(world.snapshot ?? {}),
+          }),
+        );
       }
       m = /^\/sessions\/([^/]+)\/slots$/.exec(path);
       if (m) {
@@ -170,14 +223,21 @@ export function installDesk(world: DeskWorld) {
       m = /^\/sessions\/([^/]+)\/alternatives$/.exec(path);
       if (m) return json(world.alternatives);
       if (path === '/appointments' && method === 'GET') {
-        if (world.failPatientAppointments && q.get('patientId')) return json({ error: { code: 'INTERNAL', message: 'Database is busy.' } }, 500);
+        if (world.failPatientAppointments && q.get('patientId'))
+          return json({ error: { code: 'INTERNAL', message: 'Database is busy.' } }, 500);
         return json(
-          world.appointments.filter((a) => (!q.get('sessionId') || a.sessionId === q.get('sessionId')) && (!q.get('patientId') || a.patientId === q.get('patientId'))),
+          world.appointments.filter(
+            (a) =>
+              (!q.get('sessionId') || a.sessionId === q.get('sessionId')) &&
+              (!q.get('patientId') || a.patientId === q.get('patientId')),
+          ),
         );
       }
       if (path === '/patients' && method === 'GET') {
         const term = (q.get('q') ?? '').toLowerCase();
-        return json(world.patients.filter((p) => `${p.fullName} ${p.mrn} ${p.phone ?? ''}`.toLowerCase().includes(term)));
+        return json(
+          world.patients.filter((p) => `${p.fullName} ${p.mrn} ${p.phone ?? ''}`.toLowerCase().includes(term)),
+        );
       }
       if (path === '/patients' && method === 'POST') {
         registerCalls += 1;
@@ -188,7 +248,15 @@ export function installDesk(world: DeskWorld) {
         return json(patient(90, String(body.fullName), (body.phone as string | null) ?? null), 201);
       }
       if (method === 'POST' && /^\/sessions\/[^/]+\/walk-ins$/.test(path)) {
-        return json({ visitId: uid(0xc1), queueEntryId: uid(0xc2), token: 'W-004', group: 'W', kind: 'walkin', eligibleAt: at('10:00'), queueVersion: 8 });
+        return json({
+          visitId: uid(0xc1),
+          queueEntryId: uid(0xc2),
+          token: 'W-004',
+          group: 'W',
+          kind: 'walkin',
+          eligibleAt: at('10:00'),
+          queueVersion: 8,
+        });
       }
       if (method === 'POST' && path === '/appointments') {
         const s = world.sessions.find((x) => x.id === body.sessionId)!;

@@ -5,7 +5,14 @@ import { useCreateFollowUpTask } from '@/api/queue';
 import { Field } from '@/components/layout/Field';
 import { InlineAlert } from '@/components/scheduling/status';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -36,7 +43,8 @@ const dueAtFor = (date: string) => new Date(`${date}T17:00:00+05:30`).toISOStrin
 
 function errorWords(err: unknown): string {
   if (err instanceof ApiRequestError) {
-    if (err.code === 'NETWORK') return `${err.message} Press Create follow-up again: the same request is sent, so only one task is made.`;
+    if (err.code === 'NETWORK')
+      return `${err.message} Press Create follow-up again: the same request is sent, so only one task is made.`;
     if (err.code === 'FORBIDDEN') return 'Your account cannot create follow-ups.';
     return err.message;
   }
@@ -105,7 +113,9 @@ export function FollowUpDialog({ entry, onClose, onCreated }: FollowUpDialogProp
       },
       {
         onSuccess: () => {
-          toast.success('Follow-up created', { description: `${title} for ${entry.patientName}, due ${formatLocalDate(due)}. The follow-up team will see it.` });
+          toast.success('Follow-up created', {
+            description: `${title} for ${entry.patientName}, due ${formatLocalDate(due)}. The follow-up team will see it.`,
+          });
           onCreated(entry.visitId, { title, dueAt });
           onClose();
         },
@@ -120,17 +130,30 @@ export function FollowUpDialog({ entry, onClose, onCreated }: FollowUpDialogProp
           <DialogHeader>
             <DialogTitle>Create follow-up for {entry?.patientName}</DialogTitle>
             <DialogDescription>
-              A follow-up nurse takes this task and records what was done. It is linked to {entry?.token}&apos;s visit today.
+              A follow-up nurse takes this task and records what was done. It is linked to {entry?.token}&apos;s visit
+              today.
             </DialogDescription>
           </DialogHeader>
 
           <fieldset className="grid gap-2">
             <legend className="mb-1 text-sm font-bold">What needs following up</legend>
-            <RadioGroup value={preset} onValueChange={setPreset} aria-label="Follow-up title" className="gap-0 divide-y divide-rule overflow-hidden rounded-md border border-rule">
+            <RadioGroup
+              value={preset}
+              onValueChange={setPreset}
+              aria-label="What needs following up"
+              className="gap-0 divide-y divide-rule overflow-hidden rounded-md border border-rule"
+            >
               {[...FOLLOW_UP_PRESETS, OTHER].map((p) => {
                 const id = `${ids}-${p}`;
                 return (
-                  <Label key={p} htmlFor={id} className={cn('flex min-h-11 cursor-pointer items-center gap-3 px-3 text-sm font-normal', preset === p && 'bg-secondary')}>
+                  <Label
+                    key={p}
+                    htmlFor={id}
+                    className={cn(
+                      'flex min-h-11 cursor-pointer items-center gap-3 px-3 text-sm font-normal',
+                      preset === p && 'bg-secondary',
+                    )}
+                  >
                     <RadioGroupItem id={id} value={p} />
                     <span className={cn(preset === p && 'font-bold')}>{p === OTHER ? 'Something else' : p}</span>
                   </Label>
@@ -139,7 +162,13 @@ export function FollowUpDialog({ entry, onClose, onCreated }: FollowUpDialogProp
             </RadioGroup>
             {preset === OTHER ? (
               <Field label="Title" error={errors.title ?? null}>
-                <Input value={custom} onChange={(e) => setCustom(e.target.value)} maxLength={160} autoComplete="off" autoFocus />
+                <Input
+                  value={custom}
+                  onChange={(e) => setCustom(e.target.value)}
+                  maxLength={160}
+                  autoComplete="off"
+                  autoFocus
+                />
               </Field>
             ) : null}
           </fieldset>
@@ -172,7 +201,9 @@ export function FollowUpDialog({ entry, onClose, onCreated }: FollowUpDialogProp
             ) : null}
           </div>
 
-          {create.error ? <InlineAlert title="The follow-up was not created">{errorWords(create.error)}</InlineAlert> : null}
+          {create.error ? (
+            <InlineAlert title="The follow-up was not created">{errorWords(create.error)}</InlineAlert>
+          ) : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={create.isPending}>

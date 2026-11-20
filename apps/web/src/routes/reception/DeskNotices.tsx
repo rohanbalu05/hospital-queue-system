@@ -27,23 +27,33 @@ export function DuplicatePanel({
 }) {
   const headingId = useId();
   return (
-    <div role="alert" aria-labelledby={headingId} className="mt-3 rounded-md border border-l-[3px] border-rule border-l-ink bg-surface p-3">
+    <div
+      role="alert"
+      aria-labelledby={headingId}
+      className="mt-3 rounded-md border border-l-[3px] border-rule border-l-ink bg-surface p-3"
+    >
       <p id={headingId} className="font-bold">
         This may be an existing patient
       </p>
       <p className="mt-0.5 text-muted-foreground">Check these records before creating another one.</p>
       <ul className="mt-2 divide-y divide-rule rounded-md border border-rule">
         {candidates.map((c) => (
-          <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2">
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-bold">{c.fullName}</p>
+          <li key={c.id} className="flex flex-col gap-2 px-3 py-2.5">
+            <div className="min-w-0">
+              <p className="font-bold">{c.fullName}</p>
+              <p className="text-sm text-muted-foreground tabular-nums">{c.mrn}</p>
+              <p className="text-sm text-muted-foreground tabular-nums">{c.phone ?? 'No phone on file'}</p>
               <p className="text-sm text-muted-foreground tabular-nums">
-                {c.mrn}
-                {c.phone ? `  ${c.phone}` : '  No phone on file'}
+                {c.dateOfBirth ? `Born ${formatLocalDate(c.dateOfBirth, 'date')}` : 'Date of birth not on file'}
               </p>
-              <p className="text-sm text-muted-foreground tabular-nums">{c.dateOfBirth ? `Born ${formatLocalDate(c.dateOfBirth, 'date')}` : 'Date of birth not on file'}</p>
             </div>
-            <Button variant="outline" disabled={pending} aria-label={`Use this patient: ${c.fullName}`} onClick={() => onUse(c)}>
+            <Button
+              variant="outline"
+              className="w-full"
+              disabled={pending}
+              aria-label={`Use this patient: ${c.fullName}`}
+              onClick={() => onUse(c)}
+            >
               Use this patient
             </Button>
           </li>
@@ -97,15 +107,15 @@ export function AlternativesPanel({
       ) : (
         <ul className="mt-2 divide-y divide-rule rounded-md border border-rule">
           {free.map((a) => (
-            <li key={a.sessionId} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2">
-              <div className="min-w-0 flex-1">
+            <li key={a.sessionId} className="flex flex-col gap-2 px-3 py-2.5">
+              <div className="min-w-0">
                 <p className="font-bold">{a.doctorName}</p>
                 <p className="text-sm text-muted-foreground tabular-nums">
                   Room {a.room}, {sessionLabelWord(a)}, {sessionTimes(a)}
                 </p>
                 <p className="text-sm tabular-nums">{`${a.walkinAvailable} walk-in ${a.walkinAvailable === 1 ? 'place' : 'places'} left`}</p>
               </div>
-              <Button variant="outline" disabled={!canAdmit || pending} onClick={() => onAdmitTo(a)}>
+              <Button variant="outline" className="w-full" disabled={!canAdmit || pending} onClick={() => onAdmitTo(a)}>
                 {`Admit to ${a.doctorName}`}
               </Button>
             </li>
@@ -114,10 +124,14 @@ export function AlternativesPanel({
       )}
       {!canAdmit && free.length > 0 ? (
         <p className="mt-1.5 text-sm text-muted-foreground">
-          {item ? 'This patient has a live appointment in this session, so they are not a walk-in.' : 'Choose or register a patient first, then admit them to one of these doctors.'}
+          {item
+            ? 'This patient has a live appointment in this session, so they are not a walk-in.'
+            : 'Choose or register a patient first, then admit them to one of these doctors.'}
         </p>
       ) : null}
-      <p className="mt-2 text-sm text-muted-foreground">No doctor can take them? Ask an admin to raise capacity for this session.</p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        No doctor can take them? Ask an admin to raise capacity for this session.
+      </p>
     </div>
   );
 }
@@ -132,11 +146,18 @@ export function OtherQueueNote({ item, session }: { item: ArrivalItem | null; se
   if (!enabled || !session) return null;
   const today = istDate();
   const elsewhere = (q.data ?? []).filter(
-    (a) => (a.status === 'booked' || a.status === 'checked_in') && a.sessionId !== session.id && istDate(a.scheduledAt) === today,
+    (a) =>
+      (a.status === 'booked' || a.status === 'checked_in') &&
+      a.sessionId !== session.id &&
+      istDate(a.scheduledAt) === today,
   );
   if (elsewhere.length === 0) return null;
   return (
-    <div role="status" aria-label="Already in another queue" className="mt-3 rounded-md border border-l-[3px] border-rule border-l-ink bg-surface px-3 py-2">
+    <div
+      role="status"
+      aria-label="Already in another queue"
+      className="mt-3 rounded-md border border-l-[3px] border-rule border-l-ink bg-surface px-3 py-2"
+    >
       <p className="font-bold">{item.name} already has a place with another doctor today</p>
       <ul className="mt-0.5 tabular-nums">
         {elsewhere.map((a) => (

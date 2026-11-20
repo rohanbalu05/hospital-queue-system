@@ -17,7 +17,10 @@ import { SessionConsole } from './components/SessionConsole';
  * until the next call). PR-35: Skip asks for confirmation first.
  */
 
-vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn() }), Toaster: () => null }));
+vi.mock('sonner', () => ({
+  toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn() }),
+  Toaster: () => null,
+}));
 
 beforeAll(() => {
   Element.prototype.hasPointerCapture = () => false;
@@ -27,7 +30,8 @@ beforeAll(() => {
 });
 
 const session = makeSession(1, DOC_RAO);
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 interface State {
   active: ReturnType<typeof entry> | null;
@@ -75,7 +79,11 @@ beforeEach(() => {
   );
   posts = [];
   failFollowUp = false;
-  state = { active: entry(14, { state: 'in_service', calledAt: '2026-11-11T04:42:00.000Z', patientName: 'Ananya Iyer' }), waiting: [entry(15, { patientName: 'Harish Gowda' })], completed: 3 };
+  state = {
+    active: entry(14, { state: 'in_service', calledAt: '2026-11-11T04:42:00.000Z', patientName: 'Ananya Iyer' }),
+    waiting: [entry(15, { patientName: 'Harish Gowda' })],
+    completed: 3,
+  };
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -84,9 +92,26 @@ beforeEach(() => {
       const method = init?.method ?? 'GET';
       const body = typeof init?.body === 'string' ? (JSON.parse(init.body) as Record<string, unknown>) : {};
       if (method === 'POST') posts.push({ path, body, key: new Headers(init?.headers).get('Idempotency-Key') });
-      if (path === '/me') return json({ userId: uid(3), email: 'doctor@hqms.test', displayName: 'Dr. Meenakshi Rao', role: 'doctor', patientId: null, doctorId: DOC_RAO.id, assignedDoctorIds: [DOC_RAO.id] });
+      if (path === '/me')
+        return json({
+          userId: uid(3),
+          email: 'doctor@hqms.test',
+          displayName: 'Dr. Meenakshi Rao',
+          role: 'doctor',
+          patientId: null,
+          doctorId: DOC_RAO.id,
+          assignedDoctorIds: [DOC_RAO.id],
+        });
       if (path === `/sessions/${session.id}/queue`) {
-        return json(staffSnapshot({ sessionId: session.id, active: state.active, waiting: state.waiting, completedCount: state.completed, lastDecision: decision() }));
+        return json(
+          staffSnapshot({
+            sessionId: session.id,
+            active: state.active,
+            waiting: state.waiting,
+            completedCount: state.completed,
+            lastDecision: decision(),
+          }),
+        );
       }
       if (method === 'POST' && /\/visits\/[^/]+\/complete$/.test(path)) {
         state.active = null;
@@ -103,7 +128,8 @@ beforeEach(() => {
         return json({ decision: decision({ token: next.token }), entry: state.active });
       }
       if (method === 'POST' && path === '/follow-up-tasks') {
-        if (failFollowUp) return json({ error: { code: 'VALIDATION_FAILED', message: 'The due time must be in the future.' } }, 422);
+        if (failFollowUp)
+          return json({ error: { code: 'VALIDATION_FAILED', message: 'The due time must be in the future.' } }, 422);
         return json(task(body), 201);
       }
       return json({ error: { code: 'NOT_FOUND', message: 'Not mocked.' } }, 404);
@@ -178,7 +204,11 @@ describe('doctor: Create follow-up (PR-32)', () => {
     await user.type(date, addDays(TODAY, 20));
     await user.click(within(dialog).getByRole('button', { name: 'Create follow-up' }));
     await waitFor(() => expect(posts.filter((p) => p.path === '/follow-up-tasks')).toHaveLength(1));
-    expect(posts.find((p) => p.path === '/follow-up-tasks')!.body).toMatchObject({ title: 'Review knee X-ray', dueAt: istFivePm(20), kind: 'post_visit' });
+    expect(posts.find((p) => p.path === '/follow-up-tasks')!.body).toMatchObject({
+      title: 'Review knee X-ray',
+      dueAt: istFivePm(20),
+      kind: 'post_visit',
+    });
   });
 
   it('keeps the completed patient on screen with Create follow-up until the next call', async () => {
@@ -193,7 +223,10 @@ describe('doctor: Create follow-up (PR-32)', () => {
     const dialog = await screen.findByRole('dialog', { name: /Create follow-up for Ananya Iyer/ });
     await user.click(within(dialog).getByRole('button', { name: 'Create follow-up' }));
     await waitFor(() => expect(posts.filter((p) => p.path === '/follow-up-tasks')).toHaveLength(1));
-    expect(posts.find((p) => p.path === '/follow-up-tasks')!.body).toMatchObject({ sourceVisitId: uid(0xf000 + 14), title: 'Review test results' });
+    expect(posts.find((p) => p.path === '/follow-up-tasks')!.body).toMatchObject({
+      sourceVisitId: uid(0xf000 + 14),
+      title: 'Review test results',
+    });
 
     // The next call replaces it.
     await user.click(await screen.findByRole('button', { name: /^Call next/ }));

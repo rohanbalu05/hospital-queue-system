@@ -1,6 +1,13 @@
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -59,11 +66,23 @@ export function ConfirmDialog({
           {reasonLabel ? (
             <div className="grid gap-1.5">
               <Label htmlFor={reasonId}>{reasonLabel}</Label>
-              <Input id={reasonId} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} autoComplete="off" />
+              <Input
+                id={reasonId}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                maxLength={300}
+                autoComplete="off"
+              />
             </div>
           ) : null}
           <DialogFooter>
-            <Button type="button" variant="outline" autoFocus={!reasonLabel} disabled={pending} onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              autoFocus={!reasonLabel}
+              disabled={pending}
+              onClick={() => onOpenChange(false)}
+            >
               {cancelLabel}
             </Button>
             <Button type="submit" variant={destructive ? 'destructive' : 'default'} disabled={pending}>

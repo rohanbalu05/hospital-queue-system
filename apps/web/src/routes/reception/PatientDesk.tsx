@@ -17,7 +17,11 @@ export interface DeskPatient {
   phone: string | null;
 }
 
-type Mode = { kind: 'list' } | { kind: 'book' } | { kind: 'cancel'; appointment: Appointment } | { kind: 'reschedule'; appointment: Appointment };
+type Mode =
+  | { kind: 'list' }
+  | { kind: 'book' }
+  | { kind: 'cancel'; appointment: Appointment }
+  | { kind: 'reschedule'; appointment: Appointment };
 
 const HEADINGS: Record<Mode['kind'], string> = {
   list: 'Upcoming appointments',
@@ -90,13 +94,20 @@ export function PatientDesk({ patient, onClose }: { patient: DeskPatient | null;
               apptQ.isPending ? (
                 <SkeletonRows count={3} />
               ) : apptQ.isError && !apptQ.data ? (
-                <ErrorState title="Appointments could not be loaded" error={apptQ.error} onRetry={() => void apptQ.refetch()} />
+                <ErrorState
+                  title="Appointments could not be loaded"
+                  error={apptQ.error}
+                  onRetry={() => void apptQ.refetch()}
+                />
               ) : list.length === 0 ? (
                 <EmptyState title="No upcoming appointments">
                   {shown.name} has nothing booked from today on. Use Book appointment to give them a place.
                 </EmptyState>
               ) : (
-                <ul aria-label="Upcoming appointments" className="divide-y divide-rule overflow-hidden rounded-xl border border-rule bg-surface">
+                <ul
+                  aria-label="Upcoming appointments"
+                  className="divide-y divide-rule overflow-hidden rounded-xl border border-rule bg-surface"
+                >
                   {list.map((a) => {
                     const date = istDate(a.scheduledAt);
                     const when = `${dayWord(date, today)}, ${formatIST(a.scheduledAt)}`;
@@ -115,10 +126,18 @@ export function PatientDesk({ patient, onClose }: { patient: DeskPatient | null;
                         <StatusWord status={a.status} />
                         {a.status === 'booked' ? (
                           <div className="flex w-full gap-2 sm:w-auto">
-                            <Button variant="outline" aria-label={`Reschedule appointment with ${a.doctorName}, ${when}`} onClick={() => setMode({ kind: 'reschedule', appointment: a })}>
+                            <Button
+                              variant="outline"
+                              aria-label={`Reschedule appointment with ${a.doctorName}, ${when}`}
+                              onClick={() => setMode({ kind: 'reschedule', appointment: a })}
+                            >
                               Reschedule
                             </Button>
-                            <Button variant="outline" aria-label={`Cancel appointment with ${a.doctorName}, ${when}`} onClick={() => setMode({ kind: 'cancel', appointment: a })}>
+                            <Button
+                              variant="outline"
+                              aria-label={`Cancel appointment with ${a.doctorName}, ${when}`}
+                              onClick={() => setMode({ kind: 'cancel', appointment: a })}
+                            >
                               Cancel
                             </Button>
                           </div>
@@ -132,7 +151,9 @@ export function PatientDesk({ patient, onClose }: { patient: DeskPatient | null;
 
             {mode.kind === 'book' ? <BookPanel patient={shown} onBack={back} onDone={back} /> : null}
             {mode.kind === 'cancel' ? <CancelPanel appointment={mode.appointment} onBack={back} onDone={back} /> : null}
-            {mode.kind === 'reschedule' ? <ReschedulePanel appointment={mode.appointment} onBack={back} onDone={back} /> : null}
+            {mode.kind === 'reschedule' ? (
+              <ReschedulePanel appointment={mode.appointment} onBack={back} onDone={back} />
+            ) : null}
           </div>
         ) : null}
       </SheetContent>
