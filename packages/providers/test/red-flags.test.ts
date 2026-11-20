@@ -75,6 +75,15 @@ const SHOULD_FLAG: Array<[string, string]> = [
   ['medicine_reaction', 'dizzy after taking my new tablets'],
   ['medicine_reaction', 'after the injection I got hives'],
   ['medicine_reaction', 'since the new tablet I am very dizzy'],
+  // a negation only cancels a symptom it directly precedes, and never when the sentence says it is new or ongoing
+  ['chest_pain', 'I have never had chest pain like this before'],
+  ['chest_pain', 'No relief from my chest pain'],
+  ['chest_pain', 'I never had chest pain before but now it is back'],
+  ['chest_pain', 'no chest pain earlier, but the chest pain is worse now'],
+  ['chest_pain', 'I do not usually get chest pain, today it is here again'],
+  ['breathing', 'I was never short of breath before today'],
+  ['breathing', 'not able to relax, still short of breath'],
+  ['fainting', 'I have never fainted like this'],
 ];
 
 const SHOULD_NOT_FLAG = [
@@ -85,6 +94,9 @@ const SHOULD_NOT_FLAG = [
   'without any chest pain or shortness of breath',
   "I don't have chest pain",
   'never had chest pain',
+  'not short of breath',
+  'never fainted',
+  'no chest pain or shortness of breath',
   'chest physiotherapy timings',
   'What time does the chest clinic open?',
   'How often should I take paracetamol?',
