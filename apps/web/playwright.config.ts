@@ -3,7 +3,8 @@ import { defineConfig } from '@playwright/test';
 // The sandbox ships Chromium under /opt/pw-browsers. Set PW_CHROMIUM_PATH to point at a specific binary
 // when the version Playwright 1.63.0 expects is not installed.
 const executablePath = process.env.PW_CHROMIUM_PATH;
-const PORT = 4175;
+// WEB_E2E_PORT lets two builders run the mocked screenshots at once without reusing each other's Vite server.
+const PORT = Number(process.env.WEB_E2E_PORT ?? 4175);
 
 export default defineConfig({
   testDir: './e2e',
