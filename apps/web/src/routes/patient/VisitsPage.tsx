@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ChevronDown } from 'lucide-react';
 import type { Appointment } from '@hqms/contracts';
-import { useAppointmentsQuery, useCancelAppointment, useRescheduleAppointment, useSessionsQuery } from '@/api';
+import { useAppointmentsQuery, useRescheduleAppointment, useSessionsQuery } from '@/api';
 import { PatientPage } from '@/components/layout/PatientPage';
 import { QueueLink } from './TodayPage';
+import { RebookPanel } from './RebookPanel';
+import { BookedAvailability } from '@/components/scheduling/BookedAvailability';
+import { CancelDialog } from '@/components/scheduling/CancelDialog';
 import { EmptyState, ErrorState, SkeletonRows } from '@/components/queue';
 import { SessionChoiceList } from '@/components/scheduling/sessions';
 import { InlineAlert, StatusWord } from '@/components/scheduling/status';
@@ -33,6 +36,8 @@ export function splitAppointments(list: Appointment[], today: string) {
 export default function VisitsPage() {
   const { me } = useAuth();
   const location = useLocation();
+  const [params, setParams] = useSearchParams();
+  const rebookId = params.get('rebook');
   const patientId = me?.patientId ?? undefined;
   const q = useAppointmentsQuery({ patientId }, { enabled: Boolean(patientId) });
   const today = istDate();
@@ -51,6 +56,22 @@ export default function VisitsPage() {
         <InlineAlert tone="notice" title="Booked" className="mb-4">
           {formatLocalDate(istDate(justBooked.scheduledAt))}, {formatIST(justBooked.scheduledAt)} with {justBooked.doctorName}. Arrive 10 minutes early and check in at reception.
         </InlineAlert>
+      ) : null}
+
+      {rebookId && q.data ? (
+        <RebookPanel
+          appointmentId={rebookId}
+          appointment={q.data.find((a) => a.id === rebookId)}
+          onClose={() =>
+            setParams(
+              (p) => {
+                p.delete('rebook');
+                return p;
+              },
+              { replace: true },
+            )
+          }
+        />
       ) : null}
 
       {q.isPending && patientId ? <SkeletonRows count={3} /> : null}
@@ -81,7 +102,8 @@ export default function VisitsPage() {
                 {upcoming.map((a) => (
                   <li key={a.id} className="border-l-[3px] border-l-appt px-4 py-3">
                     <AppointmentLine a={a} />
-                    {istDate(a.scheduledAt) === today ? <QueueLink sessionId={a.sessionId} className="mt-3 w-full sm:w-auto" /> : null}
+                    {a.status === 'booked' ? <BookedAvailability appointment={a} onCancel={setCancelling} className="mt-3" /> : null}
+                    {a.status === 'checked_in' && istDate(a.scheduledAt) === today ? <QueueLink sessionId={a.sessionId} className="mt-3 w-full sm:w-auto" /> : null}
                     {a.status === 'booked' ? (
                       <div className="mt-3 flex gap-3">
                         <Button variant="outline" size="lg" className="flex-1 sm:flex-none" onClick={() => setMoving(a)}>
@@ -141,56 +163,6 @@ function AppointmentLine({ a }: { a: Appointment }) {
   );
 }
 
-function CancelDialog({ appointment, onClose }: { appointment: Appointment | null; onClose: () => void }) {
-  const cancel = useCancelAppointment();
-  const err = cancel.error instanceof ApiRequestError ? cancel.error : null;
-  const close = () => {
-    cancel.reset();
-    onClose();
-  };
-  return (
-    <Dialog open={appointment !== null} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto p-4 sm:p-6">
-        <DialogHeader>
-          <DialogTitle>Cancel this appointment?</DialogTitle>
-          <DialogDescription className="text-base">
-            {appointment ? (
-              <>
-                {appointment.doctorName}, {formatLocalDate(istDate(appointment.scheduledAt))}, {formatIST(appointment.scheduledAt)}. Your place is released so another patient can book it.
-              </>
-            ) : null}
-          </DialogDescription>
-        </DialogHeader>
-        {err ? <InlineAlert title="The appointment was not cancelled">{err.message}</InlineAlert> : null}
-        <DialogFooter>
-          <Button variant="outline" size="lg" onClick={close} disabled={cancel.isPending}>
-            Keep appointment
-          </Button>
-          <Button
-            variant="destructive"
-            size="lg"
-            disabled={cancel.isPending}
-            onClick={() =>
-              appointment &&
-              cancel.mutate(
-                { appointmentId: appointment.id },
-                {
-                  onSuccess: () => {
-                    toast.success('Cancelled', { description: 'Your place has been released.' });
-                    close();
-                  },
-                },
-              )
-            }
-          >
-            {cancel.isPending ? 'Cancelling…' : 'Cancel appointment'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 function RescheduleDialog({ appointment, onClose }: { appointment: Appointment | null; onClose: () => void }) {
   const [target, setTarget] = useState('');
   const days = useMemo(() => nextDays(7), []);
@@ -210,7 +182,7 @@ function RescheduleDialog({ appointment, onClose }: { appointment: Appointment |
   const submit = () => {
     if (!appointment || !target || move.isPending) return;
     move.mutate(
-      { appointmentId: appointment.id, targetSessionId: target },
+      { appointmentId: appointment.id, targetSessionId: target, expectedVersion: appointment.version },
       {
         onSuccess: (next) => {
           toast.success('Rescheduled', { description: `${formatIST(next.scheduledAt, 'date-time')} with ${next.doctorName}` });
