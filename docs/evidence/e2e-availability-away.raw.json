@@ -1,42 +1,42 @@
 {
   "spec": "availability-away",
   "fixture": {
-    "sessionId": "6c405daf-445f-45cc-a9b4-34d81e7b3eb3",
+    "sessionId": "da6924ab-2d74-4a35-bad3-556e84f24fac",
     "doctorNumber": 1,
     "doctorName": "Dr. Suresh Hegde",
     "label": "morning",
-    "startsAt": "2026-11-20T04:26:00.000Z",
-    "endsAt": "2026-11-20T08:26:00.000Z",
-    "tabName": "Morning 9:56 am",
+    "startsAt": "2026-11-20T04:47:00.000Z",
+    "endsAt": "2026-11-20T08:47:00.000Z",
+    "tabName": "Morning 10:17 am",
     "roomLabel": "OPD 1",
     "tokens": {
       "appointment": "A-001",
       "walk1": "W-001",
       "walk2": "W-002"
     },
-    "awayUntilShownInDialog": "10:23 am",
-    "expectedBackClockForThisRun": "10:23 am",
-    "nowClock": "10:09 am"
+    "awayUntilShownInDialog": "10:44 am",
+    "expectedBackClockForThisRun": "10:44 am",
+    "nowClock": "10:29 am"
   },
   "waitingOrderBeforeAway": [
     "W-001",
     "W-002"
   ],
   "calledAfterBack": "W-001",
-  "patientBannerText": "Heads up Dr. Suresh Hegde has stepped away and is expected back about 10:23 am Your place in the queue is kept. Updated wait: about 14–21 min from 10:09 am.",
-  "patientBellText": "New Heads up just now, 10:09 am Dr. Suresh Hegde has stepped away and is expected back about 10:23 am. Your place in the queue is kept; your estimated wait now includes this break. Open Mark as read",
+  "patientBannerText": "Heads up Dr. Suresh Hegde has stepped away and is expected back about 10:44 am Your place in the queue is kept. Updated wait: about 15–22 min from 10:29 am.",
+  "patientBellText": "New Heads up just now, 10:29 am Dr. Suresh Hegde has stepped away and is expected back about 10:44 am. Your place in the queue is kept; your estimated wait now includes this break. Open Mark as read",
   "timingsMs": {
-    "awayToDoctorStripMs": 407,
-    "awayToPatientBannerMs": 584,
-    "awayToDisplayBannerMs": 1119,
-    "awayToReceptionStripMs": 1193,
-    "awayToPatientBellMs": 1467,
-    "awayToAdminLogSentMs": 5043,
-    "backToDoctorMs": 272,
-    "backToPatientMs": 1238,
-    "backToDisplayMs": 1410,
-    "backToReceptionMs": 1464,
-    "backToPatientBellMs": 1742
+    "awayToDoctorStripMs": 484,
+    "awayToPatientBannerMs": 699,
+    "awayToDisplayBannerMs": 1278,
+    "awayToReceptionStripMs": 1335,
+    "awayToPatientBellMs": 1623,
+    "awayToAdminLogSentMs": 5335,
+    "backToDoctorMs": 332,
+    "backToPatientMs": 490,
+    "backToDisplayMs": 637,
+    "backToReceptionMs": 680,
+    "backToPatientBellMs": 15884
   },
   "databaseAfter": {
     "sessionStatus": "open",

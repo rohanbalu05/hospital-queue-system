@@ -1,17 +1,17 @@
 {
   "summary": {
-    "totalChecks": 528,
+    "totalChecks": 640,
     "skippedChecks": 0,
     "byCategory": {
       "cross-patient": 26,
       "positive-control": 9,
-      "role-matrix": 360,
+      "role-matrix": 444,
       "assignment": 15,
-      "anonymous": 118
+      "anonymous": 146
     },
     "crossPatientAttempts": 20,
     "crossPatientShapeChecks": 6,
-    "deniedExpectedTotal": 301,
+    "deniedExpectedTotal": 378,
     "unauthorizedSuccesses": 0,
     "attemptsWithSideEffects": 0,
     "failedChecks": 0
@@ -20,7 +20,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "GET /appointments/412262cd-02d0-417d-b671-ed3aa1893376",
+      "request": "GET /appointments/4ed8d935-368a-42d3-bea7-814a382a9cfb",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -30,7 +30,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "GET /appointments/412262CD-02D0-417D-B671-ED3AA1893376",
+      "request": "GET /appointments/4ED8D935-368A-42D3-BEA7-814A382A9CFB",
       "expected": "403|404 (upper-case id)",
       "expectDenied": true,
       "status": 404,
@@ -50,7 +50,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "GET /appointments?patientId=10039ba3-f268-5775-b674-7d8adfb8f79b&sessionId=ba6280ae-7d87-494d-8a42-2afeff50d20e",
+      "request": "GET /appointments?patientId=10039ba3-f268-5775-b674-7d8adfb8f79b&sessionId=82bed6ce-6680-471f-8a47-ddc7326ca8f1",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -70,7 +70,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "POST /appointments/412262cd-02d0-417d-b671-ed3aa1893376/cancel",
+      "request": "POST /appointments/4ed8d935-368a-42d3-bea7-814a382a9cfb/cancel",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -80,7 +80,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "POST /appointments/412262cd-02d0-417d-b671-ed3aa1893376/reschedule",
+      "request": "POST /appointments/4ed8d935-368a-42d3-bea7-814a382a9cfb/reschedule",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -90,7 +90,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "POST /appointments/412262cd-02d0-417d-b671-ed3aa1893376/check-in",
+      "request": "POST /appointments/4ed8d935-368a-42d3-bea7-814a382a9cfb/check-in",
       "expected": "403|404 (staff route)",
       "expectDenied": true,
       "status": 403,
@@ -110,7 +110,7 @@
     {
       "category": "cross-patient",
       "actor": "patient2@ -> patient",
-      "request": "GET /appointments/4e726920-5f29-45c6-b856-af35c6aa696a",
+      "request": "GET /appointments/bf589f4b-5aed-47b4-83ff-ffa09fdfbb4b",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -120,7 +120,7 @@
     {
       "category": "cross-patient",
       "actor": "patient2@ -> patient",
-      "request": "GET /appointments/4E726920-5F29-45C6-B856-AF35C6AA696A",
+      "request": "GET /appointments/BF589F4B-5AED-47B4-83FF-FFA09FDFBB4B",
       "expected": "403|404 (upper-case id)",
       "expectDenied": true,
       "status": 404,
@@ -140,7 +140,7 @@
     {
       "category": "cross-patient",
       "actor": "patient2@ -> patient",
-      "request": "GET /appointments?patientId=f6f9e8b9-0675-53e0-9b3b-3c1c8ac5e194&sessionId=a65461ba-5606-432e-bc32-285e3d894fc3",
+      "request": "GET /appointments?patientId=f6f9e8b9-0675-53e0-9b3b-3c1c8ac5e194&sessionId=921ef617-efb2-4dc7-96d0-8afb925a45fc",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -160,7 +160,7 @@
     {
       "category": "cross-patient",
       "actor": "patient2@ -> patient",
-      "request": "POST /appointments/4e726920-5f29-45c6-b856-af35c6aa696a/cancel",
+      "request": "POST /appointments/bf589f4b-5aed-47b4-83ff-ffa09fdfbb4b/cancel",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -170,7 +170,7 @@
     {
       "category": "cross-patient",
       "actor": "patient2@ -> patient",
-      "request": "POST /appointments/4e726920-5f29-45c6-b856-af35c6aa696a/reschedule",
+      "request": "POST /appointments/bf589f4b-5aed-47b4-83ff-ffa09fdfbb4b/reschedule",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -180,7 +180,7 @@
     {
       "category": "cross-patient",
       "actor": "patient2@ -> patient",
-      "request": "POST /appointments/4e726920-5f29-45c6-b856-af35c6aa696a/check-in",
+      "request": "POST /appointments/bf589f4b-5aed-47b4-83ff-ffa09fdfbb4b/check-in",
       "expected": "403|404 (staff route)",
       "expectDenied": true,
       "status": 403,
@@ -200,7 +200,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "POST /appointments/412262cd-02d0-417d-b671-ed3aa1893376/reschedule",
+      "request": "POST /appointments/4ed8d935-368a-42d3-bea7-814a382a9cfb/reschedule",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -270,7 +270,7 @@
     {
       "category": "cross-patient",
       "actor": "patient@ -> patient2",
-      "request": "GET /sessions/07b02a1b-487b-48ce-987b-6229eb49934b/queue",
+      "request": "GET /sessions/d6b952e2-9adf-412e-8def-e228a7360085/queue",
       "expected": "403|404",
       "expectDenied": true,
       "status": 404,
@@ -280,7 +280,7 @@
     {
       "category": "positive-control",
       "actor": "patient@",
-      "request": "GET /appointments/4e726920-5f29-45c6-b856-af35c6aa696a",
+      "request": "GET /appointments/bf589f4b-5aed-47b4-83ff-ffa09fdfbb4b",
       "expected": "200 (own appointment)",
       "expectDenied": false,
       "status": 200,
@@ -310,7 +310,7 @@
     {
       "category": "positive-control",
       "actor": "patient2@",
-      "request": "GET /appointments/412262cd-02d0-417d-b671-ed3aa1893376",
+      "request": "GET /appointments/4ed8d935-368a-42d3-bea7-814a382a9cfb",
       "expected": "200 (own appointment)",
       "expectDenied": false,
       "status": 200,
@@ -340,6 +340,126 @@
     {
       "category": "role-matrix",
       "actor": "patient",
+      "request": "GET /admin/notifications",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception",
+      "request": "GET /admin/notifications",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception3",
+      "request": "GET /admin/notifications",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "doctor",
+      "request": "GET /admin/notifications",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "followup",
+      "request": "GET /admin/notifications",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "admin",
+      "request": "GET /admin/notifications",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "patient",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/activate",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/activate",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception3",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/activate",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "doctor",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/activate",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "followup",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/activate",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "admin",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/activate",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 400,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "patient",
       "request": "PUT /admin/staff/00000000-0000-4000-8000-000000000000/assignments",
       "expected": "403",
       "expectDenied": true,
@@ -391,6 +511,126 @@
       "category": "role-matrix",
       "actor": "admin",
       "request": "PUT /admin/staff/00000000-0000-4000-8000-000000000000/assignments",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 400,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "patient",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/deactivate",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/deactivate",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception3",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/deactivate",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "doctor",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/deactivate",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "followup",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/deactivate",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "admin",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/deactivate",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 400,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "patient",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/reset-password",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/reset-password",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception3",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/reset-password",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "doctor",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/reset-password",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "followup",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/reset-password",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "admin",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/reset-password",
       "expected": "not 401/403/5xx",
       "expectDenied": false,
       "status": 400,
@@ -454,6 +694,186 @@
       "expected": "not 401/403/5xx",
       "expectDenied": false,
       "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "patient",
+      "request": "POST /admin/staff",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception",
+      "request": "POST /admin/staff",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception3",
+      "request": "POST /admin/staff",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "doctor",
+      "request": "POST /admin/staff",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "followup",
+      "request": "POST /admin/staff",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "admin",
+      "request": "POST /admin/staff",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 400,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "patient",
+      "request": "GET /admin/system",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception",
+      "request": "GET /admin/system",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception3",
+      "request": "GET /admin/system",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "doctor",
+      "request": "GET /admin/system",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "followup",
+      "request": "GET /admin/system",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "admin",
+      "request": "GET /admin/system",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "patient",
+      "request": "GET /appointments/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 404,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception",
+      "request": "GET /appointments/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 404,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception3",
+      "request": "GET /appointments/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 404,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "doctor",
+      "request": "GET /appointments/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 404,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "followup",
+      "request": "GET /appointments/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 404,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "admin",
+      "request": "GET /appointments/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 404,
       "sideEffects": false,
       "ok": true
     },
@@ -2080,6 +2500,66 @@
     {
       "category": "role-matrix",
       "actor": "patient",
+      "request": "GET /me/visits/today",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception",
+      "request": "GET /me/visits/today",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception3",
+      "request": "GET /me/visits/today",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "doctor",
+      "request": "GET /me/visits/today",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "followup",
+      "request": "GET /me/visits/today",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "admin",
+      "request": "GET /me/visits/today",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "patient",
       "request": "GET /me",
       "expected": "not 401/403/5xx",
       "expectDenied": false,
@@ -2194,6 +2674,126 @@
       "expected": "not 401/403/5xx",
       "expectDenied": false,
       "status": 404,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "patient",
+      "request": "POST /notifications/read-all",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception",
+      "request": "POST /notifications/read-all",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception3",
+      "request": "POST /notifications/read-all",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "doctor",
+      "request": "POST /notifications/read-all",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "followup",
+      "request": "POST /notifications/read-all",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "admin",
+      "request": "POST /notifications/read-all",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "patient",
+      "request": "GET /notifications/unread-count",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception",
+      "request": "GET /notifications/unread-count",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception3",
+      "request": "GET /notifications/unread-count",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "doctor",
+      "request": "GET /notifications/unread-count",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "followup",
+      "request": "GET /notifications/unread-count",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "admin",
+      "request": "GET /notifications/unread-count",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 200,
       "sideEffects": false,
       "ok": true
     },
@@ -2860,6 +3460,186 @@
     {
       "category": "role-matrix",
       "actor": "patient",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/affected/move",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/affected/move",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 400,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception3",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/affected/move",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 400,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "doctor",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/affected/move",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "followup",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/affected/move",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "admin",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/affected/move",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 400,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "patient",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/affected",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/affected",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 404,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception3",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/affected",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 404,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "doctor",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/affected",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "followup",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/affected",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "admin",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/affected",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 404,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "patient",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 404,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception3",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 404,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "doctor",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "followup",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "admin",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 404,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "patient",
       "request": "POST /sessions/00000000-0000-4000-8000-000000000000/call-next",
       "expected": "403",
       "expectDenied": true,
@@ -3334,6 +4114,66 @@
       "expected": "not 401/403/5xx",
       "expectDenied": false,
       "status": 404,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "patient",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/reopen",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/reopen",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "reception3",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/reopen",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "doctor",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/reopen",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "followup",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/reopen",
+      "expected": "403",
+      "expectDenied": true,
+      "status": 403,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "role-matrix",
+      "actor": "admin",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/reopen",
+      "expected": "not 401/403/5xx",
+      "expectDenied": false,
+      "status": 400,
       "sideEffects": false,
       "ok": true
     },
@@ -3880,7 +4720,7 @@
     {
       "category": "role-matrix",
       "actor": "patient@",
-      "request": "POST /sessions/ba6280ae-7d87-494d-8a42-2afeff50d20e/walk-ins",
+      "request": "POST /sessions/82bed6ce-6680-471f-8a47-ddc7326ca8f1/walk-ins",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -3890,7 +4730,7 @@
     {
       "category": "role-matrix",
       "actor": "patient@",
-      "request": "POST /appointments/4e726920-5f29-45c6-b856-af35c6aa696a/check-in",
+      "request": "POST /appointments/bf589f4b-5aed-47b4-83ff-ffa09fdfbb4b/check-in",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -3900,7 +4740,7 @@
     {
       "category": "role-matrix",
       "actor": "patient@",
-      "request": "PATCH /sessions/ba6280ae-7d87-494d-8a42-2afeff50d20e/capacity",
+      "request": "PATCH /sessions/82bed6ce-6680-471f-8a47-ddc7326ca8f1/capacity",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -3940,7 +4780,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "GET /appointments/4e726920-5f29-45c6-b856-af35c6aa696a",
+      "request": "GET /appointments/bf589f4b-5aed-47b4-83ff-ffa09fdfbb4b",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -3950,7 +4790,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "POST /appointments/4e726920-5f29-45c6-b856-af35c6aa696a/cancel",
+      "request": "POST /appointments/bf589f4b-5aed-47b4-83ff-ffa09fdfbb4b/cancel",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -3960,7 +4800,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "POST /appointments/4e726920-5f29-45c6-b856-af35c6aa696a/reschedule",
+      "request": "POST /appointments/bf589f4b-5aed-47b4-83ff-ffa09fdfbb4b/reschedule",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -3970,7 +4810,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "POST /appointments/4e726920-5f29-45c6-b856-af35c6aa696a/check-in",
+      "request": "POST /appointments/bf589f4b-5aed-47b4-83ff-ffa09fdfbb4b/check-in",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -3980,7 +4820,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "POST /sessions/ba6280ae-7d87-494d-8a42-2afeff50d20e/walk-ins",
+      "request": "POST /sessions/82bed6ce-6680-471f-8a47-ddc7326ca8f1/walk-ins",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -4000,7 +4840,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "GET /sessions/ba6280ae-7d87-494d-8a42-2afeff50d20e",
+      "request": "GET /sessions/82bed6ce-6680-471f-8a47-ddc7326ca8f1",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -4010,7 +4850,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "GET /sessions/ba6280ae-7d87-494d-8a42-2afeff50d20e/slots",
+      "request": "GET /sessions/82bed6ce-6680-471f-8a47-ddc7326ca8f1/slots",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -4020,7 +4860,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "GET /appointments?sessionId=ba6280ae-7d87-494d-8a42-2afeff50d20e",
+      "request": "GET /appointments?sessionId=82bed6ce-6680-471f-8a47-ddc7326ca8f1",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -4030,7 +4870,7 @@
     {
       "category": "assignment",
       "actor": "reception3@",
-      "request": "POST /appointments/412262cd-02d0-417d-b671-ed3aa1893376/reschedule",
+      "request": "POST /appointments/4ed8d935-368a-42d3-bea7-814a382a9cfb/reschedule",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -4060,7 +4900,7 @@
     {
       "category": "assignment",
       "actor": "doctor@ (doctor 1)",
-      "request": "GET /appointments/412262cd-02d0-417d-b671-ed3aa1893376",
+      "request": "GET /appointments/4ed8d935-368a-42d3-bea7-814a382a9cfb",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -4070,7 +4910,7 @@
     {
       "category": "assignment",
       "actor": "doctor@ (doctor 1)",
-      "request": "GET /sessions/a65461ba-5606-432e-bc32-285e3d894fc3",
+      "request": "GET /sessions/921ef617-efb2-4dc7-96d0-8afb925a45fc",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -4080,7 +4920,7 @@
     {
       "category": "assignment",
       "actor": "doctor@ (doctor 1)",
-      "request": "GET /appointments?sessionId=a65461ba-5606-432e-bc32-285e3d894fc3",
+      "request": "GET /appointments?sessionId=921ef617-efb2-4dc7-96d0-8afb925a45fc",
       "expected": "403",
       "expectDenied": true,
       "status": 403,
@@ -4090,7 +4930,7 @@
     {
       "category": "positive-control",
       "actor": "reception3@",
-      "request": "GET /appointments/412262cd-02d0-417d-b671-ed3aa1893376",
+      "request": "GET /appointments/4ed8d935-368a-42d3-bea7-814a382a9cfb",
       "expected": "200 (own doctor)",
       "expectDenied": false,
       "status": 200,
@@ -4100,7 +4940,7 @@
     {
       "category": "positive-control",
       "actor": "doctor@ (doctor 1)",
-      "request": "GET /appointments/4e726920-5f29-45c6-b856-af35c6aa696a",
+      "request": "GET /appointments/bf589f4b-5aed-47b4-83ff-ffa09fdfbb4b",
       "expected": "200 (own doctor)",
       "expectDenied": false,
       "status": 200,
@@ -4110,7 +4950,7 @@
     {
       "category": "positive-control",
       "actor": "admin@",
-      "request": "GET /appointments/412262cd-02d0-417d-b671-ed3aa1893376",
+      "request": "GET /appointments/4ed8d935-368a-42d3-bea7-814a382a9cfb",
       "expected": "200 (all doctors)",
       "expectDenied": false,
       "status": 200,
@@ -4120,6 +4960,46 @@
     {
       "category": "anonymous",
       "actor": "anonymous",
+      "request": "GET /admin/notifications",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "forged cookie",
+      "request": "GET /admin/notifications",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "anonymous",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/activate",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "forged cookie",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/activate",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "anonymous",
       "request": "PUT /admin/staff/00000000-0000-4000-8000-000000000000/assignments",
       "expected": "401",
       "expectDenied": true,
@@ -4140,6 +5020,46 @@
     {
       "category": "anonymous",
       "actor": "anonymous",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/deactivate",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "forged cookie",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/deactivate",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "anonymous",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/reset-password",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "forged cookie",
+      "request": "POST /admin/staff/00000000-0000-4000-8000-000000000000/reset-password",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "anonymous",
       "request": "GET /admin/staff",
       "expected": "401",
       "expectDenied": true,
@@ -4151,6 +5071,66 @@
       "category": "anonymous",
       "actor": "forged cookie",
       "request": "GET /admin/staff",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "anonymous",
+      "request": "POST /admin/staff",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "forged cookie",
+      "request": "POST /admin/staff",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "anonymous",
+      "request": "GET /admin/system",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "forged cookie",
+      "request": "GET /admin/system",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "anonymous",
+      "request": "GET /appointments/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "forged cookie",
+      "request": "GET /appointments/00000000-0000-4000-8000-000000000000/alternatives",
       "expected": "401",
       "expectDenied": true,
       "status": 401,
@@ -4700,6 +5680,26 @@
     {
       "category": "anonymous",
       "actor": "anonymous",
+      "request": "GET /me/visits/today",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "forged cookie",
+      "request": "GET /me/visits/today",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "anonymous",
       "request": "GET /me",
       "expected": "401",
       "expectDenied": true,
@@ -4731,6 +5731,46 @@
       "category": "anonymous",
       "actor": "forged cookie",
       "request": "POST /notifications/00000000-0000-4000-8000-000000000000/read",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "anonymous",
+      "request": "POST /notifications/read-all",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "forged cookie",
+      "request": "POST /notifications/read-all",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "anonymous",
+      "request": "GET /notifications/unread-count",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "forged cookie",
+      "request": "GET /notifications/unread-count",
       "expected": "401",
       "expectDenied": true,
       "status": 401,
@@ -4960,6 +6000,66 @@
     {
       "category": "anonymous",
       "actor": "anonymous",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/affected/move",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "forged cookie",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/affected/move",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "anonymous",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/affected",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "forged cookie",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/affected",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "anonymous",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "forged cookie",
+      "request": "GET /sessions/00000000-0000-4000-8000-000000000000/alternatives",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "anonymous",
       "request": "POST /sessions/00000000-0000-4000-8000-000000000000/call-next",
       "expected": "401",
       "expectDenied": true,
@@ -5111,6 +6211,26 @@
       "category": "anonymous",
       "actor": "forged cookie",
       "request": "GET /sessions/00000000-0000-4000-8000-000000000000/queue",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "anonymous",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/reopen",
+      "expected": "401",
+      "expectDenied": true,
+      "status": 401,
+      "sideEffects": false,
+      "ok": true
+    },
+    {
+      "category": "anonymous",
+      "actor": "forged cookie",
+      "request": "POST /sessions/00000000-0000-4000-8000-000000000000/reopen",
       "expected": "401",
       "expectDenied": true,
       "status": 401,

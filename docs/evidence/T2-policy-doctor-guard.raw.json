@@ -71,7 +71,7 @@
       "runs": [
         {
           "run": "A (doctor 3)",
-          "sessionId": "1cbe8cac-d239-4c7b-b43f-5bfa32345920",
+          "sessionId": "06043d0a-495f-4d61-ac9d-9fcf508a2e68",
           "decisionsOverHttp": [
             {
               "token": "A-001",
@@ -221,7 +221,7 @@
         },
         {
           "run": "B (doctor 4)",
-          "sessionId": "62426c5c-e192-43ec-9f4b-efdebc9c0667",
+          "sessionId": "38581ad2-ce4d-4d35-bd85-e1ab0f3897e7",
           "decisionsOverHttp": [
             {
               "token": "A-001",
@@ -378,6 +378,1220 @@
     "globalInvariantViolations": []
   },
   "t2DoctorGuard": {
+    "overlappingSessions": {
+      "doctor": 5,
+      "sessions": 2,
+      "rounds": 20,
+      "racersPerRound": 30,
+      "requests": 600,
+      "ok200": 20,
+      "conflict409DoctorOccupied": 580,
+      "serverErrors": 0,
+      "byStatus": {
+        "200": 20,
+        "409": 580
+      },
+      "invariantViolations": 0,
+      "poller": {
+        "totalPolls": 890,
+        "maxActiveAllocationsEverSeen": 1
+      },
+      "winnersFromSessionA": 13,
+      "winnersFromSessionB": 7,
+      "latencyMs": {
+        "allRequests": {
+          "n": 600,
+          "p50": 54.6,
+          "p95": 102.3,
+          "max": 170.2
+        },
+        "winningRequests": {
+          "n": 20,
+          "p50": 26.6,
+          "p95": 49.1
+        }
+      },
+      "perRound": [
+        {
+          "round": 1,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "B",
+          "winnerToken": "W-001",
+          "pollsDuringRace": 89,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 142.8,
+            "p95": 167.7
+          }
+        },
+        {
+          "round": 2,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-001",
+          "pollsDuringRace": 49,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 72.4,
+            "p95": 91.4
+          }
+        },
+        {
+          "round": 3,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-002",
+          "pollsDuringRace": 37,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 44.3,
+            "p95": 65.2
+          }
+        },
+        {
+          "round": 4,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-003",
+          "pollsDuringRace": 39,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 41.6,
+            "p95": 59.6
+          }
+        },
+        {
+          "round": 5,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-004",
+          "pollsDuringRace": 31,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 37.8,
+            "p95": 54.8
+          }
+        },
+        {
+          "round": 6,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "B",
+          "winnerToken": "W-002",
+          "pollsDuringRace": 38,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 41.6,
+            "p95": 61
+          }
+        },
+        {
+          "round": 7,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "B",
+          "winnerToken": "W-003",
+          "pollsDuringRace": 53,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 74,
+            "p95": 98.6
+          }
+        },
+        {
+          "round": 8,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-005",
+          "pollsDuringRace": 34,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 46.5,
+            "p95": 68.3
+          }
+        },
+        {
+          "round": 9,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "B",
+          "winnerToken": "W-004",
+          "pollsDuringRace": 37,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 47.9,
+            "p95": 69.9
+          }
+        },
+        {
+          "round": 10,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-006",
+          "pollsDuringRace": 32,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 43.9,
+            "p95": 62.9
+          }
+        },
+        {
+          "round": 11,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-007",
+          "pollsDuringRace": 31,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 40.1,
+            "p95": 59.3
+          }
+        },
+        {
+          "round": 12,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-008",
+          "pollsDuringRace": 37,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 45.2,
+            "p95": 69.8
+          }
+        },
+        {
+          "round": 13,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-009",
+          "pollsDuringRace": 47,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 57,
+            "p95": 83
+          }
+        },
+        {
+          "round": 14,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-010",
+          "pollsDuringRace": 46,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 55.9,
+            "p95": 78.6
+          }
+        },
+        {
+          "round": 15,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "B",
+          "winnerToken": "W-005",
+          "pollsDuringRace": 41,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 52.7,
+            "p95": 73.3
+          }
+        },
+        {
+          "round": 16,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-011",
+          "pollsDuringRace": 62,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 68.7,
+            "p95": 97.9
+          }
+        },
+        {
+          "round": 17,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "B",
+          "winnerToken": "W-006",
+          "pollsDuringRace": 37,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 62.9,
+            "p95": 85.3
+          }
+        },
+        {
+          "round": 18,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-012",
+          "pollsDuringRace": 43,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 55.4,
+            "p95": 86.9
+          }
+        },
+        {
+          "round": 19,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "A",
+          "winnerToken": "W-013",
+          "pollsDuringRace": 61,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 72.1,
+            "p95": 100.5
+          }
+        },
+        {
+          "round": 20,
+          "requests": 30,
+          "ok200": 1,
+          "conflict409": 29,
+          "serverErrors": 0,
+          "byCode": {
+            "DOCTOR_OCCUPIED": 29
+          },
+          "winnerSession": "B",
+          "winnerToken": "W-007",
+          "pollsDuringRace": 46,
+          "maxActiveSeenByPoller": 1,
+          "latencyMs": {
+            "p50": 56.8,
+            "p95": 79.4
+          }
+        }
+      ]
+    },
+    "transitionRace": {
+      "doctor": 6,
+      "rounds": 40,
+      "requestsPerRound": 9,
+      "requests": 360,
+      "byStatus": {
+        "200": 94,
+        "409": 266
+      },
+      "byCode": {
+        "INVALID_TRANSITION": 181,
+        "DOCTOR_OCCUPIED": 85
+      },
+      "serverErrors": 0,
+      "sequenceViolations": 0,
+      "finalStateDistribution": {
+        "completed+next-called": 16,
+        "skipped+next-called": 19,
+        "completed": 3,
+        "in_service": 2
+      },
+      "perRound": [
+        {
+          "round": 1,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 2,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 3,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 4,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 5,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 6,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 7,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 0,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 8,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 9,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 10,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 11,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 12,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 13,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 14,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 15,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 0,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 16,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 17,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 18,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 19,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 20,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 21,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 22,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 23,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 24,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 25,
+          "finalState": "in_service",
+          "versionBump": 1,
+          "callNextSucceeded": 0,
+          "statuses": {
+            "200": 1,
+            "409": 8
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 26,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 27,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 0,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 28,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 29,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 30,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 31,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 32,
+          "finalState": "in_service",
+          "versionBump": 1,
+          "callNextSucceeded": 0,
+          "statuses": {
+            "200": 1,
+            "409": 8
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 33,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 34,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 35,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 36,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 37,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 38,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 39,
+          "finalState": "completed",
+          "versionBump": 2,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 3,
+            "409": 6
+          },
+          "maxActiveSeen": 1
+        },
+        {
+          "round": 40,
+          "finalState": "skipped",
+          "versionBump": 1,
+          "callNextSucceeded": 1,
+          "statuses": {
+            "200": 2,
+            "409": 7
+          },
+          "maxActiveSeen": 1
+        }
+      ]
+    },
+    "pauseRace": {
+      "doctor": 7,
+      "rounds": 20,
+      "requestsPerRound": 12,
+      "roundsWhereACallWonBeforeThePause": 16,
+      "roundsWhereThePauseWonFirst": 4,
+      "successfulCallsSerialisedAfterThePause": 0,
+      "roundsWithAnAppliedPause": 4,
+      "roundsWherePauseWasRefusedDoctorOccupied": 16,
+      "allRefusedSessionNotCallable": true,
+      "perRound": [
+        {
+          "round": 1,
+          "callsThatWonBeforePause": 0,
+          "pauseVersion": 6,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "SESSION_NOT_CALLABLE": 10
+          },
+          "pausesApplied": 2,
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 2,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 3,
+          "callsThatWonBeforePause": 0,
+          "pauseVersion": 6,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "SESSION_NOT_CALLABLE": 10
+          },
+          "pausesApplied": 2,
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 4,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 5,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 6,
+          "callsThatWonBeforePause": 0,
+          "pauseVersion": 6,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "SESSION_NOT_CALLABLE": 10
+          },
+          "pausesApplied": 2,
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 7,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 8,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 9,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 10,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 11,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 12,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 13,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 14,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 15,
+          "callsThatWonBeforePause": 0,
+          "pauseVersion": 6,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 2,
+            "409": 10
+          },
+          "byCode": {
+            "SESSION_NOT_CALLABLE": 10
+          },
+          "pausesApplied": 2,
+          "callsAfterCommittedPause": 6
+        },
+        {
+          "round": 16,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 17,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 18,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 19,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        },
+        {
+          "round": 20,
+          "callsThatWonBeforePause": 1,
+          "pauseVersion": null,
+          "versionBefore": 5,
+          "statuses": {
+            "200": 1,
+            "409": 11
+          },
+          "byCode": {
+            "DOCTOR_OCCUPIED": 11
+          },
+          "pausesApplied": 0,
+          "callsAfterCommittedPause": 0
+        }
+      ]
+    },
+    "sameKeyCallNext": {
+      "doctor": 8,
+      "trials": 5,
+      "perTrial": [
+        {
+          "trial": 1,
+          "requests": 10,
+          "ok200": 10,
+          "distinctEntries": 1,
+          "decisionRows": 1
+        },
+        {
+          "trial": 2,
+          "requests": 10,
+          "ok200": 10,
+          "distinctEntries": 1,
+          "decisionRows": 1
+        },
+        {
+          "trial": 3,
+          "requests": 10,
+          "ok200": 10,
+          "distinctEntries": 1,
+          "decisionRows": 1
+        },
+        {
+          "trial": 4,
+          "requests": 10,
+          "ok200": 10,
+          "distinctEntries": 1,
+          "decisionRows": 1
+        },
+        {
+          "trial": 5,
+          "requests": 10,
+          "ok200": 10,
+          "distinctEntries": 1,
+          "decisionRows": 1
+        }
+      ]
+    },
     "globalInvariantViolations": []
   }
 }
