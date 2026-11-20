@@ -235,3 +235,68 @@ Setup: Rahul A-001 (appointment) and Santosh W-001 (walk-in) were waiting. Pooja
 - **Call timeout auto-skip (2 min), automatic no-show release, notification delivery, OCR, review inbox verify and the assistant answering from a verified instruction:** all need the worker, which was not running (PR-01). I was not permitted to start one.
 - **Text contrast measurements:** not measured with a tool. Visual check only: patient text at 390 px is 16 px or larger for main content, with secondary lines about 14 px in grey.
 - **Behaviour of the B1 to B4 changes merged at 09:13 to 09:14 IST:** out of scope. This review covers `250c691`.
+
+## Disposition (session 3, after B1-B6)
+
+Every P0 and P1 above was fixed in this session, test-first, unless marked otherwise. "B1"..."B6" are the build items in
+`docs/review/final-report.md`; decisions are in `DECISIONS.md` (D-032..D-039). P2 items were fixed where they were cheap;
+the rest are future work with a reason.
+
+| ID | Sev | Disposition | Where / why |
+| --- | --- | --- | --- |
+| PR-01 | P0 | Fixed (B6) | Worker defaults `DATABASE_URL` like the API outside production; heartbeat rows (migration 0010) |
+| PR-02 | P1 | Fixed (B6) | `/health` reports `worker: up/down` (`degraded`, still 200); admin **Background work** panel from `GET /admin/system` |
+| PR-03 | P1 | Fixed (B2) | Notification bell for every role; worker fan-out for away/back/unavailable/transfer/reply; SMS/email through the fake `NotificationProvider`; admin **Notifications sent** |
+| PR-04 | P1 | Fixed (B6) | Offline/stale banner on doctor, reception, display and My visit; refetch on reconnect |
+| PR-05 | P1 | Fixed (B4) | Account-scoped cache cleared on 401, logout and user change; "Your session has ended" on sign-in |
+| PR-06 | P2 | Fixed (process) | Contracts committed before builders started; the demo stack runs from merged commits only |
+| PR-07 | P1 | Fixed (B4) | `GET /me/visits/today`; Today shows walk-in, late-admission and transfer visits |
+| PR-08 | P1 | Fixed (B6) | No queue link before check-in; My visit shows "You have not checked in yet" instead of an error |
+| PR-09 | P1 | Fixed (B4) | Slot assignable only if `slot + grace >= now + 10 min` everywhere (D-035) |
+| PR-10 | P1 | Fixed (B1/B6) | Away banner shows "expected back about hh:mm"; ETA lower bound never before the stated return |
+| PR-11 | P1 | Fixed (B1) | One consistent message set when away/unavailable; no "You are next" |
+| PR-12 | P1 | Fixed (B2/B3) | Urgent banner + notification for booked patients; one-click rebook or cancel |
+| PR-13 | P1 | Fixed (B6) | Red-flag questions get fixed 108/Emergency advice first and an urgent task due in 2 h; negation biased to escalate (D-039) |
+| PR-14 | P1 | Fixed (B6) | Staff reply the patient reads on Follow-ups; notification says a reply is waiting (no reply text in it) |
+| PR-15 | P2 | Fixed (B6) | Today shows "Visit completed … with Dr. X"; return visits labelled |
+| PR-16 | P2 | Partly fixed | Doctor unavailable → other doctors of the same department offered (B3). General reschedule to another doctor, and hospital holidays/closed days: **future work** (needs a holiday calendar and a doctor-schedule model) |
+| PR-17 | P2 | Future work | Patient picking a specific slot: the next-free-slot rule keeps capacity and fairness simple; choosing needs slot holds |
+| PR-18 | P2 | Partly fixed | Lower bound respects the doctor's return (B6). Clamping to session start and the patient's own eligibility time: **future work** (small, in `packages/domain/src/eta.ts`) |
+| PR-19 | P2 | Partly fixed | "Book a new time" after cancelling (B6). Optional cancel reason on the patient side: **future work** |
+| PR-20 | P0 | Fixed (B4) | Enter acts only on rows for the current query; a fast Enter waits for the current results instead of being dropped (polish) |
+| PR-21 | P1 | Fixed (B6) | Reception **patient desk**: book, cancel, reschedule for a patient (incl. desk-registered patients) |
+| PR-22 | P1 | Fixed (B6) | 409 POSSIBLE_DUPLICATE with candidates; "Use this patient" or "Create new record anyway" |
+| PR-23 | P1 | Fixed (B6) | Walk-in full → "Other doctors in <department> today" with Admit. No over-capacity override by design (capacity guard, T1) |
+| PR-24 | P1 | Fixed (B1/B3) | Board follows the live state; Check in disabled when unavailable; **Affected patients** move tool |
+| PR-25 | P2 | Partly fixed | Warning when the patient has a booking/check-in with another doctor today. A walk-in place held in another queue is not detected: **future work** (needs a per-patient live-place read) |
+| PR-26 | P2 | Fixed (B6) | "Late N min" / "past grace" markers; automatic no-show release works again with the worker (PR-01). A manual "Mark no-show" button: **future work** |
+| PR-27 | P2 | Fixed (B6) | Mark absent asks for confirmation and an optional reason |
+| PR-28 | P2 | Future work | Early check-in warning (configurable arrival window): low risk, the patient only becomes eligible 10 min before the slot |
+| PR-29 | P0 | Fixed (B6) | A clinical priority makes a present patient eligible now; selection procedure unchanged (D-038) |
+| PR-30 | P1 | Fixed (B6) | Admin **Reopen** (unavailable → open before the end, reason, patients told) |
+| PR-31 | P1 | Fixed (B1) | Step away refused with DOCTOR_OCCUPIED while a patient is called but not started |
+| PR-32 | P1 | Partly fixed | Doctor creates a follow-up task for the current or just-completed patient (B6). Clinical outcome notes: **out of scope** (no EMR, report §2) |
+| PR-33 | P1 | Fixed (B4) | The web sends `expectedCurrentVersionId`; 409 shows a refresh prompt |
+| PR-34 | P2 | Fixed (B1) | Session picker follows live status ("away") |
+| PR-35 | P2 | Fixed (B6) | Skip asks for confirmation |
+| PR-36 | P2 | Fixed (B1) | Doctor console no longer overflows at 390 px |
+| PR-37 | P1 | Fixed (B4) | Reschedule keeps `follow_up_task_id` and moves the task's return pointer in the same transaction |
+| PR-38 | P1 | Fixed (B6) | Task detail shows phone (tap to call), MRN and doctor |
+| PR-39 | P2 | Fixed (B6) | Return booking defaults to the task's doctor and states the real date range |
+| PR-40 | P0 | Fixed (B6) | Admin creates (with repeat), opens, closes and reopens sessions. Recurring doctor schedule templates and leave planning: **future work** (a schedule model is a feature of its own) |
+| PR-41 | P1 | Fixed (B6) | Overlapping sessions refused (409 SESSION_OVERLAP); closed sessions do not block |
+| PR-42 | P1 | Fixed (B6) | Admin creates staff (one-time temporary password), deactivates/activates, resets passwords. Forced password change at first sign-in: **future work** |
+| PR-43 | P2 | Fixed (B5) | Labels by time of day incl. `night` (`sessionLabelFor`, migration 0009); demo script labels correctly |
+| PR-44 | P2 | Future work | "Sessions held" counts scheduled sessions; should count sessions that opened. Report wording change, low risk |
+| PR-45 | P2 | Fixed (B6) | Audit labels a patient sign-in "User account" |
+| PR-46 | P2 | Fixed (B6) | Sessions and staff lists stack under 640 px; dates shown as "Fri, 20 Nov" |
+| PR-47 | P2 | Future work | Policy editing creates a new policy version: needs a reviewed workflow (policy changes affect fairness evidence) |
+| PR-48 | P1 | Fixed (B1) | Unavailable doctors stay on the display with "not available … please see reception" |
+| PR-49 | P2 | Future work | Display pages 6 rooms at a time (OPD 1 on page 2 with 10 doctors); a denser layout or floor grouping. The offline indicator part is fixed (PR-04) |
+| PR-50 | — | Pass | Two receptionists on one patient stay consistent |
+
+Also found and fixed after the review, on the real-stack e2e run: display banner leaked the department into the doctor's
+name; the Affected-patients list could be ~15 s stale; a fast Enter on reception search was dropped; a moved patient's
+original appointment still read "Checked in" (now "Moved to Dr. Y (token)"); the doctor console could open a closed
+earlier session after "Unavailable". And from the concurrency/security review (D-039): per-recipient SMS for shared
+phones, red-flag negation, batch idempotency for moves, admin lock order, stale fan-out, rate limits, alternatives scope.
