@@ -2,29 +2,29 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import type { ArrivalResult, QueueEntry, RegisterPatientRequest } from '@hqms/contracts';
+import { PossibleDuplicates, type AlternativeSession, type ArrivalResult, type Patient, type QueueEntry, type RegisterPatientRequest } from '@hqms/contracts';
 import {
   useAdmitWalkIn,
   useCheckIn,
   useDoctorsQuery,
   usePatientSearchQuery,
-  useRegisterPatient,
   useSessionAppointmentsQuery,
   useSessionsQuery,
 } from '@/api';
-import { useEntryAction } from '@/api/queue';
+import { useEntryAction, useRegisterPatientDesk } from '@/api/queue';
 import { useQueueSnapshot } from '@/live';
 import { StaffShell } from '@/components/layout/Shells';
-import { EmptyState, ErrorState, SkeletonRows } from '@/components/queue';
+import { ConfirmDialog, EmptyState, ErrorState, SkeletonRows } from '@/components/queue';
 import { ApiRequestError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatLocalDate, istDate, minutesBetween } from '@/lib/dates';
 import { ActionPanel } from './ActionPanel';
 import { ArrivalSearch } from './ArrivalSearch';
 import { LateArrivalDialog } from './LateArrivalDialog';
+import { PatientDesk, type DeskPatient } from './PatientDesk';
 import { QueueEntryPanel } from './QueueEntryPanel';
 import { SessionBoard } from './SessionBoard';
-import { buildItems, canCheckIn, type ArrivalItem, type ArrivalOutcome, type PanelError } from './model';
+import { buildItems, canAdmitWalkIn, canCheckIn, type ArrivalItem, type ArrivalOutcome, type PanelError } from './model';
 
 function useDebounced<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);
@@ -129,6 +129,9 @@ export default function ReceptionHome() {
   const [panelError, setPanelError] = useState<PanelError | null>(null);
   const [late, setLate] = useState<{ item: ArrivalItem; minutesLate: number } | null>(null);
   const [lateError, setLateError] = useState<PanelError | null>(null);
+  const [deskFor, setDeskFor] = useState<DeskPatient | null>(null);
+  const [duplicates, setDuplicates] = useState<{ form: RegisterPatientRequest; candidates: Patient[]; admit: boolean } | null>(null);
+  const [absentFor, setAbsentFor] = useState<QueueEntry | null>(null);
 
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -170,7 +173,7 @@ export default function ReceptionHome() {
 
   const checkIn = useCheckIn();
   const admit = useAdmitWalkIn();
-  const register = useRegisterPatient();
+  const register = useRegisterPatientDesk();
 
   const readyForNext = useCallback(() => {
     setQuery('');
@@ -209,16 +212,18 @@ export default function ReceptionHome() {
     [checkIn, readyForNext],
   );
 
+  /** Admit a walk-in to this session, or (PR-23) to another doctor's session of the same department. */
   const doAdmit = useCallback(
-    (patientId: string, name: string) => {
-      if (!session || admit.isPending) return;
+    (patientId: string, name: string, target?: { sessionId: string; doctorName: string }) => {
+      const sessionId = target?.sessionId ?? session?.id;
+      if (!sessionId || admit.isPending) return;
       setPanelError(null);
       admit.mutate(
-        { sessionId: session.id, patientId },
+        { sessionId, patientId },
         {
           onSuccess: (result) => {
-            toast.success('Admitted', { description: `${name}, token ${result.token}` });
-            setOutcome({ result, name, verb: 'Admitted' });
+            toast.success('Admitted', { description: `${name}, token ${result.token}${target ? ` with ${target.doctorName}` : ''}` });
+            setOutcome({ result, name, verb: 'Admitted', ...(target ? { doctorName: target.doctorName } : {}) });
             readyForNext();
           },
           onError: (e) => setPanelError(toPanelError(e, 'walk-in')),
@@ -228,27 +233,72 @@ export default function ReceptionHome() {
     [admit, session, readyForNext],
   );
 
-  const doRegister = (form: RegisterPatientRequest) => {
+  const doAdmitTo = (alt: AlternativeSession) => {
+    if (!resultsCurrent || !active || !canAdmitWalkIn(active)) return;
+    doAdmit(active.patientId, active.name, { sessionId: alt.sessionId, doctorName: alt.doctorName });
+  };
+
+  /**
+   * Register a patient at the desk. A 409 POSSIBLE_DUPLICATE (PR-22) keeps the form and shows the candidates; "Create new
+   * record anyway" resends the same form with confirmNew. When this session cannot take a walk-in (`admit` false) the patient
+   * is only registered and found in the arrivals list, ready to be admitted to another doctor.
+   */
+  const doRegister = (form: RegisterPatientRequest, admitNow: boolean) => {
     setPanelError(null);
     register.mutate(form, {
-      onSuccess: (patient) => doAdmit(patient.id, patient.fullName),
-      onError: (e) =>
+      onSuccess: (patient) => {
+        setDuplicates(null);
+        if (admitNow) {
+          doAdmit(patient.id, patient.fullName);
+        } else {
+          toast.success('Registered', { description: `${patient.fullName}, ${patient.mrn}` });
+          setQuery(patient.fullName);
+          setActiveKey(null);
+        }
+      },
+      onError: (e) => {
+        const dup = e instanceof ApiRequestError && e.code === 'CONFLICT' ? PossibleDuplicates.safeParse(e.details) : null;
+        if (dup?.success) {
+          setDuplicates({ form, candidates: dup.data.candidates, admit: admitNow });
+          return;
+        }
+        setDuplicates(null);
         setPanelError({
           code: e instanceof ApiRequestError ? e.code : 'UNKNOWN',
           title: 'Patient not registered',
           message: e instanceof Error ? e.message : 'Something went wrong.',
           hint: 'Check the details and try again.',
-        }),
+        });
+      },
     });
   };
 
-  const doMarkAbsent = (entry: QueueEntry) => {
+  /** "Use this patient": continue with the existing record. If they already hold a place here, show them in the list instead of admitting. */
+  const chooseCandidate = (c: Patient) => {
+    const holdsPlace = (appointments ?? []).some((a) => a.patientId === c.id && (a.status === 'booked' || a.status === 'checked_in'));
+    const admitNow = duplicates?.admit ?? false;
+    setDuplicates(null);
+    if (admitNow && !holdsPlace) {
+      doAdmit(c.id, c.fullName);
+    } else {
+      setQuery(c.fullName);
+      setActiveKey(null);
+    }
+  };
+
+  const doMarkAbsent = (entry: QueueEntry, reason: string) => {
     setEntryError(null);
     entryAction.mutate(
-      { entryId: entry.id, action: 'absent', expectedVersion: entry.version },
+      { entryId: entry.id, action: 'absent', expectedVersion: entry.version, ...(reason ? { reason } : {}) },
       {
-        onSuccess: () => toast.success('Marked absent', { description: `${entry.patientName}, token ${entry.token}` }),
-        onError: (e) => setEntryError(toEntryError(e, 'Not marked absent')),
+        onSuccess: () => {
+          toast.success('Marked absent', { description: `${entry.patientName}, token ${entry.token}` });
+          setAbsentFor(null);
+        },
+        onError: (e) => {
+          setAbsentFor(null);
+          setEntryError(toEntryError(e, 'Not marked absent'));
+        },
       },
     );
   };
@@ -371,6 +421,14 @@ export default function ReceptionHome() {
             admitPending={admit.isPending}
             onRegister={doRegister}
             registerPending={register.isPending}
+            onOpenDesk={() => {
+              if (resultsCurrent && active) setDeskFor({ id: active.patientId, name: active.name, mrn: active.mrn, phone: active.phone });
+            }}
+            duplicates={duplicates}
+            onUseCandidate={chooseCandidate}
+            onCreateAnyway={() => duplicates && doRegister({ ...duplicates.form, confirmNew: true }, duplicates.admit)}
+            onDismissDuplicates={() => setDuplicates(null)}
+            onAdmitTo={doAdmitTo}
             outcome={outcome}
             onDismissOutcome={() => {
               setOutcome(null);
@@ -382,7 +440,7 @@ export default function ReceptionHome() {
                 entry={selectedEntry}
                 pending={entryPending}
                 error={entryError}
-                onMarkAbsent={() => selectedEntry && doMarkAbsent(selectedEntry)}
+                onMarkAbsent={() => selectedEntry && setAbsentFor(selectedEntry)}
                 onReEnter={() => selectedEntry && doReEnter(selectedEntry)}
               />
             }
@@ -412,6 +470,19 @@ export default function ReceptionHome() {
         </div>
       </div>
 
+      <PatientDesk patient={deskFor} onClose={() => setDeskFor(null)} />
+      <ConfirmDialog
+        open={absentFor !== null}
+        onOpenChange={(o) => !o && setAbsentFor(null)}
+        title={`Mark ${absentFor?.token ?? ''} absent`}
+        description={`${absentFor?.patientName ?? 'This patient'} leaves the calling order. You can re-enter them from the board if they return.`}
+        reasonLabel="Reason (optional)"
+        confirmLabel="Mark absent"
+        cancelLabel="Keep waiting"
+        destructive
+        pending={entryAction.isPending}
+        onConfirm={(reason) => absentFor && doMarkAbsent(absentFor, reason)}
+      />
       <LateArrivalDialog
         open={late !== null}
         subject={late ? { name: late.item.name, scheduledAt: late.item.appointment?.scheduledAt ?? null } : null}

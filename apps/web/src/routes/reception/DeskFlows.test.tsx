@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'sonner';
 import { entry, uid } from '@/live/fixtures';
 import {
   DOC_KULKARNI,
@@ -25,8 +26,13 @@ import {
  * PR-26 late markers, PR-27 Mark absent asks first.
  */
 
+vi.mock('sonner', () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: vi.fn() }), Toaster: () => null }));
+
 polyfillRadix();
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
 
 const duplicateReply = (candidates: unknown[]) => (body: Record<string, unknown>) =>
   body.confirmNew
@@ -140,7 +146,7 @@ describe('PR-23: other doctors when walk-in places are full', () => {
     expect(sent.path).toBe(`/sessions/${makeSession(2, DOC_KULKARNI).id}/walk-ins`);
     expect(sent.body).toEqual({ patientId: LAKSHMI.id });
     expect(sent.key).toBeTruthy();
-    expect(await screen.findByText('Admitted')).toBeVisible();
+    expect(await screen.findByTestId('arrival-outcome')).toHaveTextContent('With Dr. Shweta Kulkarni');
   });
 
   it('does not offer a raised limit: the last resort is words, not a button', async () => {
@@ -235,7 +241,7 @@ describe('PR-27: Mark absent asks first', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Mark absent' }));
     await waitFor(() => expect(posts.filter((p) => p.path.includes('/absent'))).toHaveLength(1));
     expect(posts.find((p) => p.path.includes('/absent'))!.body).toMatchObject({ reason: 'Went to pharmacy', expectedVersion: 1 });
-    expect(await screen.findByText('Marked absent')).toBeVisible();
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Marked absent', expect.anything()));
   });
 
   it('does nothing when the desk cancels the dialog', async () => {

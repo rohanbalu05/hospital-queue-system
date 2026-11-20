@@ -10,7 +10,8 @@ import { formatIST } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { SessionBoardLive } from '@/live';
 import { AvailabilityPanel } from './AvailabilityPanel';
-import { shortRef } from './model';
+import { useNow } from '@/lib/useNow';
+import { lateWords, minutesLate, shortRef } from './model';
 import type { QueueEntry } from '@hqms/contracts';
 
 const SESSION_WORD: Record<SessionStatus, string> = {
@@ -107,7 +108,7 @@ export function SessionBoard(p: SessionBoardProps) {
             empty="No one is waiting to arrive. Booked patients show here until they check in."
           >
             {[...expected].sort(byTime).map((a) => (
-              <AppointmentRow key={a.id} a={a} tag />
+              <AppointmentRow key={a.id} a={a} tag late />
             ))}
           </Lane>
           <Lane title="Checked in" count={checkedIn.length} empty="No one has checked in yet.">
@@ -173,12 +174,37 @@ function BoardPressure({ sessionId }: { sessionId: string }) {
   return <PressureNote pressure={data.pressure} className="mt-3" />;
 }
 
-function AppointmentRow({ a, tag, muted, token }: { a: StaffAppointment; tag?: boolean; muted?: boolean; token?: ArrivalResult | undefined }): ReactNode {
+/** PR-26: a booked patient whose slot has passed is marked "Late 5 min", then "Late 20 min, past grace". Words, not colour. */
+function LateMark({ scheduledAt }: { scheduledAt: string }) {
+  const now = useNow(30_000);
+  const mins = minutesLate(scheduledAt, now);
+  if (mins === null) return null;
+  return (
+    <span data-testid="late-mark" className="shrink-0 rounded-xs border border-rule bg-paper px-1.5 py-0.5 text-xs font-bold tabular-nums">
+      {lateWords(mins)}
+    </span>
+  );
+}
+
+function AppointmentRow({
+  a,
+  tag,
+  muted,
+  token,
+  late,
+}: {
+  a: StaffAppointment;
+  tag?: boolean;
+  muted?: boolean;
+  token?: ArrivalResult | undefined;
+  late?: boolean;
+}): ReactNode {
   return (
     <li className={cn('flex min-h-10 items-center gap-3 border-l-[3px] px-3 text-sm', muted ? 'border-l-rule text-muted-foreground' : 'border-l-appt')}>
       {tag ? <GroupTag group="A" className="min-w-6 justify-center" /> : null}
       <span className="w-[4.25rem] shrink-0 font-bold tabular-nums">{formatIST(a.scheduledAt)}</span>
       <span className="min-w-0 flex-1 truncate font-bold">{a.patientName ?? shortRef(a.patientId)}</span>
+      {late ? <LateMark scheduledAt={a.scheduledAt} /> : null}
       {a.patientMrn ? <span className="hidden shrink-0 text-xs text-muted-foreground tabular-nums sm:inline">{a.patientMrn}</span> : null}
       {token ? <TokenText token={token.token} size="md" className="shrink-0" /> : null}
       <StatusWord status={a.status} className="w-24 shrink-0 text-right" />
