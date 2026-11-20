@@ -20,9 +20,9 @@ say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 die() { printf '\n[x] %s\n' "$*" >&2; exit 1; }
 
 # ---- Tooling ----
-command -v node >/dev/null 2>&1 || die "Node.js not found. Install it: brew install node@22 (then: brew link --overwrite node@22)"
+command -v node >/dev/null 2>&1 || die "Node.js not found. Install it: brew install node@22 (then: brew link --overwrite --force node@22)"
 NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
-[ "$NODE_MAJOR" -ge 22 ] || die "Node.js 22 or newer is required (found $(node -v)). Install: brew install node@22 && brew link --overwrite node@22"
+[ "$NODE_MAJOR" -ge 22 ] || die "Node.js 22 or newer is required (found $(node -v)). Install: brew install node@22 && brew link --overwrite --force node@22"
 if ! command -v pnpm >/dev/null 2>&1; then
   die "pnpm not found. Run: corepack enable   (or: npm install -g pnpm@10.28.0)"
 fi
