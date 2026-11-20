@@ -7,20 +7,22 @@ import PolicyPage from './PolicyPage';
 import ReportsPage from './ReportsPage';
 import SessionsPage from './SessionsPage';
 import StaffPage from './StaffPage';
+import SystemPanel from './SystemPanel';
 
 const NAV = [
   { to: '/admin', label: 'Sessions and capacity', end: true },
-  { to: '/admin/staff', label: 'Staff assignments' },
+  { to: '/admin/staff', label: 'Staff' },
   { to: '/admin/policy', label: 'Current policy' },
   { to: '/admin/reports', label: 'Reports' },
   { to: '/admin/notifications', label: 'Notifications sent' },
   { to: '/admin/audit', label: 'Audit trail' },
 ] as const;
 
-/** Admin: session capacity, staff assignments, the read-only policy, measured vs target reports, audit. */
+/** Admin: background-work health, sessions and capacity, staff accounts and assignments, the read-only policy, measured vs target reports, audit. */
 export default function AdminHome() {
   return (
-    <StaffShell title="Administration" description="Sessions, capacity, staff assignments, policy, reports, notifications sent and the audit trail.">
+    <StaffShell title="Administration" description="Sessions, capacity, staff, policy, reports, notifications sent and the audit trail.">
+      <SystemPanel />
       <SectionNav label="Admin sections" items={NAV} />
       <Routes>
         <Route index element={<SessionsPage />} />
