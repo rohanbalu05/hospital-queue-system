@@ -20,7 +20,17 @@ const me = patientUser(1, 'Ananya Iyer');
 const SESSION = uuid(0x5e1);
 const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
 
-const seed = () => [
+interface Row {
+  id: string;
+  kind: string;
+  body: string;
+  createdAt: string;
+  readAt: string | null;
+  link: string | null;
+  severity: string;
+}
+
+const seed = (): Row[] => [
   { id: uuid(0x901), kind: 'SessionUnavailable', body: 'Dr. Arvind Kulkarni is not available for the rest of this session. Please rebook or cancel.', createdAt: ago(2), readAt: null, link: `/patient/visits?rebook=${uuid(0xa91)}`, severity: 'urgent' },
   { id: uuid(0x902), kind: 'SessionPaused', body: 'Dr. Arvind Kulkarni has stepped away and is expected back about 10:45 am.', createdAt: ago(20), readAt: null, link: `/patient/visit/${SESSION}`, severity: 'warning' },
   { id: uuid(0x903), kind: 'SessionResumed', body: 'Dr. Arvind Kulkarni is back.', createdAt: ago(300), readAt: ago(290), link: null, severity: 'info' },
@@ -180,7 +190,7 @@ describe('notification centre', () => {
     const { calls } = stubApi(handler);
     const qc = renderShell();
     await screen.findByRole('button', { name: 'Notifications, 2 unread' });
-    state.items = [{ ...seed()[0]!, id: uuid(0x904) }, ...state.items];
+    state.items = [{ ...seed()[0], id: uuid(0x904) } as Row, ...state.items];
     const before = calls.filter((c) => c.startsWith('GET /notifications/unread-count')).length;
     await act(async () => {
       // What the live hook does when an SSE notice arrives: the snapshot query is refetched and succeeds.

@@ -6,6 +6,7 @@ import { PatientPage } from '@/components/layout/PatientPage';
 import { EmptyState, ErrorState, GroupTag, SkeletonRows, TokenText } from '@/components/queue';
 import { GROUPS } from '@/components/queue/group';
 import { AvailabilityBanner } from '@/components/scheduling/AvailabilityBanner';
+import { BookedAvailability } from '@/components/scheduling/BookedAvailability';
 import { CancelDialog } from '@/components/scheduling/CancelDialog';
 import { InlineAlert, StatusWord } from '@/components/scheduling/status';
 import { Button } from '@/components/ui/button';
@@ -66,8 +67,8 @@ function queueStateWords(state: QueueEntryState, room: string): string {
 }
 
 /** Availability and ETA for one session: the patient snapshot when it has loaded, the value the list carried until then. */
-function useSessionNotice(sessionId: string, fallback: SessionAvailability | undefined, fallbackDoctor: string) {
-  const { data } = useQueueSnapshot(sessionId);
+function useSessionNotice(sessionId: string, fallback: SessionAvailability | undefined, fallbackDoctor: string, enabled = true) {
+  const { data } = useQueueSnapshot(enabled ? sessionId : null);
   const snap = data?.view === 'patient' ? data : null;
   return {
     availability: snap?.availability ?? fallback,
@@ -77,8 +78,9 @@ function useSessionNotice(sessionId: string, fallback: SessionAvailability | und
 }
 
 function AppointmentCard({ a, visit, onCancel }: { a: Appointment; visit: MyTodayVisit | undefined; onCancel: (a: Appointment) => void }) {
-  const notice = useSessionNotice(a.sessionId, visit?.availability, a.doctorName);
+  // Before check-in there is no queue entry, so there is no queue to look at yet: no link, and the session read supplies the banner.
   const booked = a.status === 'booked' && !visit;
+  const notice = useSessionNotice(a.sessionId, visit?.availability, a.doctorName, !booked);
   return (
     <li data-testid="today-appointment" className="rounded-xl border border-l-[3px] border-rule border-l-appt bg-surface p-4">
       <div className="flex items-start justify-between gap-3">
@@ -95,33 +97,19 @@ function AppointmentCard({ a, visit, onCancel }: { a: Appointment; visit: MyToda
         </div>
         <StatusWord status={a.status} className="shrink-0" />
       </div>
-      {notice.availability ? (
-        <AvailabilityBanner
-          availability={notice.availability}
-          doctorName={notice.doctorName}
-          placement={booked ? 'booked' : 'in_queue'}
-          eta={notice.eta}
-          className="mt-4"
-          actions={
-            notice.availability.state === 'unavailable' && booked ? (
-              <>
-                <Button asChild size="lg">
-                  <Link to={`/patient/visits?rebook=${a.id}`}>Rebook with another doctor</Link>
-                </Button>
-                <Button variant="outline" size="lg" onClick={() => onCancel(a)}>
-                  Cancel appointment
-                </Button>
-              </>
-            ) : null
-          }
-        />
+      {booked ? (
+        <BookedAvailability appointment={a} onCancel={onCancel} className="mt-4" />
+      ) : notice.availability ? (
+        <AvailabilityBanner availability={notice.availability} doctorName={notice.doctorName} placement="in_queue" eta={notice.eta} className="mt-4" />
       ) : null}
-      <QueueLink sessionId={a.sessionId} className="mt-4 w-full" />
-      <p className="mt-2 text-muted-foreground">
-        {a.status === 'booked'
-          ? 'Check in at reception when you arrive. Your token and estimated wait appear on the next screen.'
-          : 'You are checked in. The next screen shows your token, your place and the estimated wait.'}
-      </p>
+      {booked ? (
+        <p className="mt-4 text-muted-foreground">Check in at reception when you arrive. Your token and estimated wait appear here after you check in.</p>
+      ) : (
+        <>
+          <QueueLink sessionId={a.sessionId} className="mt-4 w-full" />
+          <p className="mt-2 text-muted-foreground">You are checked in. The next screen shows your token, your place and the estimated wait.</p>
+        </>
+      )}
     </li>
   );
 }

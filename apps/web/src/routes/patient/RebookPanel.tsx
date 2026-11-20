@@ -19,7 +19,7 @@ export function bookLabel(option: Pick<AlternativeSession, 'nextSlotAt' | 'docto
 }
 
 function dayWord(date: string): string {
-  return date === istDate() ? `Today, ${formatLocalDate(date)}` : formatLocalDate(date);
+  return date === istDate() ? 'Today' : formatLocalDate(date);
 }
 
 function Option({
@@ -94,7 +94,7 @@ export function RebookPanel({ appointmentId, appointment, onClose }: { appointme
 
   const intro = (children: ReactNode) => (
     <div className="border-b border-rule px-4 py-4">
-      <h2 id="rebook-h" ref={heading} tabIndex={-1} className="text-xl font-bold">
+      <h2 id="rebook-h" ref={heading} tabIndex={-1} className="text-xl font-bold focus:outline-none">
         Rebook with another doctor
       </h2>
       {children}
@@ -105,7 +105,7 @@ export function RebookPanel({ appointmentId, appointment, onClose }: { appointme
   if (booked) {
     return (
       <section aria-labelledby="rebooked-h" data-testid="rebook-done" className="mb-6 rounded-xl border border-l-[6px] border-rule border-l-done bg-surface px-4 py-4">
-        <h2 id="rebooked-h" ref={heading} tabIndex={-1} className="text-xl font-bold">
+        <h2 id="rebooked-h" ref={heading} tabIndex={-1} className="text-xl font-bold focus:outline-none">
           Booked
         </h2>
         <p role="status" className="mt-1 text-lg">
@@ -130,7 +130,7 @@ export function RebookPanel({ appointmentId, appointment, onClose }: { appointme
   if (cancelled) {
     return (
       <section aria-labelledby="rebook-h" className="mb-6 rounded-xl border border-l-[6px] border-rule border-l-ink bg-surface px-4 py-4">
-        <h2 id="rebook-h" ref={heading} tabIndex={-1} className="text-xl font-bold">
+        <h2 id="rebook-h" ref={heading} tabIndex={-1} className="text-xl font-bold focus:outline-none">
           Appointment cancelled
         </h2>
         <p role="status" className="mt-1">Your place has been released. You can book another appointment at any time.</p>

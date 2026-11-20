@@ -97,6 +97,16 @@ function rotationExplanation(pointer: number): string {
   return `Called by rotation: ${ORDINAL[nth - 1]} ${GROUP_WORD[letter]} of ${ROTATION.join(', ')}`;
 }
 
+/** What a patient snapshot says about the doctor, derived from the session status like the server's deriveAvailability. */
+function patientAvailability(status: SessionStatus, pauseUntil: string | null) {
+  const base = { since: null, expectedBackAt: null, overdue: false, reason: null };
+  if (status === 'paused') return { ...base, state: 'away', since: NOW.toISOString(), expectedBackAt: pauseUntil };
+  if (status === 'unavailable') return { ...base, state: 'unavailable', since: NOW.toISOString() };
+  if (status === 'closed') return { ...base, state: 'ended' };
+  if (status === 'scheduled') return { ...base, state: 'not_started' };
+  return { ...base, state: 'available' };
+}
+
 export interface PatientViewState {
   state: EntryState;
   position: number | null;
@@ -289,6 +299,7 @@ export async function mockQueue(page: Page, options: QueueMockOptions = {}): Pro
     lastDecision: world.lastDecision,
     capacity: { bookedCapacity: 10, walkinCapacity: 5, bookedReserved: 8, walkinUsed: 2 },
     pressure: options.pressure ?? { level: 'normal' as const, reasons: [] },
+    availability: { ...patientAvailability(world.status, world.pauseUntil), reason: null },
   });
 
   const calledToken = () => (world.active?.state === 'called' ? world.active.token : null);
@@ -401,6 +412,8 @@ export async function mockQueue(page: Page, options: QueueMockOptions = {}): Pro
             view: 'patient',
             sessionId: SESSION_ID,
             status: world.status,
+            doctorName: 'Dr. Meenakshi Rao',
+            availability: patientAvailability(world.status, world.pauseUntil),
             queueVersion: world.version,
             capturedAt: NOW.toISOString(),
             myEntry: {

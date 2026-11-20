@@ -121,7 +121,10 @@ export async function apiFetch<T = unknown>(path: string, opts: RequestOptions<T
 
   let json: unknown;
   try {
-    json = await res.json();
+    const text = await res.text();
+    // A success with no body (e.g. mark-as-read) is fine when the caller expects no payload.
+    if (text.trim() === '' && !opts.schema) return undefined as T;
+    json = JSON.parse(text);
   } catch {
     throw new ApiRequestError({ status: res.status, code: 'BAD_RESPONSE', message: 'The server sent a response this screen cannot read.' });
   }

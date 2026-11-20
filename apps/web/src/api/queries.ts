@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   AppointmentAlternatives,
+  Session as SessionSchema,
   SlotAvailability,
   type MyTodayVisit,
   type Session,
@@ -118,6 +119,17 @@ export function useMyTodayVisits(options: { enabled?: boolean } = {}) {
     queryFn: ({ signal }) => get('/me/visits/today', {}, MyTodayVisitList, signal),
     enabled: options.enabled ?? true,
     refetchInterval: 30_000,
+  });
+}
+
+/** GET /sessions/{id}: one session with its doctor availability (readable by a patient who holds an appointment there). */
+export function useSessionRead(sessionId: Id | null, options: { enabled?: boolean } = {}) {
+  return useQuery<Session, ApiRequestError>({
+    queryKey: keys.session(sessionId ?? 'none'),
+    queryFn: ({ signal }) => get(`/sessions/${sessionId}`, {}, SessionSchema, signal),
+    enabled: sessionId !== null && (options.enabled ?? true),
+    staleTime: 10_000,
+    refetchInterval: 60_000,
   });
 }
 
