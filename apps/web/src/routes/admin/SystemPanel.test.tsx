@@ -53,7 +53,8 @@ describe('Background work panel', () => {
 
   it('is calm when everything is fine: worker running, nothing waiting, no alert', async () => {
     mount(fine);
-    const panel = await screen.findByRole('region', { name: 'Background work' });
+    await screen.findByTestId('stat-overdue');
+    const panel = screen.getByRole('region', { name: 'Background work' });
     expect(within(panel).getByText('Worker running')).toBeVisible();
     expect(panel).toHaveTextContent('Last seen 10:04 am');
     expect(within(panel).queryByRole('alert')).toBeNull();
@@ -84,7 +85,8 @@ describe('Background work panel', () => {
       outbox: { undispatched: 5, oldestSeconds: 95 },
       notifications: { queued: 3, failedLast24h: 1 },
     });
-    const panel = await screen.findByRole('region', { name: 'Background work' });
+    await screen.findByTestId('stat-overdue');
+    const panel = screen.getByRole('region', { name: 'Background work' });
     expect(within(panel).getByTestId('stat-overdue')).toHaveTextContent('4, oldest waiting 13 min');
     expect(within(panel).getByTestId('stat-dead')).toHaveTextContent('2');
     expect(within(panel).getByTestId('stat-outbox')).toHaveTextContent('5, oldest waiting 1 min');

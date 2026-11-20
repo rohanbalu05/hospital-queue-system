@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion -- tests index fixture arrays they just built */
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -80,6 +81,7 @@ const list = (sessions: Session[]): Handler => (r) => (r.method === 'GET' && r.p
 
 describe('Sessions page: status and actions', () => {
   it('shows availability words and only the actions that fit each status', async () => {
+    const scheduled = session(1, { startsAt: `${TODAY}T20:00:00+05:30` });
     const away = session(2, {
       status: 'paused',
       startsAt: `${TODAY}T00:00:01+05:30`,
@@ -89,21 +91,27 @@ describe('Sessions page: status and actions', () => {
     const unavailable = session(3, {
       doctorName: KULKARNI.fullName,
       status: 'unavailable',
+      startsAt: `${TODAY}T21:00:00+05:30`,
       endsAt: `${TODAY}T23:59:00+05:30`,
       availability: { state: 'unavailable', since: null, expectedBackAt: null, overdue: false, reason: 'Family emergency' },
     });
-    const closed = session(4, { status: 'closed', availability: { state: 'ended', since: null, expectedBackAt: null, overdue: false, reason: null } });
-    render_(list([session(1), away, unavailable, closed]));
+    const closed = session(4, {
+      status: 'closed',
+      startsAt: `${TODAY}T22:00:00+05:30`,
+      availability: { state: 'ended', since: null, expectedBackAt: null, overdue: false, reason: null },
+    });
+    render_(list([scheduled, away, unavailable, closed]));
 
+    // Rows are in start-time order: away, scheduled, unavailable, closed.
     const rows = await screen.findAllByTestId('session-row');
     expect(rows).toHaveLength(4);
-    expect(within(rows[0]!).getByText('Not started')).toBeVisible();
-    expect(within(rows[0]!).getByRole('button', { name: /Open session, Dr\. Meenakshi Rao/ })).toBeVisible();
-    expect(within(rows[0]!).queryByRole('button', { name: /Close session/ })).toBeNull();
+    expect(within(rows[1]!).getByText('Not started')).toBeVisible();
+    expect(within(rows[1]!).getByRole('button', { name: /Open session, Dr\. Meenakshi Rao/ })).toBeVisible();
+    expect(within(rows[1]!).queryByRole('button', { name: /Close session/ })).toBeNull();
 
-    expect(within(rows[1]!).getByText('Away until 11:35 pm')).toBeVisible();
-    expect(within(rows[1]!).getByRole('button', { name: /Close session/ })).toBeVisible();
-    expect(within(rows[1]!).queryByRole('button', { name: /Reopen session/ })).toBeNull();
+    expect(within(rows[0]!).getByText('Away until 11:35 pm')).toBeVisible();
+    expect(within(rows[0]!).getByRole('button', { name: /Close session/ })).toBeVisible();
+    expect(within(rows[0]!).queryByRole('button', { name: /Reopen session/ })).toBeNull();
 
     expect(within(rows[2]!).getByText('Unavailable')).toBeVisible();
     expect(within(rows[2]!).getByRole('button', { name: /Reopen session, Dr\. Arvind Kulkarni/ })).toBeVisible();
